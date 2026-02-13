@@ -39,7 +39,7 @@ type student = {
 
 export default function Home() {
   const [dat, setDat]= useState<student[]>([])
-  const [use,setUse]= useState<any[] | null>([])
+  //const [use,setUse]= useState<any[] | null>([])
   const [filter, setFilter] = useState(false)
 
  const searchpara = useSearchParams();
@@ -47,7 +47,8 @@ export default function Home() {
 
           async ()=> {const { data:{user}, error } = await supabase.auth.getUser()
         if (error) console.error(error.message)
-        else setUse(user as any | null)}
+        //else setUse(user as any | null)
+      }
   useEffect(() => {
     const getData = async () => {
       const { data:comp, error } =  await supabase.from('student').select('*')
