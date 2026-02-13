@@ -4,7 +4,6 @@ import {supabase} from "./component/db"
 import { useState,useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Redirect } from "next";
 
 type student = {
     id: number
