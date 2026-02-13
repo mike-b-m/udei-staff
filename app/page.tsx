@@ -37,6 +37,7 @@ type student = {
     seen_by: string
 }
 
+export const dynamic = 'force-dynamic';
 export default function Home() {
   const [dat, setDat]= useState<student[]>([])
   //const [use,setUse]= useState<any[] | null>([])
@@ -45,7 +46,7 @@ export default function Home() {
  const searchpara = useSearchParams();
          const search = searchpara.get('faculty') || '';
 
-          async ()=> {const { data:{user}, error } = await supabase.auth.getUser()
+          async ()=> {const { data, error } = await supabase.auth.getUser()
         if (error) console.error(error.message)
         //else setUse(user as any | null)
       }
