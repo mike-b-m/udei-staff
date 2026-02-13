@@ -17,7 +17,7 @@ export default function Login(){
 }        
 return(
     <>
-    <form onSubmit={sign} className="flex flex-col bg-gray-200 p-10 rounded-2xl justify-items-center ">
+    <form onSubmit={sign} className="flex flex-col bg-gray-200 p-10 rounded-2xl border-2 border-gray-300 shadow-lg justify-items-center ">
       <div className="flex justify-center">
         <Image
                src="/logos.svg"

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { supabase } from "../component/db";
 import { useSearchParams } from "next/navigation";
 import Pay from "../component/add-payment/addpayment";
@@ -16,7 +16,7 @@ type user = {
     first_name: string
     last_name: string
 }
-export default function Payment(){
+function Payments(){
     const [payment, setPayment]= useState<pay[]>([])
     const [student, setStudent] = useState<user[]>([])
     const searchpara = useSearchParams()
@@ -48,4 +48,13 @@ export default function Payment(){
             </ol>)}
         </div>
     )
+}
+
+export default function Payment(){
+    return(
+        <Suspense fallback={<div className="text-center">Chajman...</div>}>
+              <Payments/>
+            </Suspense>
+          )
+    
 }

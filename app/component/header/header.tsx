@@ -18,7 +18,7 @@ export default function Header(){
     const [profiles, setProfiles] = useState<any| null>(null)
     const [open, setOpen] = useState (false)
      const [ses, setSes] =useState <any>()
-     const Open= true
+     const [tOpen,setTOpen] = useState (true)
     const pathname = usePathname()
     const signOutall = async () => {
   
@@ -43,7 +43,11 @@ export default function Header(){
     setProfiles(data)
         }
         if (!session && pathname !== '/login') redirect('/login')
-        if (!session) console.error('not session find')      
+        if (!session) 
+          {
+            setTOpen(false)
+            console.error('not session find')
+          }
         else if (error) console.error(error?.message);
         //else setUser(user)
         }; 
@@ -89,7 +93,7 @@ export default function Header(){
        </div>
         </div>)
        
-      : Open ?
+      : tOpen ?
        (<div className="flex border rounded-2xl max-w-25 min-w-20 max-h-10 mt-2 justify-between p-1 border-gray-400"><Image
          src="/profil.png"
       width={30}

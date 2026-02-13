@@ -1,7 +1,7 @@
 'use client'
 import StudentInfos from "../component/student-infos/page";
 import { useSearchParams } from "next/navigation";
-
+import { Suspense } from "react";
 type user = {
     id: number
     first_name: string
@@ -32,7 +32,7 @@ type user = {
     enrol_date: string
     seen_by: string
 }
-export default function Infos(){
+function Infos1(){
      const searchpara = useSearchParams();
         const search = searchpara.get('nom') || '';
         const search2 = searchpara.get('prenom') || '';
@@ -40,5 +40,12 @@ export default function Infos(){
     return(
         <>
         <StudentInfos nom={search} prenom={search2}/></>
+    )
+}
+export default function Infos(){
+    return(
+        <Suspense fallback={<div>chargement...</div>}>
+            <Infos/>
+        </Suspense>
     )
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { supabase } from "../component/db";
 import Input from "../component/input/input-comp";
 import TheTable from "../component/table/table";
@@ -17,7 +17,7 @@ type prog = {
     year: number
     session: number
 }
-export default function Program(){
+ function Program(){
     const [program, setProgram] = useState<prog[]>([])
     const [veri, setVeri] = useState(false)
 
@@ -159,5 +159,12 @@ setVeri(false)}
                 <TheTable int={program} session={2} year={5} faculty={search}/>
             </div>: null}
         </div>
+    )
+}
+export default function Programm(){
+    return(
+        <Suspense fallback={<div>chargement..</div>}>
+            <Program/>
+        </Suspense>
     )
 }
