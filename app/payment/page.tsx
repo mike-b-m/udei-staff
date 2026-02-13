@@ -38,7 +38,7 @@ export default function Payment(){
         <div className="bg-amber-300 w-50 ">
             {payment.map((pay)=>
             <ol key={pay.id} className="flex justify-between">
-            <Pay id={pay.id} price={pay.price} amount={pay.amount} history={pay.payment_history}/>
+            <Pay id={pay.id} prices={pay.price}  history={pay.payment_history}/>
             <li>h{pay.payment_history}
             </li>
             <li>b{pay.balance}</li>

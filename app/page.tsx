@@ -52,7 +52,7 @@ export default function Home() {
     const getData = async () => {
       const { data:comp, error } =  await supabase.from('student').select('*')
       .eq('faculty', search);
-    if (error) console.error(error)
+    if (error) console.error(error.message)
       else setDat(comp)
     }; 
     getData()},[])

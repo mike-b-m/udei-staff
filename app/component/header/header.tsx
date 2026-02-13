@@ -37,7 +37,7 @@ export default function Header(){
            const { data,} = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user?.id).single();
+    .eq('id', user?.id).maybeSingle();
     if (error) console.error(error.message)
     setProfiles(data)
         }
@@ -49,13 +49,13 @@ export default function Header(){
         getData()},[])
 
     return(
-        <>
+        <div>
         <div className="flex justify-between  m-3 ml-10 ">
             <Link href="/"><Image
          src="/image/logo.png"
       width={150}
       height={150}
-      alt="logo"/></Link>
+      alt="logo"/></Link></div>
       {/*profil section */}
         {ses ? <div className='static'>
        
@@ -67,21 +67,35 @@ export default function Header(){
       height={30}
       className="m-1 size-8"
       alt="user profil"/>
-      <div className="">{profiles?.full_name}
-        <div className="text-[12px] ">{user?.email}</div>
+      
+      <div className="">{user.map((prof:any)=><ol>
+        <li className="text-[12px] ">{prof.email}</li>
+        <li>{prof.role}</li>
+      </ol>)}</div>
+      
+      <div className="">{profiles.map((prof)=><ol>
+        <li>{prof.full_name}</li>
+        <li> role: {prof.role}</li>
+      </ol>)}
+      
       </div>
-       <div className="justify-right w-full"><button onClick={()=>setOpen(!open)}>
+       <div className="justify-right w-full">
+        <button onClick={()=>setOpen(!open)}>
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
         strokeWidth="1.5" stroke="currentColor" className="size-6">
-  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-</svg>
+    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+    </svg>
 
-</button></div>
-       </div>
-
-       <div className="text-[16px] pt-2 border-t  border-gray-400 ">Role: {profiles?.role}</div>
+  </button></div>
+        <div className="text-[16px] pt-2 border-t  border-gray-400 ">
+        Role: {profiles.map((prof)=><ol key={prof.id}>
+        <li>{prof.role}</li>
+      </ol>)}
        <div className="text-[16px] pt-2 border-t  border-gray-400 "><button onClick={signOutall}>log out</button></div>
            </div>
+       </div>
+
+       
       :
        <div className="flex border rounded-2xl w-20 justify-between p-1 border-gray-400"><Image
          src="/profil.png"
@@ -94,13 +108,12 @@ export default function Header(){
   <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
 </svg>
 </button></div> 
-}</div> : null}
+        </div>:null } :
 
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-8 mr-10">
   <path fillRule="evenodd" d="M3 5.25a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 5.25Zm0 4.5A.75.75 0 0 1 3.75 9h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 9.75Zm0 4.5a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Zm0 4.5a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
 </svg>
 
-</div>
-        </>
-    )
+</div> :null}
+      </div>)
 }

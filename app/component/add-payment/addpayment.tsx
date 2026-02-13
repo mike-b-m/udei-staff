@@ -1,30 +1,25 @@
-import { useState} from "react"
+import { useEffect, useState} from "react"
 import { supabase } from "../db"
 
 
 interface int{
 id: number
 history: string
-amount: number
-price: number
+//amount: number
+prices: number
 }
-export default function Pay({id,history,price,amount}:int){
+export default function Pay({id,history,prices}:int){
     const [theAmount, setTheAmount] = useState(Number)
-    //const [balance, setBalance] = useState('')
-    const date = new Date() 
-    const [array ,setArray] = useState<any>([])
-       const newAmount = amount + theAmount;
- const balance = newAmount - price;
+    const date = new Date()
+    const price = prices - theAmount ;
  
- const [h, setH] = useState({date: date,
-amount: theAmount,
-balance: `${balance}`})
+    const h =[...history,{date: date,
+    amount: theAmount,
+    balance: `${prices}`}]
 
-const HandlePayment = async (e:any) => {
-    e.preventDefault()
-    setArray([history,h])
-          const { data:comp, error } =  await supabase.from('student_payment')
-          .update({amount: {newAmount}, balance, payment_history: {array}})
+const HandlePayment = async () => {
+          const { data, error } =  await supabase.from('student_payment')
+          .update({price, payment_history: {h}})
           .select('*')
           .eq('student_id', `${id}`);
         if (error) console.error(error.message)
@@ -32,8 +27,10 @@ const HandlePayment = async (e:any) => {
     return(
         <div>
            <form onSubmit={HandlePayment}>
-             <input type="number" value={theAmount} onChange={(e:any)=>setTheAmount(e.target.value)}/>
-             <button type="submit"></button>
+             <input type="number" value={theAmount} 
+             className="border-2xl" 
+             onChange={(e:any)=>setTheAmount(e.target.value)}/>
+             {price}/{theAmount}<button type="submit">submit</button>
            </form>
         </div>
     )
