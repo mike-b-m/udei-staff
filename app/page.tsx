@@ -36,7 +36,7 @@ type student = {
     seen_by: string
 }
 
-export const dynamic = 'force-dynamic';
+//export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const [dat, setDat]= useState<student[]>([])
@@ -50,14 +50,14 @@ export default function Home() {
       //   if (error) console.error(error.message)
       //   //else setUse(user as any | null)
       // }
-  useEffect(() => {
-    const getData = async () => {
-      const { data:comp, error } =  await supabase.from('student').select('*')
-      .eq('faculty', search);
-    if (error) console.error(error.message)
-      else setDat(comp)
-    }; 
-    getData()},[])
+  // useEffect(() => {
+  //   const getData = async () => {
+  //     const { data:comp, error } =  await supabase.from('student').select('*')
+  //     .eq('faculty', search);
+  //   if (error) console.error(error.message)
+  //     else setDat(comp)
+  //   }; 
+  //   getData()},[])
  
  
   return (
