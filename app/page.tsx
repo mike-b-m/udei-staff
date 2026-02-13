@@ -46,10 +46,10 @@ export default function Home() {
  const searchpara = useSearchParams();
          const search = searchpara.get('faculty') || '';
 
-          async ()=> {const { data, error } = await supabase.auth.getUser()
-        if (error) console.error(error.message)
-        //else setUse(user as any | null)
-      }
+      //     async ()=> {const { data, error } = await supabase.auth.getUser()
+      //   if (error) console.error(error.message)
+      //   //else setUse(user as any | null)
+      // }
   useEffect(() => {
     const getData = async () => {
       const { data:comp, error } =  await supabase.from('student').select('*')
