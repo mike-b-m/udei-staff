@@ -52,10 +52,7 @@ export default function StudentInfos({nom,prenom}:prop){
      const [first_name,setFirst_name]=useState('')
      const [last_name, setLast_name]= useState('')
     const  [status,setStatus] = useState<stat[]>([])
-       const searchpara = useSearchParams();
-    const search = searchpara.get('nom') || '';
-    const search2 = searchpara.get('prenom') || '';
-
+    
      useEffect(() => {
         const getData = async () => {
           const { data:comp, error } =  await supabase.from('student').select('*')
