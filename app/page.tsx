@@ -1,65 +1,116 @@
-import Image from "next/image";
+'use client'
+
+import {supabase} from "./component/db"
+import { useState,useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Redirect } from "next";
+
+type student = {
+    id: number
+    first_name: string
+    last_name: string
+    faculty: string
+    date_birth: string
+    place_of_birth: string
+    nif_cin: string
+    sex: string
+    email: string
+    phone_number: string
+    marital_status: string
+    adress: string
+    
+    mother_name: string
+    mother_birth:string
+    mother_residence: string
+    mother_phone: string
+    mother_profesion: string
+
+     father_name: string
+    father_birth:string
+    father_residence: string
+    father_phone: string
+    father_profesion: string
+
+    diploma: string
+    enrol_date: string
+    seen_by: string
+}
 
 export default function Home() {
+  const [dat, setDat]= useState<student[]>([])
+  const [use,setUse]= useState<any[] | null>([])
+  const [filter, setFilter] = useState(false)
+
+ const searchpara = useSearchParams();
+         const search = searchpara.get('faculty') || '';
+
+          async ()=> {const { data:{user}, error } = await supabase.auth.getUser()
+        if (error) console.error(error.message)
+        else setUse(user as any | null)}
+  useEffect(() => {
+    const getData = async () => {
+      const { data:comp, error } =  await supabase.from('student').select('*')
+      .eq('faculty', search);
+    if (error) console.error(error)
+      else setDat(comp)
+    }; 
+    getData()},[])
+ 
+ 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+<>
+<div className="w-full mt-3">
+   {/* filter query*/}
+  <div><button className="text-xl ml-5 flex" onClick={()=>setFilter(!filter)}>filter
+     {filter ?  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
+        strokeWidth="1.5" stroke="currentColor" className="size-6">
+  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+</svg> :<svg xmlns="http://www.w3.org/2000/svg" fill="none" 
+        viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
+  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+</svg> }</button>
+   {filter ?
+  <div>
+     <form action="/">
+    <div><input type="radio" name="faculty" value='Genie Civil' /> Génie Civil</div>
+     <div><input type="radio" name="faculty" value='Médecine Géneérale' />Médecine Géneérale</div>
+     <div><input type="radio" name="faculty" value='Odontologie' /> Odontologie</div>
+     <div><input type="radio" name="faculty" value='Sciences Infirmières' /> Sciences Infirmières</div>
+     <div><input type="radio" name="faculty" value=' Sciences Administratives' /> Sciences Administratives</div>
+     <div><input type="radio" name="faculty" value='Sciences Comptables' /> Sciences Comptables</div>
+      <div><input type="radio" name="faculty" value='Gestion des affaires' /> Gestion des affaires</div>
+       <div><input type="radio" name="faculty" value='Sciences Agronomiques' /> Sciences Agronomiques</div>
+        <div><input type="radio" name="faculty" value='Sciences Economiques' /> Sciences Economiques</div>
+         <div><input type="radio" name="faculty" value={`Sciences de l'Education`} /> Sciences de l'Education</div>
+          <div><input type="radio" name="faculty" value='Sciences Juridiques' /> Sciences Juridiques</div>
+           <div><input type="radio" name="faculty" value='Pharmacologies' /> Pharmacologies</div>
+            <div><input type="radio" name="faculty" value='Médecine vétérinaire' /> Médecine vétérinaire</div>
+             <div><input type="radio" name="faculty" value='Laboratoire medicale' /> Laboratoire medicale</div>
+              <div><input type="radio" name="faculty" value='Physiothérapie' /> Physiothérapie</div>
+               <div><input type="radio" name="faculty" value={`Jardinières d'enfants`} /> Jardinières d'enfants</div>
+   <button type="submit" className="bg-[#2DAE0D] rounded-2xl
+             text-white text-[20px] hover:bg-green-700 w-20">filter</button>
+   </form>
+  </div> : null}
+  </div>
+  {/* header for the list of student by faculty*/}
+    <ol className="flex justify-between  bg-sky-200 font-poppins rounded-t-lg ">
+    <li className="ml-5">fullname</li>
+  <li className="">Faculty</li>
+  <li className="mr-10">year</li>
+  </ol>
+  {/*list of list of student by faculty */}
+  <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan)=>(
+  <ol key={compan.id}   className="flex justify-between text-center">
+    <li className="ml-5"><Link href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>{compan.last_name} {compan.first_name}</Link></li>
+  <li className="">{compan.faculty}</li>
+  <li className="mr-10">0</li>
+  </ol>
+))}</div>
+
+</div>
+
+</>
+  )
 }
