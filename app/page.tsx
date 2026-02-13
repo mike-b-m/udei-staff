@@ -38,6 +38,7 @@ type student = {
 }
 
 export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const [dat, setDat]= useState<student[]>([])
   //const [use,setUse]= useState<any[] | null>([])
