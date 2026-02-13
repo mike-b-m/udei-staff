@@ -1,7 +1,7 @@
 'use client'
 
 import {supabase} from "./component/db"
-import { useState,useEffect } from "react";
+import { Suspense, useState, useEffect} from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -38,7 +38,7 @@ type student = {
 
 //export const dynamic = 'force-dynamic';
 
-export default function Home() {
+function Home() {
   const [dat, setDat]= useState<student[]>([])
   //const [use,setUse]= useState<any[] | null>([])
   const [filter, setFilter] = useState(false)
@@ -46,18 +46,18 @@ export default function Home() {
  const searchpara = useSearchParams();
          const search = searchpara.get('faculty') || '';
 
-      //     async ()=> {const { data, error } = await supabase.auth.getUser()
-      //   if (error) console.error(error.message)
-      //   //else setUse(user as any | null)
-      // }
-  // useEffect(() => {
-  //   const getData = async () => {
-  //     const { data:comp, error } =  await supabase.from('student').select('*')
-  //     .eq('faculty', search);
-  //   if (error) console.error(error.message)
-  //     else setDat(comp)
-  //   }; 
-  //   getData()},[])
+          async ()=> {const { data, error } = await supabase.auth.getUser()
+        if (error) console.error(error.message)
+        //else setUse(user as any | null)
+      }
+  useEffect(() => {
+    const getData = async () => {
+      const { data:comp, error } =  await supabase.from('student').select('*')
+      .eq('faculty', search);
+    if (error) console.error(error.message)
+      else setDat(comp)
+    }; 
+    getData()},[])
  
  
   return (
@@ -103,16 +103,23 @@ export default function Home() {
   <li className="mr-10">year</li>
   </ol>
   {/*list of list of student by faculty */}
-  <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan)=>(
+   <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan)=>(
   <ol key={compan.id}   className="flex justify-between text-center">
     <li className="ml-5"><Link href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>{compan.last_name} {compan.first_name}</Link></li>
   <li className="">{compan.faculty}</li>
   <li className="mr-10">0</li>
   </ol>
-))}</div>
+))}</div> 
 
 </div>
 
 </>
+  )
+}
+export default function Page(){
+  return (
+    <Suspense fallback={<div className="text-center">Chajman...</div>}>
+      <Home/>
+    </Suspense>
   )
 }
