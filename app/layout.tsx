@@ -5,6 +5,8 @@ import Header from "./component/header/header";
 import Footer from "./component/footer/fouter";
 import Nav from "./component/nav/nav";
 
+export const dynamic = 'force-dynamic';
+
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
