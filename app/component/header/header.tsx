@@ -20,13 +20,15 @@ export default function Header(){
      const [ses, setSes] =useState <any>()
      const [tOpen,setTOpen] = useState (true)
     const pathname = usePathname()
+
     const signOutall = async () => {
   
             const {error} = await supabase.auth.signOut()
           if (!error)  window.location.reload();}
+
      useEffect(() => {
         const getData = async () => {
-          const { data:{session}, error } =   await supabase.auth.getSession();
+          const { data:{session}, error } =   await supabase.auth.refreshSession();
         if (session){
           const { data:{user}, error } =   await supabase.auth.getUser();
           if (error) console.log('Error',error.message);
@@ -40,7 +42,8 @@ export default function Header(){
     .select('*')
     .eq('id', user?.id).maybeSingle();
     if (error) console.error(error.message)
-    setProfiles(data)
+    else setProfiles(data)
+
         }
         if (!session && pathname !== '/login') redirect('/login')
         if (!session) 
@@ -87,8 +90,11 @@ export default function Header(){
   </button>  </div>
         <div className="text-[16px] pt-2 border-t  border-gray-400 ">
         Role: {profiles?.role}
-       <div className="text-[16px] pt-2 border-t  border-gray-400 ">
-        <button onClick={signOutall}>log out</button></div>
+       <div className="text-[16px] p-2 border-t  border-gray-400  justify-items-center">
+        <button className="flex hover:bg-gray-300" onClick={signOutall}><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+</svg>
+log out</button></div>
            </div>
        </div>
         </div>)

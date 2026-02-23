@@ -12,7 +12,10 @@ type company ={
   pay_method: string
   decribe_motive: string
 }
-
+const colors=[
+ " bg-green-200",
+ "bg-gray-200"
+]
 export default function Spend() {
   const [dat, setDat]= useState<company[]>([])
  
@@ -46,13 +49,13 @@ export default function Spend() {
   </ol>
   {/*list of company spent */}
   <div className="rounded-b-lg  bg-gray-200">
-   {dat.map((compan)=>(
-  <ol key={compan.id}   className="flex justify-between text-center border-b border-gray-400">
-    <li className="min-w-50 text-center border-b-0.5 bg-gray-300">{compan.name}</li>
-  <li className=" min-w-50 text-center border-b-0.5 ">HTG  {compan.amount}</li>
-  <li className="min-w-50 text-center border-b-0.5 bg-gray-300"><Time open={compan.date_time}/></li>
-  <li className=" min-w-50 text-center max-w-50  border-b-0.5">{compan.decribe_motive}</li>
-  <li className="mr-5 min-w-50 text-center border-b-0.5 bg-gray-300">{compan.pay_method}</li></ol>
+   {dat.map((compan,index)=>(
+  <ol key={compan.id}   className={`flex justify-between text-center border-b border-gray-400 ${colors[index  % colors.length]}`}>
+    <li className="min-w-50  border-b-0.5">{compan.name}</li>
+  <li className=" min-w-50  border-b-0.5 ">HTG  {compan.amount}</li>
+  <li className="min-w-50 border-b-0.5"><Time open={compan.date_time}/></li>
+  <li className=" min-w-50  max-w-50  border-b-0.5">{compan.decribe_motive}</li>
+  <li className="mr-5 min-w-50  border-b-0.5">{compan.pay_method}</li></ol>
 ))}</div>
 
 <div className="text-center"> 0-10 <button>next</button></div>

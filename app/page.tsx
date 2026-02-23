@@ -75,8 +75,8 @@ function Home() {
    {filter ?
   <div>
      <form action="/">
-    <div><input type="radio" name="faculty" value='Genie Civil' /> Génie Civil</div>
-     <div><input type="radio" name="faculty" value='Médecine Géneérale' />Médecine Géneérale</div>
+    <div><input type="radio" name="faculty" value='Génie Civil' /> Génie Civil</div>
+     <div><input type="radio" name="faculty" value='Médecine Générale' />Médecine Générale</div>
      <div><input type="radio" name="faculty" value='Odontologie' /> Odontologie</div>
      <div><input type="radio" name="faculty" value='Sciences Infirmières' /> Sciences Infirmières</div>
      <div><input type="radio" name="faculty" value=' Sciences Administratives' /> Sciences Administratives</div>

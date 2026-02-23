@@ -31,7 +31,7 @@ export default function Student_input(){
     {/*cert/diploma and agreement */}
     const [diploma, setDiploma]=useState([])
     //const [profil_url, setProfil_url]= useState('')
-    const [seen_by,setSeen_by]= useState('barry')
+    const [seen_by,setSeen_by]= useState('')
     const [agreement, setAgreement] =useState(Boolean)
     {/*Submit fonstion */}
     const HandleSubmit = async (e:any) => {
@@ -65,9 +65,9 @@ export default function Student_input(){
   console.log('Saved:', data);
 }}
     return (
-        <div className=" ml-[15%] mr-[15%] grid grid- col-2 border-t-2 border-gray-600 mt-4">
-         
-            <form onSubmit={HandleSubmit} className="grid grid-cols-1">
+        <div className=" grid grid- col-2 border-t-2 border-b-2 border-gray-600 mt-4 w-full h-full bg-gray-200 rounded-xl ">
+              <h6 className="text-center text-[20px] mt-4">formulaire d'inscription</h6>
+            <form onSubmit={HandleSubmit} className="grid grid-cols-1 pl-[15%] pr-[15%] pb-3">
                  <div className="flex justify-between">
                     <Input int={last_name} text="Nom"
                     type="text" out={(e)=>setLast_name(e.target.value)}/>
@@ -92,8 +92,8 @@ export default function Student_input(){
                 <div className="flex justify-between">
                   <span><label >statut matrimonial</label>
                 <select value={marital_status} onChange={(e)=>setMarital_status(e.target.value)}
-                    className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-full bg-gray-300">
+                    className="py-2 px-4 focus:outline-none
+                  rounded-4xl placeholder:text w-[50%] h-8 bg-gray-300 border border-gray-400 ">
                     <option>option</option>
                     <option>Marié</option>
                     <option>Célibataire</option>
@@ -184,7 +184,9 @@ export default function Student_input(){
                      type="text" out={(e)=>setFather_profesion(e.target.value)}/>
           
             </div>
-
+              <Input int={seen_by} text="vue part"
+                     type="text" out={(e)=>setSeen_by(e.target.value)}/>
+                    
             <div>
                <input type="checkbox" value={father_profesion}
             className=" mt-2.5 py-2 px-4 focus:outline-none

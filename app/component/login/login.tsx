@@ -22,14 +22,5 @@ export default function LogIn(){
         }; 
         getData()},[])
 
-        return (
-            <>{user.email}
-            {user.id}
-            <button onClick={signOutall}>log out</button>
-           {/*{user ? user.map((use:any)=>
-    <ol key={use.id}>
-        <li>{use}</li>
-    </ol>):<div>null</div> }*/}
-            </>
-        )
+       
 }

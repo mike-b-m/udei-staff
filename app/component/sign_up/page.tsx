@@ -30,7 +30,7 @@ export default function SignUp(){
     };}
 return(
     <>
-    <form onSubmit={HandleCreate}>
+    <form onSubmit={HandleCreate} className="bg-gray-200 ">
       <h2>Créer un compte pour le personnel</h2>
         <input type="text" placeholder="fullname" 
         className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
