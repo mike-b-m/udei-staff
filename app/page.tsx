@@ -4,6 +4,7 @@ import {supabase} from "./component/db"
 import { Suspense, useState, useEffect} from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Filter, Filter2, Filter3 } from "./component/filter/filter";
 
 type student = {
     id: number
@@ -35,7 +36,10 @@ type student = {
     enrol_date: string
     seen_by: string
 }
-
+const colors=[
+ "bg-[#2DAE0D]/70",
+ "bg-gray-200"
+]
 //export const dynamic = 'force-dynamic';
 
 function Home() {
@@ -62,7 +66,8 @@ function Home() {
  
   return (
 <>
-<div className="w-full mt-3">
+<div className="w-full mt-3 bg-gray-200 rounded-xl">
+  
    {/* filter query*/}
   <div><button className="text-xl ml-5 flex" onClick={()=>setFilter(!filter)}>filter
      {filter ?  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
@@ -73,8 +78,8 @@ function Home() {
   <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
 </svg> }</button>
    {filter ?
-  <div>
-     <form action="/">
+  <div className="relative">
+     <form action="/" className="absolute bg-gray-300 p-5 rounded-xl">
     <div><input type="radio" name="faculty" value='Génie Civil' /> Génie Civil</div>
      <div><input type="radio" name="faculty" value='Médecine Générale' />Médecine Générale</div>
      <div><input type="radio" name="faculty" value='Odontologie' /> Odontologie</div>
@@ -97,17 +102,18 @@ function Home() {
   </div> : null}
   </div>
   {/* header for the list of student by faculty*/}
-    <ol className="flex justify-between  bg-sky-200 font-poppins rounded-t-lg ">
-    <li className="ml-5">fullname</li>
-  <li className="">Faculty</li>
-  <li className="mr-10">year</li>
+    <ol className="w-full flex justify-between p-1 mt-3 bg-gray-400 rounded-t-xl font-medium">
+    <li className="w-full pl-5">Nom et Prénom</li>
+  <li className="w-full">Faculté</li>
+  <li className="w-full">Année</li>
   </ol>
   {/*list of list of student by faculty */}
-   <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan)=>(
-  <ol key={compan.id}   className="flex justify-between text-center">
-    <li className="ml-5"><Link href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>{compan.last_name} {compan.first_name}</Link></li>
-  <li className="">{compan.faculty}</li>
-  <li className="mr-10">0</li>
+   <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan,index)=>(
+  <ol key={compan.id}   className={`flex justify-between  ${colors[index % colors.length]}`}>
+    <li className="w-full pl-5"><Link href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>{compan.last_name} {compan.first_name}</Link></li>
+  <li className="w-full">{compan.faculty}</li>
+  <li className="w-full"><Filter2 id={compan.id} bool/></li>
+ 
   </ol>
 ))}</div> 
 

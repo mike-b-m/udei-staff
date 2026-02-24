@@ -4,6 +4,7 @@ import { supabase } from "../db";
 import { useSearchParams } from "next/navigation";
 import  Lecture  from "../lect_input/lecture";
 import Link from "next/link";
+import { Filter, Filter3 } from "../filter/filter";
 
 type user = {
     id: number
@@ -119,6 +120,15 @@ export default function StudentInfos(){
                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 mt-1">
   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
 </svg><span className="ml-2">payment</span></Link>
+                {/*status section*/}
+             <h6 className="text-center m-2 underline text-[16px]">statut de progression de l'étudiant</h6>
+             <div className="flex">
+               <Lecture int="Année actuel" out={status[0]?.year_study} />
+             <Lecture int="Année complete" out={status[0]?.year_completed} />
+             <Lecture int="Vue par" out={studentInfos[0]?.seen_by} />
+             <Lecture int="année completer" out={status[0]?.faculty_completion} />
+              <Filter id={studentInfos[0]?.id} bool={status[0]?.faculty_completion} year={status[0]?.year_study} year_complt={status[0]?.year_completed}/>
+              </div>
 
                  {/*family infos for mother*/}
                <h3 className="text-center m-2 underline text-[16px]">Information familiales </h3>
@@ -139,14 +149,7 @@ export default function StudentInfos(){
                  </div>
            </li>)}
             </ol>
-             {/*status section*/}
-             <h6 className="text-center m-2 underline text-[16px]">statut de progression de l'étudiant</h6>
-             <div className="flex">
-               <Lecture int="Année actuel" out={status[0]?.year_study} />
-             <Lecture int="Année complete" out={status[0]?.year_completed} />
-             <Lecture int="Vue par" out={studentInfos[0]?.seen_by} />
-              </div>
-    
+        
         </div>
         </>
      )

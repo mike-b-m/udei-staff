@@ -3,6 +3,8 @@ import { supabase } from "../db"
 import { Update } from "@/app/component/add-buuton/add_button";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Time from "../time/time";
+import { Filter2 } from "../filter/filter";
 
 interface int{
 id: number
@@ -117,7 +119,7 @@ export  function Price(){
             }; 
             getData()},[])
     return(
-        <div>
+        <div className="m-1">
           {open ? <form action={handleUpdate} className="flex flex-col min-h-25 justify-between">
             <h4>ajouter la faculté et le prix</h4>
             <input type="text" placeholder="faculté" value={faculty} 
@@ -137,6 +139,10 @@ export  function Price(){
           </form>
           : <button className="bg-[#2DAE0D] rounded-2xl
              text-white  text-[16px] hover:bg-green-700 w-30 h-6 m-6" onClick={(e)=>setOpen(true)}>ajouter le prix</button> }
+        <div className="w-full flex p-1 mt-3 bg-gray-400 rounded-t-xl font-medium">
+                 <div className="ml-2 pt-1 w-50">faculté</div>
+                <div className="w-25 pt-1">Prix</div>
+             </div>
        {title.map((tit:pric,index)=>
           <ol key={tit.id} className={` flex text-[16px] ${colors[index % colors.length]}`}>
             <li className="ml-2 pt-1 w-50">{tit.faculty}</li>
@@ -159,7 +165,7 @@ function Stu({id}:ide){
             }; 
             getData()},[])
             return (
-                <div>HTG {du?.balance}</div>
+                <div>{du?.balance} HTG </div>
             )
  }
 
@@ -179,17 +185,20 @@ function Stu({id}:ide){
 
     return(
         <div>
-            <div className="flex ">
+            <h4 className="text-center font-poppins font-medium m-2 text-[20px]">liste des étudiants et le solde disponible</h4>
+            <div className="w-full flex justify-between p-1 mt-3 bg-gray-400 rounded-t-xl font-medium">
                 <div className=" ml-2 w-50">nom et prénom</div>
                 <div className="w-50">balance</div>
                  <div className="w-50">faculté</div>
+                 <div className="w-50">niveau</div>
              </div>
            {student.map((stund,index)=>
         <ol key={stund.id} className={`${colors[index % colors.length]}`}>
-            <Link href={`/payment?id=${stund.id}`} className="flex">
+            <Link href={`/payment?id=${stund.id}`} className="w-full flex justify-between p-1">
             <li className="ml-2 w-50">{stund.last_name} {stund.first_name} </li>
             <li className="w-50"><Stu id={stund.id}/></li>
-            <li className="w-50">{stund.faculty}</li></Link> 
+            <li className="w-50">{stund.faculty}</li>
+            <li className="w-50"><Filter2 id={stund.id} bool/></li></Link> 
         </ol>)}
         </div>
     )
@@ -217,7 +226,7 @@ export function Payments(){
 
    
     return(
-        <div className="bg-gray-300 w-full pt-2">
+        <div className="bg-gray-300 w-full pt-2 mb-5 p-2">
             {/*fullname section */}
            <div className=" flex justify-between max-w-50 bg-gray-100 m-1 p-2  rounded">
             fullname: 
@@ -243,12 +252,17 @@ export function Payments(){
 payment</button>}
            </div>
             </ol>)}
-           <h6 className="text-center text-[20px] border-b-3 border-t-3 border-gray-700 mt-2 rounded-xl"> history of payment</h6>
+           <h6 className="text-center text-[20px] border-b-3 border-t-3
+            border-gray-700 mt-2 rounded-xl"> history of payment</h6>
+            <div className="w-full flex justify-between p-1 mt-3 bg-gray-400 rounded-t-xl font-medium">
+                <span className="w-full">Montant</span> 
+                <span className="w-full">Balance</span> 
+                <span className="w-full">Date</span></div>
             {(payment[0]?.payment_history ?? []).map((pay:any,index:any)=>
-                <ol key={index} className={`flex justify-between ${colors[index  % colors.length]}`}>
-                <li>Montant:  HTG {pay.amount}</li>
-                <li>Balance: {pay.balance}</li>
-                <li>Date: {pay.date}</li>
+                <ol key={index} className={`flex justify-between p-1 ${colors[index  % colors.length]}`}>
+                <li className="w-full">{pay.amount} HTG </li>
+                <li className="w-full">{pay.balance} HTG </li>
+                <li className="w-full flex"><Time open={pay.date}/></li>
             </ol>)}
         </div>
     )

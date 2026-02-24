@@ -93,7 +93,7 @@ export default function Student_input(){
                   <span><label >statut matrimonial</label>
                 <select value={marital_status} onChange={(e)=>setMarital_status(e.target.value)}
                     className="py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[50%] h-8 bg-gray-300 border border-gray-400 ">
+                  rounded-4xl placeholder:text w-[50%] h-10 bg-gray-300 border border-gray-400 ">
                     <option>option</option>
                     <option>Marié</option>
                     <option>Célibataire</option>
@@ -184,7 +184,7 @@ export default function Student_input(){
                      type="text" out={(e)=>setFather_profesion(e.target.value)}/>
           
             </div>
-              <Input int={seen_by} text="vue part"
+              <Input int={seen_by} text="Vue par"
                      type="text" out={(e)=>setSeen_by(e.target.value)}/>
                     
             <div>

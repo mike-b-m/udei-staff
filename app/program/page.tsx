@@ -60,7 +60,7 @@ setVeri(false)}
                     className="px-4 focus:outline-none
                   rounded-4xl bg-gray-300 w-60">
                     <option>option</option>
-                    <option>Genie Civil</option>
+                    <option>Génie Civil</option>
                     <option>Médecine Générale</option>
                     <option>Odontologie</option>
                     <option>Sciences Infirmières</option>

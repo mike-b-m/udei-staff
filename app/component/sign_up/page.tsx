@@ -30,8 +30,8 @@ export default function SignUp(){
     };}
 return(
     <>
-    <form onSubmit={HandleCreate} className="bg-gray-200 ">
-      <h2>Créer un compte pour le personnel</h2>
+    <form onSubmit={HandleCreate} className="bg-gray-200 pl-20">
+      <h2 className="text-center font-poppins font-medium m-2 text-[20px]">Créer un compte pour le personnel</h2>
         <input type="text" placeholder="fullname" 
         className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
                   rounded-4xl placeholder:text w-[25%] bg-gray-300"

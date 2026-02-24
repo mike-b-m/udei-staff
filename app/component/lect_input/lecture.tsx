@@ -1,6 +1,6 @@
 interface put{
     int: string | number
-    out: string | number
+    out: string | number | boolean 
 }
 export default function Lecture({int, out}:put){
     return(

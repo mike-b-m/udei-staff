@@ -13,7 +13,7 @@ type company ={
   decribe_motive: string
 }
 const colors=[
- " bg-green-200",
+ "bg-[#2DAE0D]/70",
  "bg-gray-200"
 ]
 export default function Spend() {
