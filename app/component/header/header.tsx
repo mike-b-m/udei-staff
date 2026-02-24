@@ -18,7 +18,7 @@ export default function Header(){
     const [profiles, setProfiles] = useState<any| null>(null)
     const [open, setOpen] = useState (false)
      const [ses, setSes] =useState <any>()
-     const [tOpen,setTOpen] = useState (true)
+     const [tOpen,setTOpen] = useState (false)
     const pathname = usePathname()
 
     const signOutall = async () => {
@@ -35,6 +35,7 @@ export default function Header(){
           
           else {
             setUser(user)
+            setTOpen(true)
             setSes(session)
           }
            const { data,} = await supabase
@@ -48,7 +49,6 @@ export default function Header(){
         if (!session && pathname !== '/login') redirect('/login')
         if (!session) 
           {
-            setTOpen(false)
             console.error('not session find')
           }
         else if (error) console.error(error?.message);
@@ -67,7 +67,8 @@ export default function Header(){
       {/*profil section */}
        
        
-           {open ? (<div className="absolute bg-gray-100 text-center border rounded-2xl top-2 inset-x-135  p-1 border-gray-400">
+           {open ? (<div className="absolute bg-gray-100 text-center 
+           border rounded-2xl top-5 right-3  p-1 border-gray-400">
 
              <div className="text-[16] pb-2">
               <div className="flex justify-between">
@@ -100,8 +101,10 @@ log out</button></div>
         </div>)
        
       : tOpen ?
-       (<div className="flex border rounded-2xl max-w-25 min-w-20 max-h-10 mt-2 justify-between p-1 border-gray-400"><Image
-         src="/profil.png"
+       (<div className="flex border rounded-2xl max-w-25 min-w-20
+         max-h-10 mt-3 mr-3
+        justify-between p-1 border-gray-400">
+          <Image src="/profil.png"
       width={30}
       height={40}
       alt="user profil"/>
@@ -112,9 +115,6 @@ log out</button></div>
 </svg>
 </button></div>) 
          :
-null}
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-8 mr-10">
-  <path fillRule="evenodd" d="M3 5.25a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 5.25Zm0 4.5A.75.75 0 0 1 3.75 9h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 9.75Zm0 4.5a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Zm0 4.5a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
-</svg>
+null}       
       </div>)
 }

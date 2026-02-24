@@ -4,7 +4,7 @@ import { supabase } from "../db";
 import { useSearchParams } from "next/navigation";
 import  Lecture  from "../lect_input/lecture";
 import Link from "next/link";
-import { Filter, Filter3 } from "../filter/filter";
+import { Filter } from "../filter/filter";
 
 type user = {
     id: number
@@ -64,11 +64,13 @@ export default function StudentInfos(){
           .eq('last_name', search).eq('first_name', search2);
         if (error) console.error(error.message)
           else {
-      const { data:com, error:status_error } =  await supabase.from('student_status').select('*')
+       const studebId = comp[0]?.id
+       if (studebId){
+        const { data:com, error:status_error } =  await supabase.from('student_status').select('*')
           .eq('student_id', comp[0]?.id);
           setStudentInfos(comp)
         if (status_error) console.error(status_error.message)
-        else setStatus(com) }
+        else setStatus(com) }}
         };
         getData()},[]) 
  

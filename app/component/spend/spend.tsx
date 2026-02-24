@@ -18,10 +18,12 @@ const colors=[
 ]
 export default function Spend() {
   const [dat, setDat]= useState<company[]>([])
+  const [year, setYear] =useState('2026-01-01 00:00:00')
  
   useEffect(() => {
     const getData = async () => {
-      const { data:comp, error } =  await supabase.from('spent_in_company').select('*');
+      const { data:comp, error } =  await supabase.from('spent_in_company').select('*')
+      .gte('date_time', year);
     if (error) console.error(error)
       else setDat(comp)
     }; 
@@ -31,11 +33,15 @@ export default function Spend() {
   return (
 <>
 <div className="mr-5 ml-1 w-[80%] justify-center">
-  History 
    {/* filter query*/}
-  <div>filter
-    year
-    month
+  <div>
+    <select onChange={(e)=>setYear(e.target.value)}>
+      <option value="2027-01-01 00:00:00">2027</option>
+      <option value="2026-01-01 00:00:00">2026</option>
+      <option value="2025-01-01 00:00:00">2025</option>
+      <option value="2024-01-01 00:00:00">2024</option>
+      <option value="2023-01-01 00:00:00">2023</option>
+    </select>
   </div>
   <Add_botton/>
   {/* header for the list of spent */}

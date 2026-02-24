@@ -4,7 +4,7 @@ import {supabase} from "./component/db"
 import { Suspense, useState, useEffect} from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Filter, Filter2, Filter3 } from "./component/filter/filter";
+import {Filter2} from "./component/filter/filter";
 
 type student = {
     id: number
@@ -105,7 +105,7 @@ function Home() {
     <ol className="w-full flex justify-between p-1 mt-3 bg-gray-400 rounded-t-xl font-medium">
     <li className="w-full pl-5">Nom et Prénom</li>
   <li className="w-full">Faculté</li>
-  <li className="w-full">Année</li>
+  <li className="w-full">Niveau</li>
   </ol>
   {/*list of list of student by faculty */}
    <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan,index)=>(
