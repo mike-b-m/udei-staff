@@ -84,9 +84,9 @@ const HandlePayment = async () => {
         // if (error) console.error(error.message)
          }
     return(
-        <div>
+        <div>{id}
            <form onSubmit={HandlePayment}>
-             <input type="number" value={theAmount} 
+             <input type="number" value={theAmount} min={0} max={balance}
              className="border-2xl" 
              onChange={(e:any)=>setTheAmount(e.target.value)}/>
              {price}/{theAmount} <button type="submit" className='bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-30 h-6 m-3 pl-2'>submit</button>

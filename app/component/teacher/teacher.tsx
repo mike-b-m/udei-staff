@@ -8,7 +8,10 @@ interface int{
     year: number | string | null
     id: number
 }
-
+const colors=[
+ "bg-[#2DAE0D]/70",
+ "bg-gray-200"
+]
 export default function TheacherInput({session,name,matiere,id,year}:int){
     const [note, setNote] = useState('')
     const [read,setRead] =useState(false)
@@ -112,6 +115,29 @@ export function teacherUpdate({session,id,matiere,year}:int){
             <input type="number" value={update} onChange={(e)=>setUpdate(e.target.value)}/>
             <input type="number" value={update2} onChange={(e)=>setUpdate2(e.target.value)}/>
             <button onClick={handleUpdate}></button>
+        </div>
+    )
+}
+export function ReadNote({session,year,id}:int){
+    const [note,setNote] = useState<any[]>([])
+    useEffect(() => {
+            const getData = async () => {
+            const {data , error } =  await supabase.from('exam')
+        .select('*')
+        .eq('student_id', id).eq('session',session).eq('year',year)
+        if (error) console.error(error.message)
+            else setNote(data)
+              ;}
+               getData()},[])
+    return(
+        <div>
+            {note.map((not,index)=>
+            <ol key={not.id} className={`${colors[index % colors.length]} flex`}>
+                <li className="w-30 mr-2 ml-2">{not.matiere}</li>
+                <li className="w-10 mr-2 ml-2">{not.intra}</li>
+                <li className="w-10 mr-2 ml-2">{not.final}</li>
+                <li className="w-10 mr-2 ml-2">{not.year}</li>
+            </ol>)}
         </div>
     )
 }

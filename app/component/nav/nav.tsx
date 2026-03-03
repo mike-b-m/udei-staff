@@ -17,7 +17,7 @@ export default function Nav(){
         <Suspense fallback={<div>chargement...</div>}>
             
         {/*link for site */}
-         {ses ? <div className=" bg-gray-200 rounded-2xl w-[25%] text-[20px] m-3 text-center min-w-65 max-w-65  min-h-85 max-h-85">
+         {ses ? <div className=" bg-gray-200 rounded-2xl w-[25%] text-[20px] m-3 text-center min-w-65 max-w-65  min-h-85 max-h-full">
     <ul className=" h-[80%]">
         <li className={`p-1 m-2  justify-center text-center rounded-2xl flex ${pathname === '/' ? 'bg-gray-300 border-b-2 border-green-600 text- rounded-2xl':''} `}>
            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
@@ -75,6 +75,15 @@ export default function Nav(){
 </svg>
 <Link className="pl-3" href='/payment'>Payment</Link></li>
     
+    <li className={`p-1 m-2  justify-center text-center rounded-2xl flex
+         ${pathname === '/teacher' ? 'bg-gray-300 border-b-2 border-green-600 text- rounded-2xl':''} `}>
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498
+   0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" 
+   clipRule="evenodd" />
+</svg>
+
+<Link className="pl-3" href='/teacher'>teacher</Link></li>
     </ul>
 </div>: null}
         </Suspense>

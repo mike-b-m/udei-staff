@@ -2,7 +2,7 @@
 import { supabase } from "../component/db";
 import { useState,useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import TheacherInput, { TheacherInput2 } from "../component/teacher/teacher";
+import TheacherInput, { ReadNote, TheacherInput2 } from "../component/teacher/teacher";
 const colors=[
  "bg-[#2DAE0D]/70",
  "bg-gray-200"
@@ -11,6 +11,9 @@ export default function Teacher(){
     const [exam,setExam] = useState<any[]>([])
     const [note, setNote] = useState<any[]>([])
     const [program,setProgram] = useState<any[]>([])
+    const [intra,setIntra] = useState(true)
+    const [read,setRead] = useState(false)
+    
         const [student,setStudent]= useState<any[]>([])
         const searchpara= useSearchParams()
             const search = searchpara.get('faculty') || ''
@@ -44,7 +47,8 @@ export default function Teacher(){
             }; 
             getData()},[])
     return(
-        <div className="bg-gray-200 mt-3">
+        <div className="bg-gray-200 mt-3 w-full rounded-xl">
+          <h2 className="text-center m-3 font-bold text-[16px]">Note</h2>
           {/*filter */}
           <form action='/teacher' className="p-10">
             <label>matière</label>
@@ -69,9 +73,23 @@ export default function Teacher(){
             </select>
             <button type="submit">filter</button>
           </form>
+        {/*button */}
+        <div><button onClick={()=>{setRead(true) 
+        setIntra(false)}} 
+          className={`${read ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3'
+          :'bg-gray-100 rounded-2xl text-[16px] hover:bg-green-700 w-20 h-6 ml-3'}`}>read</button>
+          <button onClick={()=>{setIntra(true)
+            setRead(false)
+          }} 
+          className={`${intra ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3'
+          :'bg-gray-100 rounded-2xl text-[16px] hover:bg-green-700 w-20 h-6 ml-3'}`}>intra</button>
+         <button onClick={()=>setIntra(false)}
+          className={`${!intra && read===false ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3'
+          :'bg-gray-100 rounded-2xl text-[16px] border-1 hover:bg-green-700 w-20 h-6 ml-3'}`}>Final</button></div>
 
-          {/*student */}
-          <div className="flex">
+          {/*teacher enter intra*/}
+          {intra ? <div className="border border-gray-100 m-2">
+            <div className="flex">
             <div className="mr-4 pl-2 min-w-40">Nom et Prénom</div>
             <div>Note</div>
           </div>
@@ -79,8 +97,10 @@ export default function Teacher(){
         <ol key={exa.id} className={`${colors[index % colors.length]}`}>
           <li><TheacherInput session={search4} year={search3} name={`${exa.last_name}
              ${exa.first_name}`} matiere={search2} id={exa.id}/> </li>           
-        </ol>)}
-
+        </ol>)} 
+          </div> : !intra && !read ?
+            (<div className="border border-gray-100 m-2">
+              {/* teacher enter final */}
             <div className="flex">
             <div className="mr-4 pl-2 min-w-40">Nom et Prénom</div>
             <div className="w-20 text-center">Note</div>
@@ -91,13 +111,25 @@ export default function Teacher(){
              <li><TheacherInput2 session={search4} year={search3} 
                 name={`${exa.last_name} ${exa.first_name}`} matiere={search2} id={exa.id}/></li>
         </ol>)}
+            </div>):null}
             {/*read session */}
-            {exam.map((exa)=>
-            <ol key={exa.id} className="flex">
-              <li>id: {exa.student_id}</li>
-              <li>intra: {exa.intra}</li>
-              <li>final: {exa.final}</li>
+            {read ? <div>
+              <div className="flex bg-gray-100">
+              <div className="w-30 m-2">Name</div>
+              <div className="w-30 m-2">Matière</div>
+              <div className="w-10 m-2">Intra</div>
+              <div className="w-10 m-2">Final</div>
+              <div className="w-10 m-2">nivo</div>
+              <div className="w-30 m-2">Faculté</div>
+            </div>
+            {student.map((stud)=>
+            <ol key={stud.id} className="flex border-b">
+              <li className="w-30 m-2">{stud.last_name} {stud.first_name}</li>
+              <li ><ReadNote session={1} year={1} id={stud.id} name="" matiere=''/></li>
+              <li className="w-30 m-2">{stud.faculty}</li>
               </ol>)}
+            </div>
+            : null}
         </div>
     )
 }

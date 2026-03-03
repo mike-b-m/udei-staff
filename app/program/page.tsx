@@ -67,16 +67,17 @@ setVeri(false)}
                     <option>Sciences Infirmières</option>
                     <option> Sciences Administratives</option>
                     <option>Sciences Comptables</option>
-                    <option>Gestion des affaires</option>
+                    <option>Science Informatique</option>
+                    <option>Gestion Des Affaires</option>
                     <option>Sciences Agronomiques</option>
                     <option> Sciences Economiques</option>
-                    <option>Sciences de l'Education</option>
+                    <option>Sciences De L'Education</option>
                     <option>Sciences Juridiques</option>
                     <option>Pharmacologies</option>
-                    <option>Médecine vétérinaire</option>
-                    <option> Laboratoire medicale</option>
+                    <option>Médecine Vétérinaire</option>
+                    <option> Laboratoire Médicale</option>
                     <option>Physiothérapie</option>
-                    <option>Jardinières d'enfants</option>
+                    <option>Jardinières D'enfants</option>
                 </select>
         <button type="submit" className="bg-green-400 border border-gray-400 m-3 rounded-2xl
              text-gray-800 text-[16px] hover:bg-green-700 w-25 h-6">search</button></form>

@@ -157,16 +157,17 @@ export default function Student_input(){
                     <option>Sciences Infirmières</option>
                     <option> Sciences Administratives</option>
                     <option>Sciences Comptables</option>
-                    <option>Gestion des affaires</option>
+                    <option>Science Informatique</option>
+                    <option>Gestion Des Affaires</option>
                     <option>Sciences Agronomiques</option>
                     <option> Sciences Economiques</option>
-                    <option>Sciences de l'Education</option>
+                    <option>Sciences De L'Education</option>
                     <option>Sciences Juridiques</option>
                     <option>Pharmacologies</option>
-                    <option>Médecine vétérinaire</option>
-                    <option> Laboratoire medicale</option>
+                    <option>Médecine Vétérinaire</option>
+                    <option> Laboratoire Médicale</option>
                     <option>Physiothérapie</option>
-                    <option>Jardinières d'enfants</option>
+                    <option>Jardinières D'enfants</option>
                 </select></span>
 
                 <span><label>sexe</label>

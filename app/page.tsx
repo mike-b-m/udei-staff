@@ -87,16 +87,17 @@ function Home() {
      <div><input type="radio" name="faculty" value='Sciences Infirmières' /> Sciences Infirmières</div>
      <div><input type="radio" name="faculty" value=' Sciences Administratives' /> Sciences Administratives</div>
      <div><input type="radio" name="faculty" value='Sciences Comptables' /> Sciences Comptables</div>
-      <div><input type="radio" name="faculty" value='Gestion des affaires' /> Gestion des affaires</div>
+      <div><input type="radio" name="faculty" value='Gestion Des Affaires' /> Gestion des affaires</div>
        <div><input type="radio" name="faculty" value='Sciences Agronomiques' /> Sciences Agronomiques</div>
         <div><input type="radio" name="faculty" value='Sciences Economiques' /> Sciences Economiques</div>
-         <div><input type="radio" name="faculty" value={`Sciences de l'Education`} /> Sciences de l'Education</div>
+         <div><input type="radio" name="faculty" value={`Sciences De L'Education`} /> Sciences de l'Education</div>
           <div><input type="radio" name="faculty" value='Sciences Juridiques' /> Sciences Juridiques</div>
+          <div><input type="radio" name="faculty" value='Science Informatique' /> Science Informatique</div>
            <div><input type="radio" name="faculty" value='Pharmacologies' /> Pharmacologies</div>
-            <div><input type="radio" name="faculty" value='Médecine vétérinaire' /> Médecine vétérinaire</div>
-             <div><input type="radio" name="faculty" value='Laboratoire medicale' /> Laboratoire medicale</div>
+            <div><input type="radio" name="faculty" value='Médecine Vétérinaire' /> Médecine vétérinaire</div>
+             <div><input type="radio" name="faculty" value='Laboratoire Medicale' /> Laboratoire Médicale</div>
               <div><input type="radio" name="faculty" value='Physiothérapie' /> Physiothérapie</div>
-               <div><input type="radio" name="faculty" value={`Jardinières d'enfants`} /> Jardinières d'enfants</div>
+               <div><input type="radio" name="faculty" value={`Jardinières D'enfants`} /> Jardinières d'enfants</div>
    <button type="submit" className="bg-[#2DAE0D] rounded-2xl
              text-white text-[20px] hover:bg-green-700 w-20">filter</button>
    </form>
