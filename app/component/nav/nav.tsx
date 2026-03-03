@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../db";
@@ -14,6 +14,8 @@ export default function Nav(){
              getData()},[])
     return(
         <>
+        <Suspense fallback={<div>chargement...</div>}>
+            
         {/*link for site */}
          {ses ? <div className=" bg-gray-200 rounded-2xl w-[25%] text-[20px] m-3 text-center min-w-65 max-w-65  min-h-85 max-h-85">
     <ul className=" h-[80%]">
@@ -75,6 +77,7 @@ export default function Nav(){
     
     </ul>
 </div>: null}
+        </Suspense>
         </>
     )
 }

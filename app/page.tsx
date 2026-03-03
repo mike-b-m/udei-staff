@@ -5,6 +5,7 @@ import { Suspense, useState, useEffect} from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {Filter2} from "./component/filter/filter";
+import { Code } from "./component/code/code";
 
 type student = {
     id: number

@@ -21,7 +21,11 @@ export function Update({id,value}:add){
     const [faculty,setFaculty] = useState(value)
     const [price, setPrice] = useState(Number)
     const [open,setOpen] = useState(false)
-    const handleUpdate= async ()=> {
+    const [load,setLoad] = useState (false)
+    const [save,setSave]= useState(false)
+//updade section
+    const handleUpdate= async ()=> { 
+        setLoad(true)
             const {error:status_error } =  await supabase.from('faculty_price')
              .update({faculty,price})
   .eq('id', id)
@@ -29,9 +33,14 @@ export function Update({id,value}:add){
 
                 if (status_error) console.error(status_error.message)
                 else {
-            setOpen(!open)
+            setSave(true)
+            setTimeout(() => {setSave(false)
+                
+            }, 2000);
             console.log('saved')}
+            setOpen(!open)
         }
+        //delete section
         const handleDelete= async ()=> {
             const {error:status_error } =  await supabase.from('faculty_price')
              .delete()
@@ -40,11 +49,26 @@ export function Update({id,value}:add){
 
                 if (status_error) console.error(status_error.message)
                 else {
+            console.log('saved')
             setOpen(!open)
-            console.log('saved')}
+        }
         }
         return(
             <div className="static  ">
+                {/* set save  */}
+                
+                    {save ? (<div className="fixed inset bg-gray-100 p-7 text-green-600 flex border border-gray-500 rounded-lg">
+                        save with succes
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+                             className="size-6">
+        <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.844-8.791a.75.75 
+        0 0 0-1.188-.918l-3.7 4.79-1.649-1.833a.75.75 0 1 0-1.114 1.004l2.25 2.5a.75.75 0 0
+        0 1.15-.043l4.25-5.5Z" clipRule="evenodd" />
+        </svg>
+        </div> ) : ''}
+                            
+              
+
                 {open ?
                 <div className="absolute left-[50%] bg-gray-300 p-3 rounded-xl">
                     <Input int={faculty} type="text" text="faculté" 
@@ -52,13 +76,19 @@ export function Update({id,value}:add){
 
                     <Input int={price} type="number" text="prix (HTG)" 
                     out={(e:any)=>setPrice(e.target.value)}/>
+                {/*button cancel and save*/}
                 <button onClick={(e)=>setOpen(!open)}
+               disabled={load} 
                className="bg-gray-600 rounded-2xl
              text-white text-[16px]
               hover:bg-gray-700 w-20 h-6 ml-3 m-3" >cancel
              </button> 
-                <button onClick={handleUpdate} className="bg-[#2DAE0D] rounded-2xl
-             text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3" >save</button> 
+                <button onClick={handleUpdate}
+                disabled={load} 
+                className={`${load===false ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700' 
+                :'bg-gray-700 rounded-2xl text-white' } w-20 h-6 ml-3`} >
+                {load ? 'saving...' : 'save'}
+                </button> 
                 </div>
               : <div className="flex m-1">
                 <button onClick={(e)=>setOpen(true)}

@@ -44,7 +44,8 @@ console.log('Save',data)
 setVeri(false)}
 }
  useEffect(() => {
-        const getData = async ()=> {const { data, error } = await supabase
+        const getData = async ()=> {
+            const { data, error } = await supabase
   .from('course_program')
   .select('*').eq('faculty',search)
         if (error) console.error(error.message)

@@ -47,6 +47,7 @@ export default function Header(){
 
         }
         if (!session && pathname !== '/login') redirect('/login')
+        if (session && pathname === '/login') redirect('/')
         if (!session) 
           {
             console.error('not session find')

@@ -1,7 +1,8 @@
 'use client'
 import { supabase } from "../db";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Input from "../input/input-comp";
+import { Code } from "../code/code";
  
 export default function Student_input(){
     const[first_name, setFirst_name]= useState('')
@@ -31,10 +32,17 @@ export default function Student_input(){
     {/*cert/diploma and agreement */}
     const [diploma, setDiploma]=useState([])
     //const [profil_url, setProfil_url]= useState('')
+    const [code,setCode]=useState('')
     const [seen_by,setSeen_by]= useState('')
     const [agreement, setAgreement] =useState(Boolean)
+    
+    {/*save succes or error */}
+    const [load,setLoad] = useState (false)
+    const [save,setSave]= useState(false)
+
     {/*Submit fonstion */}
     const HandleSubmit = async (e:any) => {
+       setLoad(true)
     e.preventDefault()
             const {data, error} = await supabase.from('student')
             .insert([{first_name,
@@ -58,14 +66,38 @@ export default function Student_input(){
                 father_profesion, 
                 agreement,
                 diploma,
-                seen_by}]).select();
+                seen_by,
+              student_code: code}]).select();
     if (error) {
   console.error('Error:', error.message);
+  setLoad(false)
 } else {
   console.log('Saved:', data);
+  setSave(true)
+            setTimeout(() => {setSave(false)   
+            }, 2000);
+            
+              setTimeout(() => {window.location.reload()   
+            }, 2000);
+    ;
+
 }}
+  
     return (
-        <div className=" grid grid- col-2 border-t-2 border-b-2 border-gray-600 mt-4 w-full h-full bg-gray-200 rounded-xl ">
+        <div className=" grid grid- col-2 border-t-2 border-b-2 
+        border-gray-600 mt-4 w-full h-full bg-gray-200 rounded-xl static">
+         {/* set save  */}
+                
+                    {save ? (<div className="fixed inset bg-gray-100 p-7 text-green-600 flex border border-gray-500 rounded-lg">
+                        save with succes
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+                             className="size-6">
+        <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.844-8.791a.75.75 
+        0 0 0-1.188-.918l-3.7 4.79-1.649-1.833a.75.75 0 1 0-1.114 1.004l2.25 2.5a.75.75 0 0
+        0 1.15-.043l4.25-5.5Z" clipRule="evenodd" />
+        </svg>
+        </div> ) : ''}
+                       
               <h6 className="text-center text-[20px] mt-4">formulaire d'inscription</h6>
             <form onSubmit={HandleSubmit} className="grid grid-cols-1 pl-[15%] pr-[15%] pb-3">
                  <div className="flex justify-between">
@@ -187,15 +219,21 @@ export default function Student_input(){
               <Input int={seen_by} text="Vue par"
                      type="text" out={(e)=>setSeen_by(e.target.value)}/>
                     
-            <div>
+            <div className="">
+              <div className="border border-gray-400 rounded-lg p-2 m-1 text-center">
+                <h2>Code</h2>
+           {code}
+          <Code one={code} third={faculty} out={(value)=>setCode(value)}/>
+         </div>
                <input type="checkbox" value={father_profesion}
             className=" mt-2.5 py-2 px-4 focus:outline-none
                   rounded-4xl placeholder:text mr-1 bg-gray-300"
                    onChange={(e)=>setAgreement(true)} required/>
             {/*button submit */}je m'engage a respecter les principes de l'UDEI.
             </div>
-            <button type="submit" className="bg-[#2DAE0D] rounded-2xl
-             text-white text-[20px] hover:bg-green-700 w-18.5 h-10">submit</button>
+            <button type="submit" disabled={load}
+             className={`${load === false ? "bg-[#2DAE0D] rounded-2xl text-white text-[20px] hover:bg-green-700 w-18.5 h-10" 
+             : ""}`}>{load ? 'submiting' : 'submit'}</button>
             </form>
         </div>
     )
