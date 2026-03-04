@@ -26,8 +26,8 @@ return(
             className="m-1 size-25"
             alt="user profil"/>
       </div>
-      <Input out={(e)=>setEmail(e.target.value)} int={email} type="text" text="email"/>
-      <Input out={(e)=>setPassword(e.target.value)} int={password} type="password" text="password"/>
+      <Input out={(e)=>setEmail(e.target.value)} int={email} type="text" text="email" require={false}/>
+      <Input out={(e)=>setPassword(e.target.value)} int={password} type="password" text="password" require={false}/>
         <div className="text-center mt-4"> <button type="submit" 
          className="bg-[#2DAE0D] rounded-2xl
              text-white text-[20px] hover:bg-green-700 w-25 h-8">connect</button></div>
