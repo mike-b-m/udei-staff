@@ -72,10 +72,10 @@ export function Update({id,value}:add){
                 {open ?
                 <div className="absolute left-[50%] bg-gray-300 p-3 rounded-xl">
                     <Input int={faculty} type="text" text="faculté" 
-                    out={(e)=>setFaculty(e.target.value)}/>
+                    out={(e)=>setFaculty(e.target.value)} require={false}/>
 
                     <Input int={price} type="number" text="prix (HTG)" 
-                    out={(e:any)=>setPrice(e.target.value)}/>
+                    out={(e:any)=>setPrice(e.target.value)} require={false}/>
                 {/*button cancel and save*/}
                 <button onClick={(e)=>setOpen(!open)}
                disabled={load} 
