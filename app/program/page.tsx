@@ -83,11 +83,14 @@ setVeri(false)}
              text-gray-800 text-[16px] hover:bg-green-700 w-25 h-6">search</button></form>
 
             {veri ? <form onSubmit={programInput} className="grid justify-between m-3 grid-cols-5 ">
-                <Input int={courses} type="text" text="Cours" out={(e)=>setCourses(e.target.value)}/>
-                 <Input int={credit} type="number" text="Crédit" out={(e)=>setCredit(e.target.value)}/>
-                  <Input int={session_subjet} type="number" text="Nombres séances/H" out={(e)=>setSession_subjet(e.target.value)}/>
-                   <Input int={hour_session} type="number" text="Nombres H/séances" out={(e)=>setHour_session(e.target.value)}/>
-                    <Input int={total_hour} type="number" text="Numbres d'heures totals " out={(e)=>setTotal_hour(e.target.value)}/>
+                <Input int={courses} type="text" text="Cours" out={(e)=>setCourses(e.target.value)} require={false}/>
+                 <Input int={credit} type="number" text="Crédit" out={(e)=>setCredit(e.target.value)} require={false}/>
+                  <Input int={session_subjet} type="number" text="Nombres séances/H" 
+                  out={(e)=>setSession_subjet(e.target.value)} require={false}/>
+                   <Input int={hour_session} type="number" text="Nombres H/séances" 
+                   out={(e)=>setHour_session(e.target.value)} require={false}/>
+                    <Input int={total_hour} type="number" text="Numbres d'heures totals " 
+                    out={(e)=>setTotal_hour(e.target.value)} require={false}/>
                      
                      <div className="w-1">
                          <label>Faculté:</label>
