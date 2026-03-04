@@ -42,6 +42,8 @@ export default function Header(){
     .from('profiles')
     .select('*')
     .eq('id', user?.id).maybeSingle();
+    if (data.role=== 'prof' &&  pathname !== '/teacher') redirect('/teacher')
+      if (data.role=== 'admistration' &&  pathname !== '/spend') redirect('/spend')
     if (error) console.error(error.message)
     else setProfiles(data)
 
@@ -102,18 +104,18 @@ log out</button></div>
         </div>)
        
       : tOpen ?
-       (<div className="flex border rounded-2xl max-w-25 min-w-20
+       (<div className="flex border rounded-2xl max-w-25 min-w-10
          max-h-10 mt-3 mr-3
         justify-between p-1 border-gray-400">
-          <Image src="/profil.png"
+      <button onClick={()=>setOpen(!open)} className="flex justify-between">
+      <Image src="/profil.png"
       width={30}
       height={40}
       alt="user profil"/>
-      <button onClick={()=>setOpen(!open)}>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" 
-        viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
+        {/* <svg xmlns="http://www.w3.org/2000/svg" fill="none" 
+        viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 m-1">
   <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-</svg>
+</svg> */}
 </button></div>) 
          :
 null}       

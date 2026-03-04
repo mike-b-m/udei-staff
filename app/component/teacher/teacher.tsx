@@ -34,7 +34,7 @@ export default function TheacherInput({session,name,matiere,id,year}:int){
         if (data?.matiere !== null) console.error('exist')
 
         const {error:status_error } =  await supabase.from('exam')
-        .update([{intra: note,matiere, session,year,student_id:id}])
+        .insert([{intra: note,matiere, session,year,student_id:id}])
         .select('*')
         .eq('student_id',id);
             if (status_error) console.error(status_error.message)

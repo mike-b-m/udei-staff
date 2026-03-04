@@ -174,7 +174,9 @@ function Stu({id}:ide){
 
      useEffect(() => {
             const getData = async () => {
-              const { data:comp, error } =  await supabase.from('student').select('last_name,first_name,id,faculty')
+              const { data:comp, error } =  await supabase.from('student')
+              .select('last_name,first_name,id,faculty')
+              .order('last_name', { ascending: true })
               ;
             if (error) console.error(error.message)
               else {
@@ -216,7 +218,8 @@ export function Payments(){
           .eq('student_id', search);
         if (error) console.error(error.message)
           else {
-      const { data:com, error:status_error } =  await supabase.from('student').select('last_name, first_name,id')
+      const { data:com, error:status_error } =  await supabase.from('student')
+      .select('last_name, first_name,id')
           .eq('id', search);
           setPayment(comp)
         if (status_error) console.error(status_error.message)

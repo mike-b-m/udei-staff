@@ -58,6 +58,7 @@ function Home() {
   useEffect(() => {
     const getData = async () => {
       const { data:comp, error } =  await supabase.from('student').select('*')
+      .order('last_name', { ascending: true })
       .eq('faculty', search);
     if (error) console.error(error.message)
       else setDat(comp)

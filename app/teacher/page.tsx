@@ -11,13 +11,14 @@ export default function Teacher(){
     const [exam,setExam] = useState<any[]>([])
     const [note, setNote] = useState<any[]>([])
     const [program,setProgram] = useState<any[]>([])
+    const [faculty,setFaculty] = useState('')
     const [intra,setIntra] = useState(true)
     const [read,setRead] = useState(false)
     
         const [student,setStudent]= useState<any[]>([])
         const searchpara= useSearchParams()
             const search = searchpara.get('faculty') || ''
-            const search2 = searchpara.get('matiere') ||''
+            //const search2 = searchpara.get('matiere') ||''
             const search3 = searchpara.get('year') || ''
             const search4 = searchpara.get('session') || ''
 
@@ -26,10 +27,11 @@ export default function Teacher(){
                //list cours in program
                const { data:pro, error:theError } = await supabase
   .from('course_program')
-  .select('*').eq('faculty', search).eq('session', search4).eq('year', search3).eq('courses', search2);
+  .select('*').eq('faculty', search).eq('session', search4).eq('year', search3)//.eq('courses', search2);
   // read student in faculty
   const { data:stud, error:second } =  await supabase.from('student')
               .select('*')
+              .order('last_name', { ascending: true })
               ;
               const { data:exa, error:third } =  await supabase.from('exam')
               .select('*')
@@ -52,27 +54,50 @@ export default function Teacher(){
           {/*filter */}
           <form action='/teacher' className="p-10">
             <label>matière</label>
-            <select name="matiere" id="" className="mr-5">
-              <option value="anan">anan</option>
+            <select name="matiere" id="" className="mr-5" onChange={(e)=>setFaculty(e.target.value)}>
+              {program.map((pro)=>
+              <option key={pro.courses}>{pro.courses}</option>)}
             </select>
             {/*faculty */}
             <label>Faculty</label>
             <select name="faculty" id="" className="mr-5">
-              <option value="Génie Civil">Génie Civil
-              </option>
+              <option>option</option>
+                    <option>Génie Civil</option>
+                    <option>Médecine Générale</option>
+                    <option>Odontologie</option>
+                    <option>Sciences Infirmières</option>
+                    <option> Sciences Administratives</option>
+                    <option>Sciences Comptables</option>
+                    <option>Science Informatique</option>
+                    <option>Gestion Des Affaires</option>
+                    <option>Sciences Agronomiques</option>
+                    <option> Sciences Economiques</option>
+                    <option>Sciences De L'Education</option>
+                    <option>Sciences Juridiques</option>
+                    <option>Pharmacologies</option>
+                    <option>Médecine Vétérinaire</option>
+                    <option> Laboratoire Médicale</option>
+                    <option>Physiothérapie</option>
+                    <option>Jardinières D'enfants</option>
             </select>
             {/*year/nivau */}
             <label>nivau</label>
             <select name="year" id="" className="mr-5">
               <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
             </select>
             {/*session */}
             <label>session</label>
             <select name="session" id="" className="mr-5">
               <option value="1">1</option>
+              <option value="2">2</option>
             </select>
-            <button type="submit">filter</button>
+            <button type="submit" className="bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3">filter</button>
           </form>
+       
         {/*button */}
         <div><button onClick={()=>{setRead(true) 
         setIntra(false)}} 
@@ -87,6 +112,7 @@ export default function Teacher(){
           className={`${!intra && read===false ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3'
           :'bg-gray-100 rounded-2xl text-[16px] border-1 hover:bg-green-700 w-20 h-6 ml-3'}`}>Final</button></div>
 
+             <h3>{faculty}</h3>
           {/*teacher enter intra*/}
           {intra ? <div className="border border-gray-100 m-2">
             <div className="flex">
@@ -96,7 +122,7 @@ export default function Teacher(){
          {student.map((exa:any,index)=>
         <ol key={exa.id} className={`${colors[index % colors.length]}`}>
           <li><TheacherInput session={search4} year={search3} name={`${exa.last_name}
-             ${exa.first_name}`} matiere={search2} id={exa.id}/> </li>           
+             ${exa.first_name}`} matiere={faculty} id={exa.id}/> </li>           
         </ol>)} 
           </div> : !intra && !read ?
             (<div className="border border-gray-100 m-2">
@@ -109,7 +135,7 @@ export default function Teacher(){
           {student.map((exa:any,index)=>
         <ol key={exa.id} className={`${colors[index % colors.length]}`}>
              <li><TheacherInput2 session={search4} year={search3} 
-                name={`${exa.last_name} ${exa.first_name}`} matiere={search2} id={exa.id}/></li>
+                name={`${exa.last_name} ${exa.first_name}`} matiere={faculty} id={exa.id}/></li>
         </ol>)}
             </div>):null}
             {/*read session */}

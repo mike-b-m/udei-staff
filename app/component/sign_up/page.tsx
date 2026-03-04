@@ -1,47 +1,42 @@
 'use client'
 import { supabase } from "../db";
 import { useState, useEffect } from "react";
-
+import Time from "../time/time";
+const colors=[
+ "bg-[#2DAE0D]/70",
+ "bg-gray-200"
+]
 export default function SignUp(){
     const [email,setEmail]= useState('')
     const [password, setPassword]= useState('')
     const [phone,setPhone]= useState('')
     const [fullname, setFullname] = useState ('')
     const [role , setRole] =useState('')
-    const [matiere, setMatiere] = useState<any[]>([])
-    const [program,setProgram] = useState<any[]>([])
    //program
    const [filter,setFilter] =useState<string[]>([])
    const [faculty,setFaculty] = useState('')
    const [session,setSession] = useState('')
    const [year,setYear] = useState('')
+   const [read,setRead] =useState<any[]>([])
+   //loading
+   const [load,setLoad] = useState(false)
+   const [save,setSave] = useState(false)
+   const [error,setError] = useState('')
 
-    const handleSelectChange = (event:any) => {
-    const options = event.target.options;
-    const value = [];
-    for (let i = 0; i < options.length; i++) {
-      if (options[i].selected) {
-        value.push(options[i].value);
-      }
-    }
-    setMatiere(value);
-  };
-
-  
        useEffect(() => {
-              const getData = async () => {
-                 //list cours in program
-                 const { data:pro, error:theError } = await supabase
-    .from('course_program')
-    .select('*').eq('faculty', faculty).eq('session', session).eq('year', year);
-          if (theError) console.error(theError.message)
-          else setProgram(pro)
+              const getData = async () => {            
+           const { data:pr, error:theErr } = await supabase
+    .from('profiles')
+    .select('*');
+          if (theErr) console.error(theErr.message)
+          else setRead(pr)
   
               }; 
               getData()},[])
 
     const HandleCreate = async (e:any) => {
     e.preventDefault()
+    setLoad(true)
             const {data, error} = await supabase.auth.signUp({
   email: email,
   password: password,
@@ -55,13 +50,41 @@ export default function SignUp(){
 });
     if (error) {
   console.error('Error:', error.message);
+  setLoad(false)
+  setError(error.message)
+  setTimeout(() => {setError('')  }, 2000);
 } else {
   console.log('Saved:', data);
+  setLoad(false)
+  setSave(true)
+  setTimeout(() => {setSave(false)   
+            }, 2000);
 
     };}
 return(
-    <>
-    <form onSubmit={HandleCreate} className="bg-gray-200 pl-20">
+    <div >
+      {/* set error message  */}
+                    {error ? (<div className="fixed inset top-0 bg-red-100 p-7 text-red-500 flex border border-gray-500 rounded-lg">
+                        Error: {error}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+  <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 
+  9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06
+   1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06
+    12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z" clipRule="evenodd" />
+</svg>
+        </div> ) : ''}
+      {/* set save  */}
+                    {save ? (<div className="fixed inset bg-gray-100 p-7 text-green-600 flex border border-gray-500 rounded-lg">
+                        save with succes
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+                             className="size-6">
+        <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.844-8.791a.75.75 
+        0 0 0-1.188-.918l-3.7 4.79-1.649-1.833a.75.75 0 1 0-1.114 1.004l2.25 2.5a.75.75 0 0
+        0 1.15-.043l4.25-5.5Z" clipRule="evenodd" />
+        </svg>
+        </div> ) : ''}
+
+    <form onSubmit={HandleCreate} className="bg-gray-200 pl-20 mt-3 rounded-xl pb-5">
       <h2 className="text-center font-poppins font-medium m-2 text-[20px]">Créer un compte pour le personnel</h2>
         <input type="text" placeholder="fullname" 
         className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
@@ -84,70 +107,29 @@ return(
         <option>role</option>
         <option>admin</option>
         <option>editor</option>
+        <option>admistration</option>
         <option>prof</option>
     </select>
 
-    {/*select prof */}
-    {role === 'prof' ? <div>
-      {/*matiere, year, */}
-      {matiere}
-      {/*filter section */}
-      <div className="flex p-5">
-        <label>faculté</label>
-    <select value={faculty} className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] bg-gray-300" onChange={(e)=>setFaculty(e.target.value)}>
-        <option>option</option>
-                    <option>Génie Civil</option>
-                    <option>Médecine Générale</option>
-                    <option>Odontologie</option>
-                    <option>Sciences Infirmières</option>
-                    <option> Sciences Administratives</option>
-                    <option>Sciences Comptables</option>
-                    <option>Gestion des affaires</option>
-                    <option>Sciences Agronomiques</option>
-                    <option> Sciences Economiques</option>
-                    <option>Sciences de l'Education</option>
-                    <option>Sciences Juridiques</option>
-                    <option>Pharmacologies</option>
-                    <option>Médecine vétérinaire</option>
-                    <option> Laboratoire medicale</option>
-                    <option>Physiothérapie</option>
-                    <option>Jardinières d'enfants</option>
-    </select>
-
-      <label>session</label>
-    <select value={session} className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] bg-gray-300" onChange={(e)=>setSession(e.target.value)}>
-        <option>option</option>
-                    <option>1</option>
-                    <option>2</option>
-    </select>
-
-      <label>year</label>
-    <select value={year} className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] bg-gray-300" onChange={(e)=>setYear(e.target.value)}>
-        <option>option</option>
-                    <option>1</option>
-                    <option>2</option>
-                    <option>3</option>
-                    <option>4</option>
-                    <option>5</option>
-    </select>
-      </div>
-
-
-      <label htmlFor=""></label>
     
-    <select multiple value={matiere} className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] bg-gray-300" onChange={handleSelectChange}>
-       {program.map((pro)=>
-        <ol key={pro.id}><li><option>{pro.courses}</option></li></ol>
-        )}
-    </select>
-    </div>: null}
-    <button className="bg-[#2DAE0D] rounded-2xl
-             text-white text-[20px] hover:bg-green-700 w-25 h-8">create</button>
+    <button  className={`${load === false ? "bg-[#2DAE0D] rounded-4xl text-white text-[20px] hover:bg-green-700 w-20 h-10" 
+             : "bg-gray-700 rounded-4xl text-white text-[20px] hover:bg-green-700 w-30 h-10"}`} disabled={load}>{load ? 'creating...' : 'create'}</button>
     </form>
-    </>
+
+    <div className="bg-gray-200 mt-3 rounded-xl">
+      <h3 className="text-center">account created</h3>
+      <div className="flex justify-between">
+        <div className="w-50">Nom et Prénom</div>
+        <div className="w-50">role</div>
+        <div className="w-50">date</div>
+      </div>
+      {read.map((rea,index)=>
+      <ol key={rea.full_name} className={`flex justify-between border-b-5 border-white ${colors[index % colors.length]}`}>
+      <li className="w-50">{rea.full_name}</li>
+      <li className="w-50">{rea.role}</li>
+      <li className="pr-15"><Time open={rea.created_at}/></li>
+      </ol>)}
+    </div>
+    </div>
     )
     }

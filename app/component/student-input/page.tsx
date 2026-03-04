@@ -102,22 +102,22 @@ export default function Student_input(){
             <form onSubmit={HandleSubmit} className="grid grid-cols-1 pl-[15%] pr-[15%] pb-3">
                  <div className="flex justify-between">
                     <Input int={last_name} text="Nom"
-                    type="text" out={(e)=>setLast_name(e.target.value)}/>
-                     <Input int={first_name} text="Pronom"
-                     type="text" out={(e)=>setFirst_name(e.target.value)}/>
+                    type="text" out={(e)=>setLast_name(e.target.value)} require={true}/>
+                     <Input int={first_name} text="Prénom"
+                     type="text" out={(e)=>setFirst_name(e.target.value)} require={true}/>
                     </div>
 
                 <div className="flex justify-between">
                   <Input int={date_birth} text="date de naissance"
-                     type="date" out={(e)=>setDate_birth(e.target.value)}/>
+                     type="date" out={(e)=>setDate_birth(e.target.value)} require={true}/>
                     
                 <Input int={place_of_birth} text="lieu de naissance"
-                     type="text" out={(e)=>setPlace_of_birth(e.target.value)}/>
+                     type="text" out={(e)=>setPlace_of_birth(e.target.value)} require={true}/>
                     </div>
 
                 <div className="">
                   <Input int={nif_cin} text="NIF/CIN"
-                     type="number" out={(e)=>setNif_cin(e.target.value)}/>
+                     type="number" out={(e)=>setNif_cin(e.target.value)} require={true}/>
                     </div>
 
                 {/*matrimonial status*/}
@@ -125,23 +125,23 @@ export default function Student_input(){
                   <span><label >statut matrimonial</label>
                 <select value={marital_status} onChange={(e)=>setMarital_status(e.target.value)}
                     className="py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[50%] h-10 bg-gray-300 border border-gray-400 ">
-                    <option>option</option>
+                  rounded-4xl placeholder:text w-[50%] h-10 bg-gray-300 border border-gray-400 " required>
+                    <option value="">option</option>
                     <option>Marié</option>
                     <option>Célibataire</option>
                     <option>divorcé</option>
                 </select></span>
                 
                 <Input int={adress} text="Adresse"
-                     type="text" out={(e)=>setAdress(e.target.value)}/>    
+                     type="text" out={(e)=>setAdress(e.target.value)} require={true}/>    
                 </div>
 
                 <div className="flex justify-between">
                   <Input int={phone_number} text="Téléphone"
-                     type="text" out={(e)=>setPhone_number(e.target.value)}/>
+                     type="text" out={(e)=>setPhone_number(e.target.value)} require/>
                      
                   <Input int={email} text="email"
-                     type="email" out={(e)=>setEmail(e.target.value)}/>
+                     type="email" out={(e)=>setEmail(e.target.value)} require/>
                  </div>
 
                 {/*faculty part */}
@@ -149,8 +149,8 @@ export default function Student_input(){
                 <span><label>Faculté:</label>
                 <select value={faculty} onChange={(e)=>setFaculty(e.target.value)}
                     className=" mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-full bg-gray-300">
-                    <option>option</option>
+                  rounded-4xl placeholder:text w-full bg-gray-300" required>
+                    <option value="">option</option>
                     <option>Génie Civil</option>
                     <option>Médecine Générale</option>
                     <option>Odontologie</option>
@@ -173,8 +173,8 @@ export default function Student_input(){
                 <span><label>sexe</label>
                 <select value={sex} onChange={(e)=>setSex(e.target.value)}
                     className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-full bg-gray-300">
-                    <option >options</option>
+                  rounded-4xl placeholder:text w-full bg-gray-300" required>
+                    <option value="">options</option>
                     <option>Masculin</option>
                     <option>féminin</option>
                 </select></span>
@@ -184,41 +184,41 @@ export default function Student_input(){
             <div className="border-t-2 border-gray-600 mt-4">
               <div className="flex justify-between">
                 <Input int={mother_name} text="Mère"
-                     type="text" out={(e)=>setMother_name(e.target.value)}/>       
+                     type="text" out={(e)=>setMother_name(e.target.value)} require={false}/>       
                  <Input int={mother_birth} text="lieu de naissance"
-                     type="text" out={(e)=>setMother_birth(e.target.value)}/>
+                     type="text" out={(e)=>setMother_birth(e.target.value)} require={false}/>
                    </div>           
             <div className="flex justify-between">
               <Input int={mother_residence} text="Domicile"
-                     type="text" out={(e)=>setMother_residence(e.target.value)}/>
+                     type="text" out={(e)=>setMother_residence(e.target.value)} require={false}/>
               <Input int={mother_phone} text="Téléphone"
-                     type="text" out={(e)=>setMother_phone(e.target.value)}/>
+                     type="text" out={(e)=>setMother_phone(e.target.value)} require={false}/>
             </div> 
              <Input int={mother_profesion} text="Profesion"
-                     type="text" out={(e)=>setMother_profesion(e.target.value)}/>
+                     type="text" out={(e)=>setMother_profesion(e.target.value)} require={false}/>
             </div>
             {/*father section */}
             <div className="border-t-2 border-gray-600 mt-4">
             <div className="flex justify-between">
               <Input int={father_name} text="Père"
-                     type="text" out={(e)=>setFather_name(e.target.value)}/>
+                     type="text" out={(e)=>setFather_name(e.target.value)} require={false}/>
               <Input int={father_birth} text="Lieu de naissance"
-                     type="text" out={(e)=>setFather_birth(e.target.value)}/>
+                     type="text" out={(e)=>setFather_birth(e.target.value)} require={false}/>
            </div>
             
             <div className="flex justify-between">
               <Input int={father_residence} text="Domicile"
-                     type="text" out={(e)=>setFather_residence(e.target.value)}/>
+                     type="text" out={(e)=>setFather_residence(e.target.value)} require={false}/>
                 <Input int={father_phone} text="Téléphone"
-                     type="text" out={(e)=>setFather_phone(e.target.value)}/>
+                     type="text" out={(e)=>setFather_phone(e.target.value)} require={false}/>
            </div>
             
             <Input int={father_profesion} text="Prefession"
-                     type="text" out={(e)=>setFather_profesion(e.target.value)}/>
+                     type="text" out={(e)=>setFather_profesion(e.target.value)} require={false}/>
           
             </div>
               <Input int={seen_by} text="Vue par"
-                     type="text" out={(e)=>setSeen_by(e.target.value)}/>
+                     type="text" out={(e)=>setSeen_by(e.target.value)} require={false}/>
                     
             <div className="">
               <div className="border border-gray-400 rounded-lg p-2 m-1 text-center">
