@@ -3,6 +3,7 @@ import { supabase } from "../db";
 import { useState, useEffect } from "react";
 import Input from "../input/input-comp";
 import { Code } from "../code/code";
+import Image from "next/image";
  
 export default function Student_input(){
     const[first_name, setFirst_name]= useState('')
@@ -35,15 +36,52 @@ export default function Student_input(){
     const [code,setCode]=useState('')
     const [seen_by,setSeen_by]= useState('')
     const [agreement, setAgreement] =useState(Boolean)
+    {/*student photo*/}
+    const [photo, setPhoto] = useState<File | null>(null)
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null)
     
     {/*save succes or error */}
     const [load,setLoad] = useState (false)
     const [save,setSave]= useState(false)
 
+    {/*handle photo selection*/}
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0] || null
+      setPhoto(file)
+      if (file) {
+        setPhotoPreview(URL.createObjectURL(file))
+      } else {
+        setPhotoPreview(null)
+      }
+    }
+
     {/*Submit fonstion */}
     const HandleSubmit = async (e:any) => {
        setLoad(true)
     e.preventDefault()
+
+    let photo_url: string | null = null
+
+    {/* Upload photo to Supabase storage */}
+    if (photo) {
+      const fileExt = photo.name.split('.').pop()
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
+      const { error: uploadError } = await supabase.storage
+        .from('student_photo')
+        .upload(fileName, photo, { contentType: photo.type })
+
+      if (uploadError) {
+        console.error('Photo upload error:', uploadError.message)
+        setLoad(false)
+        return
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('student_photo')
+        .getPublicUrl(fileName)
+      photo_url = urlData.publicUrl
+    }
+
             const {data, error} = await supabase.from('student')
             .insert([{first_name,
               last_name,
@@ -67,7 +105,8 @@ export default function Student_input(){
                 agreement,
                 diploma,
                 seen_by,
-              student_code: code}]).select();
+              student_code: code,
+              photo_url}]).select();
     if (error) {
   console.error('Error:', error.message);
   setLoad(false)
@@ -100,6 +139,22 @@ export default function Student_input(){
                        
               <h6 className="text-center text-[20px] mt-4">formulaire d'inscription</h6>
             <form onSubmit={HandleSubmit} className="grid grid-cols-1 pl-[15%] pr-[15%] pb-3">
+                {/* Student Photo Upload */}
+                <div className="flex flex-col items-center mb-4">
+                  <label className="font-poppins mb-2">Photo de l&apos;étudiant</label>
+                  <div className="w-32 h-32 rounded-full border-2 border-gray-400 overflow-hidden bg-gray-300 flex items-center justify-center mb-2">
+                    {photoPreview ? (
+                      <Image src={photoPreview} alt="Preview" width={128} height={128} className="w-full h-full object-cover" />
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-500">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                      </svg>
+                    )}
+                  </div>
+                  <input type="file" accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="py-1 px-2 text-sm file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:bg-green-600 file:text-white hover:file:bg-green-700 cursor-pointer" />
+                </div>
                  <div className="flex justify-between">
                     <Input int={last_name} text="Nom"
                     type="text" out={(e)=>setLast_name(e.target.value)} require={true}/>
