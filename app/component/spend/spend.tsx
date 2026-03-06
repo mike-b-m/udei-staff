@@ -13,7 +13,7 @@ type company ={
   decribe_motive: string
 }
 const colors=[
- "bg-[#2DAE0D]/70",
+ "bg-[#2DAE0D]",
  "bg-gray-200"
 ]
 export default function Spend() {
@@ -23,7 +23,8 @@ export default function Spend() {
   useEffect(() => {
     const getData = async () => {
       const { data:comp, error } =  await supabase.from('spent_in_company').select('*')
-      .gte('date_time', year);
+      .gte('date_time', year)
+      .order('date_time', { ascending: false });
     if (error) console.error(error)
       else setDat(comp)
     }; 
@@ -32,7 +33,7 @@ export default function Spend() {
  
   return (
 <>
-<div className="mr-5 ml-1 w-[80%] justify-center">
+<div className="w-full justify-center">
    {/* filter query*/}
   <div>
     <select onChange={(e)=>setYear(e.target.value)}>
@@ -44,9 +45,10 @@ export default function Spend() {
     </select>
   </div>
   <Add_botton/>
-  {/* header for the list of spent */}
+  <div className="rounded-xl border-4 pb-0.1 mt-3 border-gray-500 bg-gray-200">
+    {/* header for the list of spent */}
    <h3 className="text-center text-[20px]">Money spent</h3>
-    <ol className="flex justify-between bg-gray-300 font-poppins rounded-t-xl border-b border-t border-gray-400">
+    <ol className="flex justify-between bg-gray-300 font-poppins border-b border-t border-gray-400">
     <div className="bg-gray-300 min-w-50 text-center "><li className="ml-5:">nom</li></div>
   <li className="bg-gray-300 min-w-50 text-center">montant</li>
   <li className="bg-gray-300 min-w-50 text-center">date</li>
@@ -56,15 +58,14 @@ export default function Spend() {
   {/*list of company spent */}
   <div className="rounded-b-lg  bg-gray-200">
    {dat.map((compan,index)=>(
-  <ol key={compan.id}   className={`flex justify-between text-center border-b border-gray-400 ${colors[index  % colors.length]}`}>
-    <li className="min-w-50  border-b-0.5">{compan.name}</li>
-  <li className=" min-w-50  border-b-0.5 ">HTG  {compan.amount}</li>
-  <li className="min-w-50 border-b-0.5"><Time open={compan.date_time}/></li>
-  <li className=" min-w-50  max-w-50  border-b-0.5">{compan.decribe_motive}</li>
-  <li className="mr-5 min-w-50  border-b-0.5">{compan.pay_method}</li></ol>
+  <ol key={compan.id}   className={`flex justify-between text-center w-full  border-b-2 border-gray-400 ${colors[index  % colors.length]}`}>
+    <li className={`min-w-50  border-b-0.5`}>{compan.name}</li>
+  <li className={`min-w-50  border-b-0.5`}>HTG  {compan.amount}</li>
+  <li className={`min-w-50 border-b-0.5`}><Time open={compan.date_time}/></li>
+  <li className={`min-w-50  max-w-50  border-b-0.5`}>{compan.decribe_motive}</li>
+  <li className={`mr-5 min-w-50  border-b-0.5`}>{compan.pay_method}</li></ol>
 ))}</div>
-
-<div className="text-center"> 0-10 <button>next</button></div>
+  </div>
 </div>
 
 </>

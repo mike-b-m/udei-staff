@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import  Lecture  from "../lect_input/lecture";
 import Link from "next/link";
 import { Filter } from "../filter/filter";
+import Image from "next/image";
 
 type user = {
     id: number
@@ -19,6 +20,7 @@ type user = {
     phone_number: string
     marital_status: string
     adress: string
+    student_code: string
     
     mother_name: string
     mother_birth:string
@@ -35,6 +37,7 @@ type user = {
     diploma: string
     enrol_date: string
     seen_by: string
+    photo_url: string
 }
 // interface prop{
 //   nom: string
@@ -49,6 +52,10 @@ type stat ={
   faculty: string
   year_completed: number
 }
+interface ph{
+  dat: string
+}
+
 export default function StudentInfos(){
      const [studentInfos, setStudentInfos] = useState<user[]>([])
      const [first_name,setFirst_name]=useState('')
@@ -58,6 +65,7 @@ export default function StudentInfos(){
      const searchpara = useSearchParams();
         const search = searchpara.get('nom') || '';
         const search2 = searchpara.get('prenom') || '';
+       
 
       useEffect(() => {
         const getData = async () => {
@@ -90,35 +98,41 @@ export default function StudentInfos(){
         
      return(
         <>
-        <div className="ml-[1%] mr-[1%] bg-gray-200 rounded-2xl m-3 p-2 w-full ">
+        <div className="bg-gray-200 rounded-2xl w-full ">
           {/*search section */}
-          <form action="/search" className="flex justify-between">
+          <form action="/search" className="flex justify-between mb-5 pr-50 pt-5 pl-50">
            
             <input type="text" value={last_name}
             name="nom"
                 placeholder="nom"
                  onChange={(e)=>setLast_name(e.target.value)}
                 className="mr-[15%] py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] h-8 bg-gray-100"/>
+                  rounded-4xl placeholder:text w- h-8 bg-gray-100"/>
 
                   <input type="text" value={first_name}
             name="prenom"
                 placeholder="prenom"
                  onChange={(e)=>setFirst_name(e.target.value)}
                  className="mr-[15%] py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] h-8 bg-gray-100"/>
+                  rounded-4xl placeholder:text w- h-8 bg-gray-100"/>
 
                   <button type="submit" className="bg-[#2DAE0D] rounded-2xl
-             text-white text-[20px] hover:bg-green-700 w-25 h-8">Search</button>
+             text-white text-[20px] hover:bg-green-700 w-30 pr-5 pl-5 h-8">Search</button>
           </form>
           {/*section read student infos */}
-          <h3 className="text-center font-poppins text-[20px]">formulaire Inscription</h3>
+          {search && search2 ? 
+          (<div>
+            <h3 className="text-center font-poppins text-[20px]">formulaire Inscription</h3>
             <ol>{studentInfos.map((user)=>
             <li className="" key={user.id}>
                 {/*infos perso */}
-                <div className="grid grid-cols-3">
-                  <Lecture int="Nom" out={user.first_name} />
-                 <Lecture int="Prenom" out={user.last_name} />
+                 <div className="flex ">
+                  <div className="size-45 m-3">{user.photo_url? (<Image src={user.photo_url} alt="Preview" width={128} height={128} 
+                  className="w-full h-full object-cover rounded-xl" />) : null}</div>
+
+                <div className="grid grid-flow-col grid-rows-3 w-full p-2">
+                  <Lecture int="Nom" out={user.last_name} />
+                 <Lecture int="Prenom" out={user.first_name} />
                   <Lecture int="Email" out={user.email} />
                    <Lecture int="Date de naissance" out={user.date_birth} />
                     <Lecture int="lieu de naissance" out={user.place_of_birth} />
@@ -128,8 +142,9 @@ export default function StudentInfos(){
                       <Lecture int="Adress" out={user.adress} />
                       <Lecture int="Telephone" out={user.phone_number} />
                       <Lecture int="Faculté" out={user.faculty} />
-                      <Lecture int="Vue par" out={user.seen_by} />
+                      <Lecture int="code" out={user.student_code} />
                   </div>
+                 </div>
                   {/*link */}
                     {role.role === 'admin' || role.role === 'admistration' ? <Link href={`/payment?id=${user.id}`}  className="pl-3  bg-[#2DAE0D] rounded-2xl text-white text-[20px] hover:bg-green-700 w-35 pr-2  m-3 flex">
                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 mt-1">
@@ -141,7 +156,7 @@ export default function StudentInfos(){
                <Lecture int="Année actuel" out={status[0]?.year_study} />
              <Lecture int="Année complete" out={status[0]?.year_completed} />
              <Lecture int="Vue par" out={studentInfos[0]?.seen_by} />
-             <Lecture int="année completer" out={status[0]?.faculty_completion} />
+             <Lecture int="année completer" out={status[0]?.faculty_completion ? 'Oui':'Non'} />
              
               { role.role === 'admin' || role.role === 'admistration' || role.role === 'editor' ?
               <Filter id={studentInfos[0]?.id} bool={status[0]?.faculty_completion} year={status[0]?.year_study}
@@ -151,22 +166,23 @@ export default function StudentInfos(){
                  {/*family infos for mother*/}
                <h3 className="text-center m-2 underline text-[16px]">Information familiales </h3>
                  <div className="grid grid-cols-3"> 
-                    <Lecture int="Mère" out={user.mother_name} />
-                       <Lecture int="Lieu de naissance" out={user.mother_birth} />
-                        <Lecture int="Domicile" out={user.mother_residence} />
-                       <Lecture int="Téléphone" out={user.mother_phone} />
-                        <Lecture int="Profession" out={user.mother_profesion} />
+                    <Lecture int="Mère" out={user.mother_name ? `${user.mother_name}`:'vide'} />
+                      <Lecture int="Lieu de naissance" out={user.mother_birth ? `${user.mother_birth}`:'vide'} />
+                        <Lecture int="Domicile" out={user.mother_residence  ? `${user.mother_residence}`:'vide'} />
+                       <Lecture int="Téléphone" out={user.mother_phone ? `${user.mother_phone}`:'vide'} />
+                        <Lecture int="Profession" out={user.mother_profesion ? `${user.mother_profesion}`:'vide'} />
                   </div> 
                 {/*family infos for father*/}
                  <div className="grid grid-cols-3">                  
-                  <Lecture int="Père" out={user.father_name} />
-                 <Lecture int="Lieu de naissance" out={user.father_birth} />
-                        <Lecture int="Domicile" out={user.father_residence} />
-                       <Lecture int="Téléphone" out={user.father_phone} />
-                        <Lecture int="Profession" out={user.father_profesion} />
+                  <Lecture int="Père" out={user.father_name ? `${user.father_name}`:'vide'} />
+                 <Lecture int="Lieu de naissance" out={user.father_birth ? `${user.father_birth}`:'vide'} />
+                        <Lecture int="Domicile" out={user.father_residence ? `${user.father_residence}`:'vide'} />
+                       <Lecture int="Téléphone" out={user.father_phone ? `${user.father_phone}`:'vide'} />
+                        <Lecture int="Profession" out={user.father_profesion ? `${user.father_profesion}`:'vide'} />
                  </div>
            </li>)}
             </ol>
+          </div>) : <div className="text-center text-[20px] p-50 font-inter text-gray-800">Veuillez sélectionner une faculté dans la section filtre.</div>}
         
         </div>
         </>

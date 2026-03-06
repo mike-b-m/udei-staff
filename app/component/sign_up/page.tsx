@@ -2,6 +2,7 @@
 import { supabase } from "../db";
 import { useState, useEffect } from "react";
 import Time from "../time/time";
+import Input from "../input/input-comp";
 const colors=[
  "bg-[#2DAE0D]/70",
  "bg-gray-200"
@@ -84,32 +85,33 @@ return(
         </svg>
         </div> ) : ''}
 
-    <form onSubmit={HandleCreate} className="bg-gray-200 pl-20 mt-3 rounded-xl pb-5">
+    <form onSubmit={HandleCreate} className="bg-gray-200 pl-20 mt-3 rounded-xl text-center pb-5 ">
       <h2 className="text-center font-poppins font-medium m-2 text-[20px]">Créer un compte pour le personnel</h2>
-        <input type="text" placeholder="fullname" 
-        className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] bg-gray-300"
-                  value={fullname} onChange={(e)=>setFullname(e.target.value)} />
-        <input type="email" placeholder="email"  value={email} className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] bg-gray-300"
-                   onChange={(e)=>setEmail(e.target.value)}/>
-        <input type="password" placeholder="password" value={password} 
-        className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] bg-gray-300" onChange={(e)=>setPassword(e.target.value)}/>
-        <input type="text" placeholder="phone" className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] bg-gray-300"
-                   value={phone} onChange={(e)=>setPhone(e.target.value)}/>
+       <div className="grid grid-cols-2 mt-5">
+        <Input int={fullname} type="text" text="fullname" 
+                         out={(e)=>setFullname(e.target.value)} require={true}/>
+        
+        <Input int={email} type="email" text="email" 
+                         out={(e)=>setEmail(e.target.value)} require={true}/>
+        <Input int={password} type="password" text="pasword" 
+                         out={(e)=>setPassword(e.target.value)} require={true}/>
+        <Input int={phone} type="text" text="phone" 
+                         out={(e)=>setPhone(e.target.value)} require={false}/>
+                         
+       
     
     {/*sectoin access of role */}
-    <label htmlFor=""></label>
-    <select className="mr-[15%] mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w-[25%] bg-gray-300" onChange={(e)=>setRole(e.target.value)}>
-        <option>role</option>
+    <select  className="mr-[15%] mt-2.5 w-40 px-4 focus:outline-none
+                  rounded-4xl h-8 placeholder:text bg-gray-300"
+                   onChange={(e)=>setRole(e.target.value)}
+                    required >
+        <option value=''>role</option>
         <option>admin</option>
         <option>editor</option>
         <option>admistration</option>
         <option>prof</option>
-    </select>
+    </select> 
+       </div>
 
     
     <button  className={`${load === false ? "bg-[#2DAE0D] rounded-4xl text-white text-[20px] hover:bg-green-700 w-20 h-10" 

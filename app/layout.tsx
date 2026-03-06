@@ -35,9 +35,9 @@ export default function RootLayout({
         className={`${inter.className} ${poppins.className} antialiased`}
       >
         <Header/> 
-        <div className="flex justify-center">
+        <div className="flex justify-center right-0 pb-10">
           <Nav/>
-        {children }
+              <div className="ml-[32px] mr-[32px] mt-[24px] w-full">{children }</div>
           </div>
         <Footer/>
       </body>

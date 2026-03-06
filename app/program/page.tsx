@@ -53,7 +53,7 @@ setVeri(false)}
     getData()},[])
     const sum = program
     return(
-        <div className="w-full bg-gray-200 mt-3 rounded-xl mr-3"> 
+        <div className="w-full bg-gray-200 mt-3 rounded-xl mr-3 static"> 
         <form action="/program" className="text-center">
         {/*<input type="text" name="faculty"  className="border-2" />*/}
         <label>Faculté:</label>
@@ -79,18 +79,20 @@ setVeri(false)}
                     <option>Physiothérapie</option>
                     <option>Jardinières D'enfants</option>
                 </select>
-        <button type="submit" className="bg-green-400 border border-gray-400 m-3 rounded-2xl
-             text-gray-800 text-[16px] hover:bg-green-700 w-25 h-6">search</button></form>
+        <button type="submit" className="bg-[#2DAE0D] m-5 rounded-2xl
+             text-white text-[16px] hover:bg-green-700 pr-5 pl-5 h-8">Recherche</button></form>
 
-            {veri ? <form onSubmit={programInput} className="grid justify-between m-3 grid-cols-5 ">
-                <Input int={courses} type="text" text="Cours" out={(e)=>setCourses(e.target.value)} require={false}/>
+            {veri ? <form onSubmit={programInput} className="relative insert-0  bg-gray-100">
+                <div className=" flex">
+                    <Input int={courses} type="text" text="Cours" out={(e)=>setCourses(e.target.value)} require={false}/>
                  <Input int={credit} type="number" text="Crédit" out={(e)=>setCredit(e.target.value)} require={false}/>
-                  <Input int={session_subjet} type="number" text="Nombres séances/H" 
+                  <Input int={session_subjet} type="number" text="Nbr séances/H" 
                   out={(e)=>setSession_subjet(e.target.value)} require={false}/>
-                   <Input int={hour_session} type="number" text="Nombres H/séances" 
+                   <Input int={hour_session} type="number" text="Nbr H/séances" 
                    out={(e)=>setHour_session(e.target.value)} require={false}/>
-                    <Input int={total_hour} type="number" text="Numbres d'heures totals " 
+                    <Input int={total_hour} type="number" text="Nbr d'heures totals " 
                     out={(e)=>setTotal_hour(e.target.value)} require={false}/>
+                </div>
                      
                      <div className="w-1">
                          <label>Faculté:</label>
@@ -143,11 +145,11 @@ setVeri(false)}
                        <button type="submit" className="bg-[#2DAE0D] m-5 rounded-2xl
              text-white text-[20px] hover:bg-green-700 w-25 h-8">save</button>
             </form> : <button  className="bg-[#2DAE0D] m-5 rounded-2xl
-             text-white text-[16px] hover:bg-green-700 pr-5 pl-5 h-8" onClick={()=>setVeri(true)}>Add program</button> }
+             text-white text-[16px] hover:bg-green-700 pr-5 pl-5 h-8" onClick={()=>setVeri(true)}>Ajouter un programme</button> }
             {/*table program */}
-            <h3 className="text-center">Program des cours : {search} </h3>
-            
+              
             { search ? <div className=" mt-15">
+                <h3 className="text-center">Program des cours : {search} </h3>
                 <TheTable int={program} session={1} year={1} faculty={search}/>
                 <TheTable int={program} session={2} year={1} faculty={search}/>
 
@@ -162,7 +164,8 @@ setVeri(false)}
 
                 <TheTable int={program} session={1} year={5} faculty={search}/>
                 <TheTable int={program} session={2} year={5} faculty={search}/>
-            </div>: null}
+            </div>: <div className="text-center text-[20px] p-50 font-inter text-gray-800">
+  Veuillez sélectionner une faculté dans la section filtre.</div>}
         </div>
     )
 }

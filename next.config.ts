@@ -9,4 +9,16 @@ const nextConfig: NextConfig = {
   },
 };
 
+module.exports = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'nmdpobapzhsxagbxdckm.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/student_photo/**',
+      },
+    ],
+  },
+}
 export default nextConfig;

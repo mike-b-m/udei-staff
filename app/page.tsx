@@ -5,7 +5,7 @@ import { Suspense, useState, useEffect} from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {Filter2} from "./component/filter/filter";
-import { Code } from "./component/code/code";
+import { Delete_button } from "./component/add-buuton/add_button";
 
 type student = {
     id: number
@@ -50,7 +50,7 @@ function Home() {
 
  const searchpara = useSearchParams();
          const search = searchpara.get('faculty') || '';
-
+         
           async ()=> {const { data, error } = await supabase.auth.getUser()
         if (error) console.error(error.message)
         //else setUse(user as any | null)
@@ -68,20 +68,28 @@ function Home() {
  
   return (
 <>
-<div className="w-full mt-3 bg-gray-200 rounded-xl">
+<div className="w-full rounded-xl static">
   
    {/* filter query*/}
-  <div><button className="text-xl ml-5 flex" onClick={()=>setFilter(!filter)}>filter
+  <div>
+    {/*filter section */}
+    <div className="mb-[32px]">
+      <button className="text-[20px] flex w-[140px] justify-center border rounded-[8px]" onClick={()=>setFilter(!filter)}>filter
      {filter ?  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
-        strokeWidth="1.5" stroke="currentColor" className="size-6">
+        strokeWidth="1.5" stroke="currentColor" className="size-6  ml-2 mt-1">
   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
 </svg> :<svg xmlns="http://www.w3.org/2000/svg" fill="none" 
-        viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
+        viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 ml-2 mt-1">
   <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
 </svg> }</button>
+    </div>
+
+      <div className="text-gray-600 mb-[4px]">
+        {dat?.length} Résultats
+      </div>
    {filter ?
-  <div className="relative">
-     <form action="/" className="absolute bg-gray-300 p-5 rounded-xl">
+  <div className="absolute top-31 w-[50px]">
+     <form action="/" className="absolute bg-gray-300 w-[260px] p-5 rounded-xl">
     <div><input type="radio" name="faculty" value='Génie Civil' /> Génie Civil</div>
      <div><input type="radio" name="faculty" value='Médecine Générale' />Médecine Générale</div>
      <div><input type="radio" name="faculty" value='Odontologie' /> Odontologie</div>
@@ -104,21 +112,25 @@ function Home() {
    </form>
   </div> : null}
   </div>
-  {/* header for the list of student by faculty*/}
-    <ol className="w-full flex justify-between p-1 mt-3 bg-gray-400 rounded-t-xl font-medium">
+  {search ? (<div className="border-4 border-gray-500 rounded-[16px]">{/* header for the list of student by faculty*/}
+    <ol className="w-full flex justify-between p-1 bg-gray-400 rounded-t-[12px] font-medium">
     <li className="w-full pl-5">Nom et Prénom</li>
   <li className="w-full">Faculté</li>
   <li className="w-full">Niveau</li>
+  <li className="w-full"></li>
   </ol>
   {/*list of list of student by faculty */}
    <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan,index)=>(
-  <ol key={compan.id}   className={`flex justify-between  ${colors[index % colors.length]}`}>
+  <ol key={compan.id}   className={`flex   ${colors[index % colors.length]}`}>
     <li className="w-full pl-5"><Link href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>{compan.last_name} {compan.first_name}</Link></li>
   <li className="w-full">{compan.faculty}</li>
   <li className="w-full"><Filter2 id={compan.id} bool/></li>
- 
+  <li className="w-full"><Delete_button id={compan.id} value="student"/></li>
   </ol>
-))}</div> 
+))}
+</div> </div>)
+ : <div className="text-center text-[20px] p-50 font-inter text-gray-800">
+  Veuillez sélectionner une faculté dans la section filtre.</div>}
 
 </div>
 

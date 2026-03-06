@@ -152,7 +152,7 @@ export  function Price(){
         </div>
     )
 }
-function Stu({id}:ide){
+export function Stu({id}:ide){
     const [du,setDu] =useState<st[] | any>()
      useEffect(() => {
             const getData = async () => {

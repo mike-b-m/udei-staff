@@ -32,25 +32,24 @@ return(
   <form onSubmit={HandleSubmit} className="flex justify-between m-2">
     <div>
        <Input int={name} text="Nom"
-                           type="text" out={(e)=>setName(e.target.value)} require={false}/>
+                           type="text" out={(e)=>setName(e.target.value)} require={true}/>
          <Input int={amount} text="Montant (HTG)"
-                             type="text" out={(e)=>setAmount(e.target.value)} require={false}/>
+                             type="number" out={(e)=>setAmount(e.target.value)} require={true}/>
                   </div>
                   <textarea className="mt-2.5 py-2 px-4 focus:outline-none
-                  rounded-xl placeholder:text w-[15%] bg-gray-300"
+                  rounded-xl placeholder:text w-[15%] bg-gray-300" required
                   placeholder="Description" value={decribe_motive} onChange={(e)=> setDicribe_motive(e.target.value)} />
 
     {/*the date section */}
      <Input int={date_time} text="Date"
-                         type="date" out={(e)=>setDate_time(e.target.value)} require={false}/>
+                         type="date" out={(e)=>setDate_time(e.target.value)} require={true}/>
           
     {/*select the method of payment */}
     <div>
-      <label>Method</label>
-    <select className="py-2 px-4 focus:outline-none
+    <select required className="py-2 px-4 focus:outline-none
                   rounded-4xl placeholder:text w-full bg-gray-300"
                   value={pay_method} onChange={(e)=>setPay_method(e.target.value)}>
-                    <option>Option</option>
+                    <option value="">Method</option>
                     <option>cash</option>
       <option>moncash</option>
       <option>bank tranfer</option>
