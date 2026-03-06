@@ -8,16 +8,16 @@ interface prop {
 }
 export default function Input({int,type, out,text,require}:prop){
     return(
-        <div className="flex flex-col justify-between relative mb-[32px] focus-within:text-[#2DAE0D]">
+        <div className="flex flex-col justify-between relative mb-8 focus-within:text-[#2DAE0D]">
           
                    <span className="font-poppins  absolute border-gray-300 
-                   border-2 top-[0] border-b w-12 left-5 bg-gray-300 pl-1 pr-1"></span>
+                   border-2 top-0 border-b w-12 left-5 bg-gray-300 pl-1 pr-1"></span>
                     <span className="font-poppins font-semibold absolute top-[-14] left-5  pl-1 pr-1">{text}</span>
                     <input type={type} value={int} 
                 onChange={(e)=>out(e)}
                 //placeholder={text}
                 className="py-2 px-4 focus:outline-none focus:border-[#2DAE0D] focus:border-2
-                  rounded-[8px] text-gray-800 w-[190px] h-8 border border-gray-400 " required={require}/>
+                  rounded-lg text-gray-800 w-45.7 h-8 border border-gray-400 " required={require}/>
                   </div>
     )
 }

@@ -73,8 +73,8 @@ function Home() {
    {/* filter query*/}
   <div>
     {/*filter section */}
-    <div className="mb-[32px]">
-      <button className="text-[20px] flex w-[140px] justify-center border rounded-[8px]" onClick={()=>setFilter(!filter)}>filter
+    <div className="mb-8">
+      <button className="text-[20px] flex w-35 justify-center border rounded-lg" onClick={()=>setFilter(!filter)}>filter
      {filter ?  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
         strokeWidth="1.5" stroke="currentColor" className="size-6  ml-2 mt-1">
   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
@@ -84,12 +84,12 @@ function Home() {
 </svg> }</button>
     </div>
 
-      <div className="text-gray-600 mb-[4px]">
+      <div className="text-gray-600 mb-1">
         {dat?.length} Résultats
       </div>
    {filter ?
-  <div className="absolute top-31 w-[50px]">
-     <form action="/" className="absolute bg-gray-300 w-[260px] p-5 rounded-xl">
+  <div className="absolute top-31 w-12.5">
+     <form action="/" className="absolute bg-gray-300 w-65 p-5 rounded-xl">
     <div><input type="radio" name="faculty" value='Génie Civil' /> Génie Civil</div>
      <div><input type="radio" name="faculty" value='Médecine Générale' />Médecine Générale</div>
      <div><input type="radio" name="faculty" value='Odontologie' /> Odontologie</div>
@@ -112,8 +112,8 @@ function Home() {
    </form>
   </div> : null}
   </div>
-  {search ? (<div className="border-4 border-gray-500 rounded-[16px]">{/* header for the list of student by faculty*/}
-    <ol className="w-full flex justify-between p-1 bg-gray-400 rounded-t-[12px] font-medium">
+  {search ? (<div className="border-4 border-gray-500 rounded-2xl">{/* header for the list of student by faculty*/}
+    <ol className="w-full flex justify-between p-1 bg-gray-400 rounded-t-xl font-medium">
     <li className="w-full pl-5">Nom et Prénom</li>
   <li className="w-full">Faculté</li>
   <li className="w-full">Niveau</li>

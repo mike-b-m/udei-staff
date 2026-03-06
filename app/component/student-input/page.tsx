@@ -178,7 +178,7 @@ export default function Student_input(){
                   <span className="ml-5">
                 <select value={marital_status} onChange={(e)=>setMarital_status(e.target.value)}
                     className="px-4 focus:outline-none
-                  rounded-[12px] placeholder:text w-[50%] h-8 bg-gray-300 border border-gray-400 " required>
+                  rounded-xl placeholder:text w-38 h-8 bg-gray-300 border border-gray-400 " required>
                     <option value="">statut matrimonial</option>
                     <option>Marié</option>
                     <option>Célibataire</option>
@@ -200,7 +200,7 @@ export default function Student_input(){
                 <span className="">
                 <select value={faculty} onChange={(e)=>setFaculty(e.target.value)}
                     className="px-4 focus:outline-none
-                  rounded-[12px] placeholder:text w-full h-8 border border-gray-400 bg-gray-300" required>
+                  rounded-xl placeholder:text w-full h-8 border border-gray-400 bg-gray-300" required>
                     <option value="">Faculté</option>
                     <option>Génie Civil</option>
                     <option>Médecine Générale</option>
@@ -224,7 +224,7 @@ export default function Student_input(){
                 <span>
                 <select value={sex} onChange={(e)=>setSex(e.target.value)}
                     className="mr-[15%] px-4 focus:outline-none
-                  rounded-[12px] placeholder:text w-full border h-8 border-gray-400 bg-gray-300" required>
+                  rounded-xl placeholder:text w-full border h-8 border-gray-400 bg-gray-300" required>
                     <option value="">Sexe</option>
                     <option>Masculin</option>
                     <option>féminin</option>
@@ -232,7 +232,7 @@ export default function Student_input(){
                 </div>
 
             {/*section parent */}
-            <div className="border-t-2 border-gray-600 pt-[32px]">
+            <div className="border-t-2 border-gray-600 pt-8">
               <div className="flex justify-between">
                 <Input int={mother_name} text="Mère"
                      type="text" out={(e)=>setMother_name(e.target.value)} require={false}/>       
@@ -248,7 +248,7 @@ export default function Student_input(){
                      type="text" out={(e)=>setMother_profesion(e.target.value)} require={false}/>
             </div>
             {/*father section */}
-            <div className="border-t-2 border-gray-600 pt-[32px]">
+            <div className="border-t-2 border-gray-600 pt-8">
             <div className="flex justify-between">
               <Input int={father_name} text="Père"
                      type="text" out={(e)=>setFather_name(e.target.value)} require={false}/>

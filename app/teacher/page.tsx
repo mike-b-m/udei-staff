@@ -110,7 +110,7 @@ export default function Teacher(){
           :'bg-gray-100 rounded-2xl text-[16px] hover:bg-green-700 w-20 h-6 ml-3'}`}>intra</button>
          <button onClick={()=>setIntra(false)}
           className={`${!intra && read===false ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3'
-          :'bg-gray-100 rounded-2xl text-[16px] border-1 hover:bg-green-700 w-20 h-6 ml-3'}`}>Final</button></div>
+          :'bg-gray-100 rounded-2xl text-[16px] border hover:bg-green-700 w-20 h-6 ml-3'}`}>Final</button></div>
 
              <h3>{faculty}</h3>
           {/*teacher enter intra*/}
