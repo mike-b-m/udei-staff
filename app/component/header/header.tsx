@@ -60,7 +60,7 @@ export default function Header(){
         getData()},[])
 
     return(
-        <div className="flex justify-between top-0 right-0 border-b-2 border-gray-600">
+        <div className="flex justify-between top-0 right-0 border-b-2 border-gray-400">
         <div className="flex justify-between  m-3 ml-10 static">
             <Link href="/"><Image
          src="/image/logo.png"
