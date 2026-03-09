@@ -62,6 +62,7 @@ export default function StudentInfos(){
      const [last_name, setLast_name]= useState('')
     const  [status,setStatus] = useState<stat[]>([])
     const [role,setRole] = useState<any>([])
+
      const searchpara = useSearchParams();
         const search = searchpara.get('nom') || '';
         const search2 = searchpara.get('prenom') || '';
@@ -118,7 +119,9 @@ export default function StudentInfos(){
 
                   <button type="submit" className="bg-[#2DAE0D] rounded-2xl
              text-white text-[20px] hover:bg-green-700 w-30 pr-5 pl-5 h-8">Search</button>
+
           </form>
+
           {/*section read student infos */}
           {search && search2 ? 
           (<div>

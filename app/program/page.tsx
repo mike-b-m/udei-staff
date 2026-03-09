@@ -56,11 +56,10 @@ setVeri(false)}
         <div className="w-full bg-gray-200 mt-3 rounded-xl mr-3 static"> 
         <form action="/program" className="text-center">
         {/*<input type="text" name="faculty"  className="border-2" />*/}
-        <label>Faculté:</label>
                 <select name="faculty"
                     className="px-4 focus:outline-none
                   rounded-4xl bg-gray-300 w-60">
-                    <option>option</option>
+                    <option value="">Faculté:</option>
                     <option>Génie Civil</option>
                     <option>Médecine Générale</option>
                     <option>Odontologie</option>
@@ -82,12 +81,14 @@ setVeri(false)}
         <button type="submit" className="bg-[#2DAE0D] m-5 rounded-2xl
              text-white text-[16px] hover:bg-green-700 pr-5 pl-5 h-8">Recherche</button></form>
 
-            {veri ? <form onSubmit={programInput} className="relative insert-0  bg-gray-100">
-                <div className=" flex">
+            {veri ? <form onSubmit={programInput} className="absolute  bg-gray-100">
+                <div className="flex cols-2 justify-between p-5">
                     <Input int={courses} type="text" text="Cours" out={(e)=>setCourses(e.target.value)} require={false}/>
                  <Input int={credit} type="number" text="Crédit" out={(e)=>setCredit(e.target.value)} require={false}/>
                   <Input int={session_subjet} type="number" text="Nbr séances/H" 
                   out={(e)=>setSession_subjet(e.target.value)} require={false}/>
+                </div>
+                <div className="flex cols-2 justify-between p-5">
                    <Input int={hour_session} type="number" text="Nbr H/séances" 
                    out={(e)=>setHour_session(e.target.value)} require={false}/>
                     <Input int={total_hour} type="number" text="Nbr d'heures totals " 

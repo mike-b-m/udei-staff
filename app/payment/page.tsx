@@ -1,6 +1,7 @@
 'use client'
 import { Price, Payments, Student_pay } from "@/app/component/add-payment/addpayment"
 import { Suspense, useState } from "react"
+import { useSearchParams } from "next/navigation";
 export default function Pric(){
    const [open, setOpen] = useState(true)
    const [theOpen,setTheOpen] = useState(false)
@@ -8,7 +9,7 @@ export default function Pric(){
 
     return(
     <Suspense fallback={<div>chargement...</div>}>
- <div className="w-full shadow-lg border border-gray-400 rounded-2xl bg-gray-200 mt-3">
+ <div className="w-full min-h-120 pb-5 shadow-lg border border-gray-400 rounded-2xl bg-gray-200 mt-3">
          <div className="w-full border-b-3 border-white">
            <button className={`${open === true ?
              "bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 m-3"

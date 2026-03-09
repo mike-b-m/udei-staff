@@ -123,7 +123,7 @@ export default function Student_input(){
 }}
   
     return (
-        <div className=" grid grid- col-2 border-t-2 border-2 bg-gray-100 
+        <div className="border-t-2 border-2 bg-gray-100 
         border-gray-600  w-full h-full justify-center rounded-xl static">
          {/* set save  */}
                 
@@ -156,7 +156,7 @@ export default function Student_input(){
                     className="py-1 px-2 text-sm file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:bg-green-600 file:text-white hover:file:bg-green-700 cursor-pointer" />
                 </div>
                 {/*first line */}
-                 <div className="flex justify-between mt-10">
+                 <div className="flex flex-wrap mt-10">
                     <Input int={last_name} text="Nom"
                     type="text" out={(e)=>setLast_name(e.target.value)} require={true}/>
                      <Input int={first_name} text="Prénom"
@@ -169,7 +169,7 @@ export default function Student_input(){
                      type="text" out={(e)=>setPlace_of_birth(e.target.value)} require={true}/>
                     </div>
                     {/*second line */}
-                <div className="flex justify-between">
+                <div className="flex flex-wrap">
                   <Input int={nif_cin} text="NIF/CIN"
                      type="number" out={(e)=>setNif_cin(e.target.value)} require={true}/>
                     
@@ -194,7 +194,7 @@ export default function Student_input(){
                  </div>
 
                 {/*faculty part */}
-                <div className="flex justify-between">
+                <div className="flex flex-wrap">
                   <Input int={email} text="email"
                      type="email" out={(e)=>setEmail(e.target.value)} require/>
                 <span className="">
@@ -233,7 +233,7 @@ export default function Student_input(){
 
             {/*section parent */}
             <div className="border-t-2 border-gray-600 pt-8">
-              <div className="flex justify-between">
+              <div className="flex flex-wrap">
                 <Input int={mother_name} text="Mère"
                      type="text" out={(e)=>setMother_name(e.target.value)} require={false}/>       
                  <Input int={mother_birth} text="lieu de naissance"
@@ -244,12 +244,14 @@ export default function Student_input(){
               <Input int={mother_phone} text="Téléphone"
                      type="text" out={(e)=>setMother_phone(e.target.value)} require={false}/>
             </div> 
-             <Input int={mother_profesion} text="Profesion"
+             <div className="w-50">
+              <Input int={mother_profesion} text="Profesion"
                      type="text" out={(e)=>setMother_profesion(e.target.value)} require={false}/>
+             </div>
             </div>
             {/*father section */}
             <div className="border-t-2 border-gray-600 pt-8">
-            <div className="flex justify-between">
+            <div className="flex flex-wrap">
               <Input int={father_name} text="Père"
                      type="text" out={(e)=>setFather_name(e.target.value)} require={false}/>
               <Input int={father_birth} text="Lieu de naissance"
@@ -261,12 +263,17 @@ export default function Student_input(){
                      type="text" out={(e)=>setFather_phone(e.target.value)} require={false}/>
            </div>
             
-            <Input int={father_profesion} text="Prefession"
+            <div className="w-50">
+              <Input int={father_profesion} text="Prefession"
                      type="text" out={(e)=>setFather_profesion(e.target.value)} require={false}/>
+            </div>
           
             </div>
-              <Input int={seen_by} text="Vue par"
+              
+              <div className="w-50">
+                <Input int={seen_by} text="Vue par"
                      type="text" out={(e)=>setSeen_by(e.target.value)} require={false}/>
+              </div>
                     
             <div className="">
               <div className="border border-gray-400 rounded-lg p-2 m-1 text-center">

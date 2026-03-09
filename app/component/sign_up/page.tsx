@@ -87,7 +87,7 @@ return(
 
     <form onSubmit={HandleCreate} className="bg-gray-200 pl-20 mt-3 rounded-xl text-center pb-5 ">
       <h2 className="text-center font-poppins font-medium m-2 text-[20px]">Créer un compte pour le personnel</h2>
-       <div className="grid grid-cols-2 mt-5">
+       <div className="flex flex-wrap mt-5">
         <Input int={fullname} type="text" text="fullname" 
                          out={(e)=>setFullname(e.target.value)} require={true}/>
         
@@ -98,8 +98,6 @@ return(
         <Input int={phone} type="text" text="phone" 
                          out={(e)=>setPhone(e.target.value)} require={false}/>
                          
-       
-    
     {/*sectoin access of role */}
     <select  className="mr-[15%] mt-2.5 w-40 px-4 focus:outline-none
                   rounded-4xl h-8 placeholder:text bg-gray-300"

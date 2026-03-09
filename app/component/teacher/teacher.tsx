@@ -27,7 +27,7 @@ export default function TheacherInput({session,name,matiere,id,year}:int){
             else setRead(true)
               ;}
                getData()},[])
-    const handleSave= async ()=> {
+    const handleSave= async ()=> { 
         const {data , error } =  await supabase.from('exam')
         .select('*')
         .eq('student_id', id).eq('matiere',matiere).single();

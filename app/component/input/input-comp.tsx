@@ -8,7 +8,7 @@ interface prop {
 }
 export default function Input({int,type, out,text,require}:prop){
     return(
-        <div className="flex flex-col justify-between relative mb-8 focus-within:text-[#2DAE0D]">
+        <div className="flex flex-col justify-between relative mb-8 m-3 focus-within:text-[#2DAE0D]">
           
                    <span className="font-poppins  absolute border-gray-300 
                    border-2 top-0 border-b w-12 left-5 bg-gray-300 pl-1 pr-1"></span>

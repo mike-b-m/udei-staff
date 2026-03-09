@@ -37,7 +37,7 @@ export default function Teacher(){
               .select('*')
               ;
               if (third) console.error(third.message)
-        else {
+        else { 
       setExam(exa)
       setNote(exa[1]?.intra)
         }

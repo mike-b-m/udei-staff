@@ -4,6 +4,8 @@ import { supabase } from "../db";
 import { useState,useEffect } from "react";
 import Add_botton from "../add-buuton/add_button";
 import Time from "../time/time";
+import ChartProgress from "../chart components/chartComponent";
+
 type company ={
   id: number
   name: string
@@ -34,6 +36,14 @@ export default function Spend() {
   return (
 <>
 <div className="w-full justify-center">
+    <div className="flex">
+       <ChartProgress data={dat}/>
+        <div className="w-50 h-15 text-center bg-gray-300 m-10">mois dernier</div>
+      <div className="w-50 h-20 text-center bg-gray-100/50 m-10 p-2 shadow-lg outline
+       outline-[#2DAE0D] rounded-sm text-[20px] font-bold text-gray-800 flex flex-col">
+        <div className="font-medium">HTG {dat.reduce((accumulator : number, currentItem) => accumulator + Number(currentItem.amount), 0)} </div>
+        ce mois-ci</div>
+    </div>
    {/* filter query*/}
   <div>
     <select onChange={(e)=>setYear(e.target.value)}>

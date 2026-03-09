@@ -47,16 +47,22 @@ function Home() {
   const [dat, setDat]= useState<student[]>([])
   //const [use,setUse]= useState<any[] | null>([])
   const [filter, setFilter] = useState(false)
+  //const [no,setNivo] = useState<any>([])
 
  const searchpara = useSearchParams();
          const search = searchpara.get('faculty') || '';
-         
+         //const search2 = searchpara.get('niveau') || '';
+
           async ()=> {const { data, error } = await supabase.auth.getUser()
         if (error) console.error(error.message)
         //else setUse(user as any | null)
       }
   useEffect(() => {
     const getData = async () => {
+    //   const { data:com, error:Error } =  await supabase.from('student_status').select('year_study,student_id,id')
+    //       .eq('student_year', search2);
+    // if (Error) console.error(Error.message)
+    //   else setNivo(com)
       const { data:comp, error } =  await supabase.from('student').select('*')
       .order('last_name', { ascending: true })
       .eq('faculty', search);
@@ -107,6 +113,14 @@ function Home() {
              <div><input type="radio" name="faculty" value='Laboratoire Medicale' /> Laboratoire Médicale</div>
               <div><input type="radio" name="faculty" value='Physiothérapie' /> Physiothérapie</div>
                <div><input type="radio" name="faculty" value={`Jardinières D'enfants`} /> Jardinières d'enfants</div>
+             {/* <select name="niveau" className="m-5" required>
+              <option value="">niveau</option>
+              <option>1</option>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+              <option>5</option>
+             </select> */}
    <button type="submit" className="bg-[#2DAE0D] rounded-2xl
              text-white text-[20px] hover:bg-green-700 w-20">filter</button>
    </form>
