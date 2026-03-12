@@ -72,7 +72,7 @@ export default function StudentInfos(){
             const getData = async () => {
               if (first_name || last_name){
                 const { data:stud, error:second } =  await supabase.from('student')
-              .select('id,last_name,first_name,faculty').ilike('first_name', `%${first_name}%`)
+              .select('id,last_name,first_name,faculty,student_code').ilike('first_name', `%${first_name}%`)
               .ilike('last_name', `%${last_name}%`)
               if (second) console.error(second.message)
                 else setFullname(stud)
@@ -146,6 +146,7 @@ export default function StudentInfos(){
               <li className="m-1 p-1">{stud.last_name}</li>
               <li className="m-1 p-1">{stud.first_name}</li>
               <li className="m-1 p-1">faculté: {stud.faculty}</li>
+              <li className="m-1 p-1">Code {stud.student_code}</li>
                </Link>
             </ol>)}
           </div>): null}

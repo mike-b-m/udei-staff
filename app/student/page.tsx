@@ -29,7 +29,7 @@ export default function Student_dashboard(){
             </div>
             <h3 className="pl-2 bg text-[20px] font-medium text-center m-5">faculty: {user[0]?.faculty}</h3>
             {user.map((user)=>
-            <div className="flex justify-between text-center">
+            <div key={user.id} className="flex justify-between text-center">
                 <div className="bg-gray-300  text-[20px] font-bold p-10 rounded-2xl"><div className="top-0">code</div>{user.student_code}</div>
                 <div key={user.id} className="bg-gray-300  text-[20px] font-bold p-10 rounded-2xl">
                     <div>7</div>moyen</div>
