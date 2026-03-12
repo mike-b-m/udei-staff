@@ -36,6 +36,8 @@ type student = {
     diploma: string
     enrol_date: string
     seen_by: string
+    academy: string
+    student_code: string
 }
 const colors=[
  "bg-[#2DAE0D]/70",
@@ -131,15 +133,20 @@ function Home() {
     <li className="w-full pl-5">Nom et Prénom</li>
   <li className="w-full">Faculté</li>
   <li className="w-full">Niveau</li>
+  <li className="w-full">Année Académique</li>
+  <li className="w-full">code</li>
   <li className="w-full"></li>
   </ol>
   {/*list of list of student by faculty */}
    <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan,index)=>(
   <ol key={compan.id}   className={`flex   ${colors[index % colors.length]}`}>
-    <li className="w-full pl-5"><Link href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>{compan.last_name} {compan.first_name}</Link></li>
-  <li className="w-full">{compan.faculty}</li>
-  <li className="w-full"><Filter2 id={compan.id} bool/></li>
-  <li className="w-full"><Delete_button id={compan.id} value="student"/></li>
+    <li className="w-full pl-5 border-r border-gray-500"><Link href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>
+    {compan.last_name} {compan.first_name}</Link></li>
+  <li className="w-full pl-5 border-r border-gray-500">{compan.faculty}</li>
+  <li className="w-full pl-5 border-r border-gray-500"><Filter2 id={compan.id} bool/></li>
+  <li className="w-full pl-5 border-r border-gray-500">{compan.academy}</li>
+  <li className="w-full pl-5 border-r border-gray-500">{compan.student_code}</li>
+  <li className="w-full pl-5 border-r border-gray-500"><Delete_button name={`${compan.last_name} ${compan.first_name}`} id={compan.id} value="student"/></li>
   </ol>
 ))}
 </div> </div>)

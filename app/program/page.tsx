@@ -81,26 +81,26 @@ setVeri(false)}
         <button type="submit" className="bg-[#2DAE0D] m-5 rounded-2xl
              text-white text-[16px] hover:bg-green-700 pr-5 pl-5 h-8">Recherche</button></form>
 
-            {veri ? <form onSubmit={programInput} className="absolute  bg-gray-100">
+            {veri ? <form onSubmit={programInput} className="absolute flex flex-wrap bg-gray-100">
                 <div className="flex cols-2 justify-between p-5">
-                    <Input int={courses} type="text" text="Cours" out={(e)=>setCourses(e.target.value)} require={false}/>
-                 <Input int={credit} type="number" text="Crédit" out={(e)=>setCredit(e.target.value)} require={false}/>
-                  <Input int={session_subjet} type="number" text="Nbr séances/H" 
-                  out={(e)=>setSession_subjet(e.target.value)} require={false}/>
+                    <Input int={courses} type="text" text="Cours" out={(e)=>setCourses(e.target.value)} require={true}/>
+                 <Input int={credit} type="number" text="Crédit" out={(e)=>setCredit(e.target.value)} require={true}/>
+                  <Input int={session_subjet} type="number" text="Nbr séances/M" 
+                  out={(e)=>setSession_subjet(e.target.value)} require={true}/>
                 </div>
                 <div className="flex cols-2 justify-between p-5">
                    <Input int={hour_session} type="number" text="Nbr H/séances" 
-                   out={(e)=>setHour_session(e.target.value)} require={false}/>
+                   out={(e)=>setHour_session(e.target.value)} require={true}/>
                     <Input int={total_hour} type="number" text="Nbr d'heures totals " 
-                    out={(e)=>setTotal_hour(e.target.value)} require={false}/>
+                    out={(e)=>setTotal_hour(e.target.value)} require={true}/>
                 </div>
                      
-                     <div className="w-1">
-                         <label>Faculté:</label>
-                <select value={faculty} onChange={(e)=>setFaculty(e.target.value)}
-                    className="px-4 focus:outline-none
-                  rounded-4xl bg-gray-300 w-50">
-                    <option>option</option>
+                     
+                         
+                <select required value={faculty} onChange={(e)=>setFaculty(e.target.value)}
+                    className="px-4 m-5 focus:outline-none
+                  rounded-4xl bg-gray-300 h-8 w-50">
+                    <option value="">Faculté</option>
                     <option>Génie Civil</option>
                     <option>Médecine Géneérale</option>
                     <option>Odontologie</option>
@@ -118,33 +118,33 @@ setVeri(false)}
                     <option>Physiothérapie</option>
                     <option>Jardinières d'enfants</option>
                 </select>
-                     </div>
-                <div className="m-5">
-                      <label>Session</label>
-                      <select className="px-4  focus:outline-none
+                    
+              
+                    
+                      <select required className="px-4 h-8 m-5 focus:outline-none
                   rounded-4xl bg-gray-300" onChange={(e:any)=>setSession(e.target.value)}>
-                        <option>option</option>
+                        <option value="">Session</option>
                         <option>1</option>
                         <option>2</option>
-                      </select></div>
+                      </select>
                     
-                    <div className="m-5">                       
-                      <label>Année</label>
-                      <select className="px-4 focus:outline-none
+                      <select required className="px-4 m-5 h-8 focus:outline-none
                   rounded-4xl bg-gray-300" onChange={(e:any)=>setYear(e.target.value)}>
-                        <option>option</option>
+                        <option value="">Année</option>
                         <option>1</option>
                         <option>2</option>
                         <option>3</option>
                         <option>4</option>
                         <option>5</option>
                       </select>
-                    </div>
-                    <button className="bg-gray-400/50 border border-gray-400 m-5 rounded-2xl
+                 
+                    <div>
+                        <button className="bg-gray-400/50 border border-gray-400 m-5 rounded-2xl
              text-gray-800 text-[20px] hover:bg-green-700 w-25 h-8"
              onClick={()=>setVeri(false)}>Cancel</button>
                        <button type="submit" className="bg-[#2DAE0D] m-5 rounded-2xl
              text-white text-[20px] hover:bg-green-700 w-25 h-8">save</button>
+                    </div>
             </form> : <button  className="bg-[#2DAE0D] m-5 rounded-2xl
              text-white text-[16px] hover:bg-green-700 pr-5 pl-5 h-8" onClick={()=>setVeri(true)}>Ajouter un programme</button> }
             {/*table program */}

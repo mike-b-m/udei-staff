@@ -62,11 +62,23 @@ export default function StudentInfos(){
      const [last_name, setLast_name]= useState('')
     const  [status,setStatus] = useState<stat[]>([])
     const [role,setRole] = useState<any>([])
+    const [fullname,setFullname] = useState<any[]>([])
 
      const searchpara = useSearchParams();
         const search = searchpara.get('nom') || '';
         const search2 = searchpara.get('prenom') || '';
        
+      useEffect(() => {
+            const getData = async () => {
+              if (first_name || last_name){
+                const { data:stud, error:second } =  await supabase.from('student')
+              .select('id,last_name,first_name,faculty').ilike('first_name', `%${first_name}%`)
+              .ilike('last_name', `%${last_name}%`)
+              if (second) console.error(second.message)
+                else setFullname(stud)
+              }
+              ;}
+               getData()},[first_name,last_name])
 
       useEffect(() => {
         const getData = async () => {
@@ -96,12 +108,12 @@ export default function StudentInfos(){
         };
         getData()},[]) 
  
-        
+
      return(
         <>
         <div className="bg-gray-200 rounded-2xl w-full ">
           {/*search section */}
-          <form action="/search" className="flex justify-between mb-5 pr-50 pt-5 pl-50">
+          <form action="/search" className="flex static xl:justify-between xl:mb-5 xl:pr-50 xl:pt-5 xl:pl-50">
            
             <input type="text" value={last_name}
             name="nom"
@@ -117,6 +129,25 @@ export default function StudentInfos(){
                  className="mr-[15%] py-2 px-4 focus:outline-none
                   rounded-4xl placeholder:text w- h-8 bg-gray-100"/>
 
+          {/*search preview */}
+           {last_name || first_name ? (<div className="absolute insert-0 top-36 bg-white rounded-xl">
+            {fullname.map((stud)=>
+            <ol key={stud.id} className="flex">
+               <Link className="pl-3 flex " href={`/search?nom=${stud.last_name}&prenom=${stud.first_name}`} onClick={ (e) => {
+    // Prevents Next.js client-side navigation
+    e.preventDefault(); 
+    // Forces a full browser page reload
+    window.location.reload(); 
+    // Manually navigate after reload
+    window.location.href = `/search?nom=${stud.last_name}&prenom=${stud.first_name}`; 
+  }} >
+              <li className="m-1 p-1">{stud.last_name}</li>
+              <li className="m-1 p-1">{stud.first_name}</li>
+              <li className="m-1 p-1">faculté: {stud.faculty}</li>
+               </Link>
+            </ol>)}
+          </div>): null}
+          
                   <button type="submit" className="bg-[#2DAE0D] rounded-2xl
              text-white text-[20px] hover:bg-green-700 w-30 pr-5 pl-5 h-8">Search</button>
 
@@ -130,8 +161,13 @@ export default function StudentInfos(){
             <li className="" key={user.id}>
                 {/*infos perso */}
                  <div className="flex ">
-                  <div className="size-45 m-3">{user.photo_url? (<Image src={user.photo_url} alt="Preview" width={128} height={128} 
-                  className="w-full h-full object-cover rounded-xl" />) : null}</div>
+                  <div className="w-32 h-32 rounded-full border-2 border-gray-400 overflow-hidden bg-gray-300 flex items-center justify-center mt-10 m-2">
+                    {user.photo_url? (<Image src={user.photo_url} alt="Preview" width={128} height={128} 
+                  className="w-full h-full object-cover rounded-xl" />) 
+                  : (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-500">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                      </svg>
+                    )}</div>
 
                 <div className="grid grid-flow-col grid-rows-3 w-full p-2">
                   <Lecture int="Nom" out={user.last_name} />
@@ -185,7 +221,7 @@ export default function StudentInfos(){
                  </div>
            </li>)}
             </ol>
-          </div>) : <div className="text-center text-[20px] p-50 font-inter text-gray-800">Veuillez sélectionner une faculté dans la section filtre.</div>}
+          </div>) : <div className="text-center text-[20px] p-50 font-inter text-gray-800">Veuillez saisir votre nom & prénom dans la section de recherche.</div>}
         
         </div>
         </>

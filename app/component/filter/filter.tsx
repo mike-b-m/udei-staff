@@ -75,6 +75,7 @@ export function Filter({id,bool,year,year_complt}:statu){
     const [faculty_cpt, setFaculty_cpt] = useState(bool)
     const [year_completed,setYear_comppleted] = useState(year_complt)
     const [open,setOpen] = useState(false)
+    // const [academy,setAcademy] = useState('')
     const [filter, setFilter] = useState<student[]>([])
 
     const handleUpdate= async ()=> {
@@ -105,6 +106,8 @@ export function Filter({id,bool,year,year_complt}:statu){
                 <Input int={yea} out={(e)=>setYea(e.target.value)} type="number" text="année actuel" require={false}/>
                   <Input int={year_completed} out={(e)=>setYear_comppleted(e.target.value)} 
                   type="number" text="année complete" require={false}/>
+
+
                 <div className="text-center">
                      <h4>faculté completer</h4>
                     <button className={`${faculty_cpt !==true ? 'text-gray-500' : 'text-gray-800'}`}>

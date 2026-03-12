@@ -29,10 +29,12 @@ export default function Teacher(){
   .from('course_program')
   .select('*').eq('faculty', search).eq('session', search4).eq('year', search3)//.eq('courses', search2);
   // read student in faculty
-  const { data:stud, error:second } =  await supabase.from('student')
-              .select('*')
-              .order('last_name', { ascending: true })
-              ;
+  // const { data:stud, error:second } =  await supabase.from('student')
+  //             .select('id,last_name,first_name').eq('faculty', search)
+  //             .order('last_name', { ascending: true })
+   const { data:stud, error:second } =  await supabase.from('student_status')
+              .select('id,student_id,year_study')
+        .eq('year_study',search3);
               const { data:exa, error:third } =  await supabase.from('exam')
               .select('*')
               ;
@@ -53,15 +55,14 @@ export default function Teacher(){
           <h2 className="text-center m-3 font-bold text-[16px]">Note</h2>
           {/*filter */}
           <form action='/teacher' className="p-10">
-            <label>matière</label>
             <select name="matiere" id="" className="mr-5" onChange={(e)=>setFaculty(e.target.value)}>
+              <option value="">matière</option>
               {program.map((pro)=>
               <option key={pro.courses}>{pro.courses}</option>)}
             </select>
             {/*faculty */}
-            <label>Faculty</label>
-            <select name="faculty" id="" className="mr-5">
-              <option>option</option>
+            <select  name="faculty" id="" className="mr-5">
+              <option value="">Faculty</option>
                     <option>Génie Civil</option>
                     <option>Médecine Générale</option>
                     <option>Odontologie</option>
@@ -81,19 +82,21 @@ export default function Teacher(){
                     <option>Jardinières D'enfants</option>
             </select>
             {/*year/nivau */}
-            <label>nivau</label>
+            {/* <label>nivau</label> */}
             <select name="year" id="" className="mr-5">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
+              <option value="">nivau</option>
+              <option>1</option>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+              <option>5</option>
             </select>
             {/*session */}
-            <label>session</label>
+            {/* <label>session</label> */}
             <select name="session" id="" className="mr-5">
-              <option value="1">1</option>
-              <option value="2">2</option>
+              <option value="">session</option>
+              <option>1</option>
+              <option>2</option>
             </select>
             <button type="submit" className="bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3">filter</button>
           </form>
@@ -112,7 +115,13 @@ export default function Teacher(){
           className={`${!intra && read===false ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3'
           :'bg-gray-100 rounded-2xl text-[16px] border hover:bg-green-700 w-20 h-6 ml-3'}`}>Final</button></div>
 
-             <h3>{faculty}</h3>
+          {/*show filter selected */}
+          <div className="flex">
+              {search ? (<div className=" m-4 p-1 rounded shadow-sm shadow-green-400">{search}</div>):null}
+              {search3 ? (<div className=" m-4 p-1 rounded shadow-sm shadow-green-400">Niveau: {search3}</div>):null}
+              {search4 ? (<div className=" m-4 p-1 rounded shadow-sm shadow-green-400">Session: {search4}</div>):null}
+          </div>
+             {faculty ? <h3 className="text-center font-bold">matière sélectionné: {faculty}</h3>: <h3 className="text-center">Veuillez sélectionner une matiere dans la section filtre des matière.</h3>}
           {/*teacher enter intra*/}
           {intra ? <div className="border border-gray-100 m-2">
             <div className="flex">
@@ -121,8 +130,7 @@ export default function Teacher(){
           </div>
          {student.map((exa:any,index)=>
         <ol key={exa.id} className={`${colors[index % colors.length]}`}>
-          <li><TheacherInput session={search4} year={search3} name={`${exa.last_name}
-             ${exa.first_name}`} matiere={faculty} id={exa.id}/> </li>           
+          <li><TheacherInput faculty={search} session={search4} year={search3} name={''} matiere={faculty} id={exa.student_id}/> </li>           
         </ol>)} 
           </div> : !intra && !read ?
             (<div className="border border-gray-100 m-2">
@@ -134,8 +142,8 @@ export default function Teacher(){
           </div>
           {student.map((exa:any,index)=>
         <ol key={exa.id} className={`${colors[index % colors.length]}`}>
-             <li><TheacherInput2 session={search4} year={search3} 
-                name={`${exa.last_name} ${exa.first_name}`} matiere={faculty} id={exa.id}/></li>
+             <li><TheacherInput2 faculty="" session={search4} year={search3} 
+                name={`${exa.last_name} ${exa.first_name}`} matiere={faculty} id={exa.student_id}/></li>
         </ol>)}
             </div>):null}
             {/*read session */}
@@ -150,8 +158,7 @@ export default function Teacher(){
             </div>
             {student.map((stud)=>
             <ol key={stud.id} className="flex border-b">
-              <li className="w-30 m-2">{stud.last_name} {stud.first_name}</li>
-              <li ><ReadNote session={1} year={1} id={stud.id} name="" matiere=''/></li>
+              <li ><ReadNote faculty="" session={search4} year={search3} id={stud.student_id} name="" matiere=''/></li>
               <li className="w-30 m-2">{stud.faculty}</li>
               </ol>)}
             </div>

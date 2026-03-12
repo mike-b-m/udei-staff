@@ -35,8 +35,8 @@ export default function Nav(){
             
         {/*link for site */}
          {ses ? <div onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)} 
-         className={`border-r-2 ${hover ? 'w-50':null} border-b-2 border-gray-300 top-0 left-0 text-[20px] text-center
-         text-center min-w-[75px]  min-h-100`}>
+         className={`border-r-2 ${hover ? 'xl:w-50':null} border-b-2 border-gray-300 top-0 left-0 text-[20px] text-center
+         xl:min-w-[75px] xl:min-h-100`}>
     <ul className=" h-[80%] ">
         {/* home section nav */}
        {role.role ==='admin' ? 

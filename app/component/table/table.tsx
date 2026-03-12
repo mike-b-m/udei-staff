@@ -9,7 +9,7 @@ export default function TheTable({int,year,faculty,session}:tab){
     const into= int.filter((item:any)=> item.year === year && item.session===session)
     return(
         <>
-        {into ? <div className="m-5 text-[14px]">
+        {into ? <div className="m-5 text-[14px]"> 
             
             <ol className=" flex ">
                 <li className="m-2">Faculté: {faculty}</li>

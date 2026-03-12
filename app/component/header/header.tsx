@@ -60,8 +60,8 @@ export default function Header(){
         getData()},[])
 
     return(
-        <div className="flex justify-between top-0 right-0 border-b-2 border-gray-400">
-        <div className="flex justify-between  m-3 ml-10 static">
+        <div className="flex justify-between xl:top-0 xl:right-0 border-b-2 w-[100%] border-gray-400">
+        <div className="flex xl:justify-between  xl:m-3 xl:ml-10 ml-2 mt-2 static w-[30%]">
             <Link href="/"><Image
          src="/image/logo.png"
       width={150}
@@ -71,7 +71,7 @@ export default function Header(){
        
        
            {open ? (<div className="absolute bg-gray-100 text-center 
-           border rounded-2xl top-5 right-3  p-1 border-gray-400">
+           border rounded-2xl top-5 xl:right-3 right-0 p-1 border-gray-400">
 
              <div className="text-[16] pb-2">
               <div className="flex justify-between">

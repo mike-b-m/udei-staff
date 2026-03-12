@@ -17,6 +17,7 @@ export default function Student_input(){
     const [email, setEmail]=useState('')
     const[sex, setSex]= useState('')
     const [faculty, setFaculty]= useState('')
+    const [academy,setAcademy] =useState('')
 
     {/*mom input*/}
     const [mother_name, setMother_name]=useState('')
@@ -106,7 +107,8 @@ export default function Student_input(){
                 diploma,
                 seen_by,
               student_code: code,
-              photo_url}]).select();
+              photo_url,
+            academy}]).select();
     if (error) {
   console.error('Error:', error.message);
   setLoad(false)
@@ -127,8 +129,8 @@ export default function Student_input(){
         border-gray-600  w-full h-full justify-center rounded-xl static">
          {/* set save  */}
                 
-                    {save ? (<div className="fixed inset bg-gray-100 p-7 text-green-600 flex border border-gray-500 rounded-lg">
-                        save with succes
+                    {save ? (<div className="fixed right-0 top-0 bg-gray-100 p-7  text-green-600 flex border border-gray-500 rounded-lg">
+                        Enregistrer Avec Succès
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
                              className="size-6">
         <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.844-8.791a.75.75 
@@ -175,15 +177,14 @@ export default function Student_input(){
                     
 
                 {/*matrimonial status*/}
-                  <span className="ml-5">
                 <select value={marital_status} onChange={(e)=>setMarital_status(e.target.value)}
                     className="px-4 focus:outline-none
-                  rounded-xl placeholder:text w-38 h-8 bg-gray-300 border border-gray-400 " required>
+                  rounded-xl placeholder:text m-3 h-8 bg-gray-300 border border-gray-400 " required>
                     <option value="">statut matrimonial</option>
                     <option>Marié</option>
                     <option>Célibataire</option>
                     <option>divorcé</option>
-                </select></span>
+                </select>
                 
                 <Input int={adress} text="Adresse"
                      type="text" out={(e)=>setAdress(e.target.value)} require={true}/>    
@@ -197,10 +198,10 @@ export default function Student_input(){
                 <div className="flex flex-wrap">
                   <Input int={email} text="email"
                      type="email" out={(e)=>setEmail(e.target.value)} require/>
-                <span className="">
+                
                 <select value={faculty} onChange={(e)=>setFaculty(e.target.value)}
                     className="px-4 focus:outline-none
-                  rounded-xl placeholder:text w-full h-8 border border-gray-400 bg-gray-300" required>
+                  rounded-xl placeholder:text m-3 h-8 border border-gray-400 bg-gray-300" required>
                     <option value="">Faculté</option>
                     <option>Génie Civil</option>
                     <option>Médecine Générale</option>
@@ -219,16 +220,19 @@ export default function Student_input(){
                     <option> Laboratoire Médicale</option>
                     <option>Physiothérapie</option>
                     <option>Jardinières D'enfants</option>
-                </select></span>
+                </select>
 
-                <span>
+                
                 <select value={sex} onChange={(e)=>setSex(e.target.value)}
-                    className="mr-[15%] px-4 focus:outline-none
-                  rounded-xl placeholder:text w-full border h-8 border-gray-400 bg-gray-300" required>
+                    className="px-4 focus:outline-none
+                  rounded-xl placeholder:text m-3 border h-8 border-gray-400 bg-gray-300" required>
                     <option value="">Sexe</option>
                     <option>Masculin</option>
                     <option>féminin</option>
-                </select></span>
+                </select>
+
+                <Input int={academy} text="Année Académique"
+                     type="text" out={(e)=>setAcademy(e.target.value)} require={true}/>
                 </div>
 
             {/*section parent */}

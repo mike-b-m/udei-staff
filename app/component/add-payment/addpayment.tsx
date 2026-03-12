@@ -84,12 +84,21 @@ const HandlePayment = async () => {
         // if (error) console.error(error.message)
          }
     return(
-        <div>{id}
-           <form onSubmit={HandlePayment}>
+        <div>
+           <form onSubmit={HandlePayment} className="flex flex-col justify-between relative mb-8 m-3 focus-within:text-[#2DAE0D]">
+            <span className="font-poppins  absolute border-gray-300 
+                   border-2 top-0 border-b w-19 left-5 bg-gray-300 pl-1 pr-1"></span>
+            <span className="font-poppins font-semibold absolute top-[-14] left-5  pl-1 pr-1">Montant</span>
              <input type="number" value={theAmount} min={0} max={balance}
-             className="border-2xl" 
+             className="py-2 px-4 focus:outline-none focus:border-[#2DAE0D] focus:border-2
+                  rounded-lg text-gray-800 w-45.7 h-8 border border-gray-400 "
              onChange={(e:any)=>setTheAmount(e.target.value)}/>
-             {price}/{theAmount} <button type="submit" className='bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-30 h-6 m-3 pl-2'>submit</button>
+             <div className="text-gray-900 text-[20px]">
+                {/* rester:{price}/{theAmount} */}
+                restant: {balance}-{theAmount ? (<span>{theAmount}</span>) : '0'}={price}
+                </div>
+                 <button type="submit" 
+             className='bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-30 h-6 mt-3 pl-2'>submit</button>
            </form>
         </div>
     )
@@ -188,19 +197,19 @@ export function Stu({id}:ide){
     return(
         <div>
             <h4 className="text-center font-poppins font-medium m-2 text-[20px]">liste des étudiants et le solde disponible</h4>
-            <div className="w-full flex justify-between p-1 mt-3 bg-gray-400 rounded-t-xl font-medium">
-                <div className=" ml-2 w-50">nom et prénom</div>
-                <div className="w-50">balance</div>
-                 <div className="w-50">faculté</div>
+            <div className="w-full flex justify-between  mt-3 bg-gray-400 rounded-t-xl font-medium">
+                <div className="ml-2 w-50 pl-5 border-r border-gray-500">nom et prénom</div>
+                <div className="w-50 pl-5 border-r border-gray-500">balance</div>
+                 <div className="w-50 pl-5 border-r border-gray-500">faculté</div>
                  <div className="w-50">niveau</div>
              </div>
            {student.map((stund,index)=>
         <ol key={stund.id} className={`${colors[index % colors.length]}`}>
-            <Link href={`/payment?id=${stund.id}`} className="w-full flex justify-between p-1">
-            <li className="ml-2 w-50">{stund.last_name} {stund.first_name} </li>
-            <li className="w-50"><Stu id={stund.id}/></li>
-            <li className="w-50">{stund.faculty}</li>
-            <li className="w-50"><Filter2 id={stund.id} bool/></li></Link> 
+            <Link href={`/payment?id=${stund.id}`} className="w-full flex justify-between ">
+            <li className="ml-2 w-50 pl-5 border-r border-gray-500">{stund.last_name} {stund.first_name} </li>
+            <li className="w-50 pl-5 border-r border-gray-500"><Stu id={stund.id}/></li>
+            <li className="w-50 pl-5 border-r border-gray-500">{stund.faculty}</li>
+            <li className="w-50 pl-5 border-r border-gray-500"><Filter2 id={stund.id} bool/></li></Link> 
         </ol>)}
         </div>
     )

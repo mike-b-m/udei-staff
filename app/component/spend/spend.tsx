@@ -21,7 +21,11 @@ const colors=[
 export default function Spend() {
   const [dat, setDat]= useState<company[]>([])
   const [year, setYear] =useState('2026-01-01 00:00:00')
- 
+  const [chart,setchart] = useState<company[]>([])
+  const [interval,setInterval] = useState<any[]>([])
+
+  const date= Date().split(' ')
+
   useEffect(() => {
     const getData = async () => {
       const { data:comp, error } =  await supabase.from('spent_in_company').select('*')
@@ -29,6 +33,18 @@ export default function Spend() {
       .order('date_time', { ascending: false });
     if (error) console.error(error)
       else setDat(comp)
+    
+    const { data:com, error:Error } =  await supabase.from('spent_in_company').select('*')
+      .gte('date_time', year)
+      .order('date_time', { ascending: true });
+    if (Error) console.error(Error)
+      else setchart(com)
+   
+    const { data:co, error:Erro } =  await supabase.from('spent_in_company').select('amount,id')
+      .gte('date_time', `${date[3]}-01-01`).lte('date_time', `${date[3]}-12-31`)
+      .order('date_time',  { ascending: true });
+    if (Erro) console.error(Erro.message)
+      else setInterval(co)
     }; 
     getData()},[])
  
@@ -36,17 +52,16 @@ export default function Spend() {
   return (
 <>
 <div className="w-full justify-center">
-    <div className="flex">
-       <ChartProgress data={dat}/>
-        <div className="w-50 h-15 text-center bg-gray-300 m-10">mois dernier</div>
-      <div className="w-50 h-20 text-center bg-gray-100/50 m-10 p-2 shadow-lg outline
-       outline-[#2DAE0D] rounded-sm text-[20px] font-bold text-gray-800 flex flex-col">
-        <div className="font-medium">HTG {dat.reduce((accumulator : number, currentItem) => accumulator + Number(currentItem.amount), 0)} </div>
-        ce mois-ci</div>
+    <div className="flex justify-center">
+       <ChartProgress data={chart}/>
+      <div className="w-60 h-30 text-center bg-gray-100/50 m-10 p-3 shadow-lg outline
+       outline-[#2DAE0D] rounded-sm text-[16px] font-bold text-gray-800 flex flex-col">
+        <div className="font-medium text-[20px] pt-3">HTG {interval.reduce((accumulator : number, currentItem) => accumulator + Number(currentItem.amount), 0)} </div>
+        dépenser pour cette année</div>
     </div>
    {/* filter query*/}
   <div>
-    <select onChange={(e)=>setYear(e.target.value)}>
+    <select onChange={(e)=>setYear(e.target.value)} disabled>
       <option value="2027-01-01 00:00:00">2027</option>
       <option value="2026-01-01 00:00:00">2026</option>
       <option value="2025-01-01 00:00:00">2025</option>

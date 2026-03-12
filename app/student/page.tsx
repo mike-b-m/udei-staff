@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Stu } from "../component/add-payment/addpayment";
 import { Filter2 } from "../component/filter/filter";
+import Input from "../component/input/input-comp";
 
 export default function Student_dashboard(){
     const [user,setUser] =useState<any[]>([])
