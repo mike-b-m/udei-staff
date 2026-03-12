@@ -57,7 +57,7 @@ setVeri(false)}
         <form action="/program" className="text-center">
         {/*<input type="text" name="faculty"  className="border-2" />*/}
                 <select name="faculty"
-                    className="px-4 focus:outline-none
+                    className="px-4 focus:outline-none hover:bg-gray-400 hover:text-gray-900
                   rounded-4xl bg-gray-300 w-60">
                     <option value="">Faculté:</option>
                     <option>Génie Civil</option>

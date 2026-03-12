@@ -16,21 +16,21 @@ export default function Pric(){
               : 'm-3' }`} onClick={()=>{
                 setTheOpen(false)
                 setOpen(true)
-                setOpenpay(false)}}>price</button>
+                setOpenpay(false)}}>Prix</button>
 
           <button  className={`${theOpen === true ?
              "bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-50 h-6 m-3"
               : '' }`} onClick={()=>{
                 setTheOpen(true)
                 setOpen(false)
-              setOpenpay(false)}}>student and balance</button>
+              setOpenpay(false)}}>étudiant et balance</button>
 
                 <button  className={`${openpay === true ?
              "bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-50 h-6 m-3"
               : 'm-3' }`} onClick={()=>{
                 setTheOpen(false)
                 setOpen(false)
-              setOpenpay(true)}}>payment</button>
+              setOpenpay(true)}}>paiement</button>
          </div>
           {open ? <Price/>
             : theOpen ? <Student_pay/>

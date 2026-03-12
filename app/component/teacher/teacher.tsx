@@ -191,6 +191,17 @@ export function ReadNote({session,year,id}:int){
                 <li className="w-10 mr-2 ml-2">{not.year}</li>
                 <li className="w-25 mr-2 ml-2">{not.faculty}</li>
             </ol>)}
+             <ol className={`flex`}>
+                <li className="w-30 mr-2 ml-2">
+             Total
+                    </li>
+                <li className="w-10 mr-2 ml-2">
+             {note?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.intra), 0)}
+                    </li>
+                <li className="w-10 mr-2 ml-2">
+             {note?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.final), 0)}
+                    </li>
+            </ol>
             </div>
         </div>
     )

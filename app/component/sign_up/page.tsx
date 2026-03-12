@@ -99,8 +99,9 @@ return(
                          out={(e)=>setPhone(e.target.value)} require={false}/>
                          
     {/*sectoin access of role */}
-    <select  className="mr-[15%] mt-2.5 w-40 px-4 focus:outline-none
-                  rounded-4xl h-8 placeholder:text bg-gray-300"
+    <select  className="mr-[15%] mt-2.5 w-40 px-4 focus:outline-none hover:bg-blue-300 hover:border
+     hover:border-blue-500 hover:shadow-sm
+                  rounded-xl h-8 placeholder:text bg-gray-300"
                    onChange={(e)=>setRole(e.target.value)}
                     required >
         <option value=''>role</option>

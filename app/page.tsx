@@ -82,7 +82,7 @@ function Home() {
   <div>
     {/*filter section */}
     <div className="mb-8">
-      <button className="text-[20px] flex w-35 justify-center border rounded-lg" onClick={()=>setFilter(!filter)}>filter
+      <button className="text-[20px] flex w-35 justify-center border rounded-lg hover:bg-gray-300" onClick={()=>setFilter(!filter)}>filter
      {filter ?  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
         strokeWidth="1.5" stroke="currentColor" className="size-6  ml-2 mt-1">
   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
@@ -140,7 +140,7 @@ function Home() {
   {/*list of list of student by faculty */}
    <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan,index)=>(
   <ol key={compan.id}   className={`flex   ${colors[index % colors.length]}`}>
-    <li className="w-full pl-5 border-r border-gray-500"><Link href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>
+    <li className="w-full pl-5 border-r border-gray-500"><Link className="hover:text-blue-800 hover:text-[18px] hover:font-bold" href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>
     {compan.last_name} {compan.first_name}</Link></li>
   <li className="w-full pl-5 border-r border-gray-500">{compan.faculty}</li>
   <li className="w-full pl-5 border-r border-gray-500"><Filter2 id={compan.id} bool/></li>

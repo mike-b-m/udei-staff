@@ -119,14 +119,16 @@ export default function StudentInfos(){
             name="nom"
                 placeholder="nom"
                  onChange={(e)=>setLast_name(e.target.value)}
-                className="mr-[15%] py-2 px-4 focus:outline-none
-                  rounded-4xl placeholder:text w- h-8 bg-gray-100"/>
+                className="mr-[15%] py-2 px-4 focus:outline-none focus:border focus:border-blue-300 focus:h-9
+                 hover:border hover:border-blue-300  border-gray-400 border
+                  rounded-4xl placeholder:text  h-8 bg-gray-100"/>
 
                   <input type="text" value={first_name}
             name="prenom"
                 placeholder="prenom"
                  onChange={(e)=>setFirst_name(e.target.value)}
-                 className="mr-[15%] py-2 px-4 focus:outline-none
+                 className="mr-[15%] py-2 px-4 focus:outline-none focus:border focus:border-blue-300 focus:h-9
+                 hover:border hover:border-blue-300  border-gray-400 border
                   rounded-4xl placeholder:text w- h-8 bg-gray-100"/>
 
           {/*search preview */}
