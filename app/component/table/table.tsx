@@ -31,6 +31,17 @@ export default function TheTable({int,year,faculty,session}:tab){
                 <li className="border min-w-[15%]">{pro.total_hour}</li>
                 </ol>
             )}
+            <ol className="flex text-center">
+                <li className="border min-w-50">Totals</li>
+                <li className="border min-w-[15%]">
+                    {into?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.credit), 0)}</li>
+                <li className="border min-w-[15%]">
+                    {into?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.session_subjet), 0)}</li>
+                <li className="border min-w-[15%]">
+                    {into?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.hour_session), 0)}</li>
+                <li className="border min-w-[15%]">
+                    {into?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.total_hour), 0)}</li>
+                </ol>
         </div> : null}
         </>
     )
