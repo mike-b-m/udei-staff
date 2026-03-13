@@ -63,7 +63,7 @@ export default function StudentInfos(){
     const  [status,setStatus] = useState<stat[]>([])
     const [role,setRole] = useState<any>([])
     const [fullname,setFullname] = useState<any[]>([])
-    const [code,setCode] =useState(false)
+    const [code,setCode] =useState(true)
     const [thecode,setThecode] = useState('')
 
      const searchpara = useSearchParams();
