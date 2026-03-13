@@ -63,6 +63,8 @@ export default function StudentInfos(){
     const  [status,setStatus] = useState<stat[]>([])
     const [role,setRole] = useState<any>([])
     const [fullname,setFullname] = useState<any[]>([])
+    const [code,setCode] =useState(false)
+    const [thecode,setThecode] = useState('')
 
      const searchpara = useSearchParams();
         const search = searchpara.get('nom') || '';
@@ -73,12 +75,12 @@ export default function StudentInfos(){
               if (first_name || last_name){
                 const { data:stud, error:second } =  await supabase.from('student')
               .select('id,last_name,first_name,faculty,student_code').ilike('first_name', `%${first_name}%`)
-              .ilike('last_name', `%${last_name}%`)
+              .ilike('last_name', `%${last_name}%`).ilike('student_code', `%${thecode}%`)
               if (second) console.error(second.message)
                 else setFullname(stud)
               }
               ;}
-               getData()},[first_name,last_name])
+               getData()},[first_name,last_name,thecode])
 
       useEffect(() => {
         const getData = async () => {
@@ -111,11 +113,13 @@ export default function StudentInfos(){
 
      return(
         <>
-        <div className="bg-gray-200 rounded-2xl w-full ">
+        <div className="bg-gray-100 p-4 rounded-2xl w-full ">
           {/*search section */}
           <form action="/search" className="flex static xl:justify-between xl:mb-5 xl:pr-50 xl:pt-5 xl:pl-50">
            
-            <input type="text" value={last_name}
+            {code ? 
+            (<div className="flex">
+              <input type="text" value={last_name}
             name="nom"
                 placeholder="nom"
                  onChange={(e)=>setLast_name(e.target.value)}
@@ -130,6 +134,13 @@ export default function StudentInfos(){
                  className="mr-[15%] py-2 px-4 focus:outline-none focus:border focus:border-blue-300 focus:h-9
                  hover:border hover:border-blue-300  border-gray-400 border
                   rounded-4xl placeholder:text w- h-8 bg-gray-100"/>
+            </div>) : <input type="text" value={thecode}
+            name="code"
+                placeholder="code"
+                 onChange={(e)=>setThecode(e.target.value)}
+                 className="mr-[15%] py-2 px-4 focus:outline-none focus:border focus:border-blue-300 focus:h-9
+                 hover:border hover:border-blue-300  border-gray-400 border
+                  rounded-4xl placeholder:text w- h-8 bg-gray-100"/>}
 
           {/*search preview */}
            {last_name || first_name ? (<div className="absolute insert-0 top-36 bg-white rounded-xl">
@@ -151,10 +162,16 @@ export default function StudentInfos(){
             </ol>)}
           </div>): null}
           
-                  <button type="submit" className="bg-[#2DAE0D] rounded-2xl
+                 
+
+              <button type="submit" className="bg-[#2DAE0D] rounded-2xl
              text-white text-[20px] hover:bg-green-700 w-30 pr-5 pl-5 h-8">Search</button>
 
           </form>
+          {/*button code and name */}
+          <button disabled className="bg-[#00B4D8] rounded-2xl
+             text-white text-[20px] hover:bg-green-700 w-30 pr-5 pl-5 h-8" onClick={()=>setCode(!code)}>
+              {code ? 'Code': 'Nom'}</button>
 
           {/*section read student infos */}
           {search && search2 ? 

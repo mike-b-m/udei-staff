@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Time from "../time/time";
 import Input from "../input/input-comp";
 const colors=[
- "bg-[#2DAE0D]/70",
- "bg-gray-200"
+  "bg-[#CAF0F8]/25 font-medium",
+  "bg-[#90C3C8]/70 font-medium"
 ]
 export default function SignUp(){
     const [email,setEmail]= useState('')
@@ -86,7 +86,7 @@ return(
         </div> ) : ''}
 
     <form onSubmit={HandleCreate} className="bg-gray-200 pl-20 mt-3 rounded-xl text-center pb-5 ">
-      <h2 className="text-center font-poppins font-medium m-2 text-[20px]">Créer un compte pour le personnel</h2>
+      <h2 className="text-center font-poppins font-medium m-2 pt-3 text-[20px]">Créer un compte pour le personnel</h2>
        <div className="flex flex-wrap mt-5">
         <Input int={fullname} type="text" text="fullname" 
                          out={(e)=>setFullname(e.target.value)} require={true}/>
@@ -117,15 +117,15 @@ return(
              : "bg-gray-700 rounded-4xl text-white text-[20px] hover:bg-green-700 w-30 h-10"}`} disabled={load}>{load ? 'creating...' : 'create'}</button>
     </form>
 
-    <div className="bg-gray-200 mt-3 rounded-xl">
-      <h3 className="text-center">account created</h3>
-      <div className="flex justify-between">
+    <div className="bg-gray-200 mt-3 p-4 rounded-xl">
+      <h3 className="text-center font-bold text-[20px] p-2">account created</h3>
+      <div className="flex justify-between bg-[#0077B6] text-gray-300 p-2">
         <div className="w-50">Nom et Prénom</div>
         <div className="w-50">role</div>
         <div className="w-50">date</div>
       </div>
       {read.map((rea,index)=>
-      <ol key={rea.full_name} className={`flex justify-between border-b-5 border-white ${colors[index % colors.length]}`}>
+      <ol key={rea.full_name} className={`flex justify-between border-t-2 p-2 border-gray-400 ${colors[index % colors.length]}`}>
       <li className="w-50">{rea.full_name}</li>
       <li className="w-50">{rea.role}</li>
       <li className="pr-15"><Time open={rea.created_at}/></li>

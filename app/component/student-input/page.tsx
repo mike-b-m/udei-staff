@@ -125,7 +125,7 @@ export default function Student_input(){
 }}
   
     return (
-        <div className="border-t-2 border-2 bg-gray-100 
+        <div className="border-t-2 border-2 bg-gray-200 p-4
         border-gray-600  w-full h-full justify-center rounded-xl static">
          {/* set save  */}
                 

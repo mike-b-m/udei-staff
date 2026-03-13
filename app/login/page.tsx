@@ -28,7 +28,7 @@ export default function Login(){
   else window.location.href = '/'
 }        
 return(
-    <div className=" flex border-2 rounded-4xl border-gray-300 bg-gray-200 shadow-lg">
+    <div className=" flex border-2 rounded-4xl border-gray-300  bg-gray-200 shadow-lg">
       <div className="rounded-full">
         <Image
                src="/04 - Copy.bmp"
@@ -47,7 +47,7 @@ return(
             alt="user profil"/>
       </div>
       <div className="ml-6">
-      {error ? (<div className="text-red-600 flex">
+      {error ? (<div className="text-red-600 text-[14px] flex">
                         {mess}
         </div> ) : ''}
       </div>

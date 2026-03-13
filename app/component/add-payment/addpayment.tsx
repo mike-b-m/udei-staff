@@ -39,8 +39,8 @@ type ide={
     id: number
 }
 const colors=[
- "bg-[#2DAE0D]/70",
- "bg-gray-200"
+ "bg-[#2DAE0D]/50 text-[16px] font-inter text-gray-800",
+ "bg-gray-100 text-[16px] font-inter text-gray-800"
 ]
 
 
@@ -148,7 +148,7 @@ export  function Price(){
           </form>
           : <button className="bg-[#2DAE0D] rounded-2xl
              text-white  text-[16px] hover:bg-green-700 w-30 h-6 m-6" onClick={(e)=>setOpen(true)}>ajouter le prix</button> }
-        <div className="w-full flex p-1 mt-3 bg-gray-400 rounded-t-xl font-medium">
+        <div className="w-full flex p-1 mt-3 bg-gray-100 rounded-t-xl font-medium">
                  <div className="ml-2 pt-1 w-50">faculté</div>
                 <div className="w-25 pt-1">Prix</div>
              </div>
@@ -195,13 +195,13 @@ export function Stu({id}:ide){
             getData()},[])
 
     return(
-        <div>
+        <div className="">
             <h4 className="text-center font-poppins font-medium m-2 text-[20px]">liste des étudiants et le solde disponible</h4>
-            <div className="w-full flex justify-between  mt-3 bg-gray-400 rounded-t-xl font-medium">
-                <div className="ml-2 w-50 pl-5 border-r border-gray-500">nom et prénom</div>
-                <div className="w-50 pl-5 border-r border-gray-500">balance</div>
-                 <div className="w-50 pl-5 border-r border-gray-500">faculté</div>
-                 <div className="w-50">niveau</div>
+            <div className="w-full flex justify-between  mt-3 bg-gray-100 rounded-t-xl text-[18px] pb-2 pt-2 font-medium">
+                <div className="ml-2 w-50 pl-5 border-r border-gray-400">Nom et Prénom</div>
+                <div className="w-50 pl-5 border-r border-gray-500">Balance</div>
+                 <div className="w-50 pl-5 border-r border-gray-500">Faculté</div>
+                 <div className="w-50">Niveau</div>
              </div>
            {student.map((stund,index)=>
         <ol key={stund.id} className={`${colors[index % colors.length]}`}>

@@ -13,20 +13,20 @@ export default function Pric(){
          <div className="w-full border-b-3 border-white">
            <button className={`${open === true ?
              "text-[#2DAE0D] text-[18px]  border-b-2 w-20 h-8 hover:border-b-2 hover:text-green-800 m-3 transition duration-150 ease-in-out"
-              : 'm-3' }`} onClick={()=>{
+              : 'm-3 hover:border-b-2 hover:text-green-800 m-3 transition duration-150 ease-in-out' }`} onClick={()=>{
                 setTheOpen(false)
                 setOpen(true)
                 setOpenpay(false)}}>Prix</button>
 
           <button  className={`${theOpen === true ?
-             "text-[#2DAE0D] text-[18px]  border-b-2 hover:bg-green-700 w-50 h-8 m-3"
+             "text-[#2DAE0D] text-[18px]  border-b-2  w-50 h-8 m-3"
               : 'hover:border-b-2 hover:text-green-800 m-3 transition duration-150 ease-in-out' }`} onClick={()=>{
                 setTheOpen(true)
                 setOpen(false)
               setOpenpay(false)}}>étudiant et balance</button>
 
                 <button  className={`${openpay === true ?
-             "bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-50 h-6 m-3"
+             "text-[#2DAE0D] text-[18px]  border-b-2  w-23 h-8 m-3"
               : 'm-3 hover:border-b-2 hover:text-green-800 m-3 transition duration-150 ease-in-out' }`} onClick={()=>{
                 setTheOpen(false)
                 setOpen(false)

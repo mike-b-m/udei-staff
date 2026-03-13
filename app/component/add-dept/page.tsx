@@ -29,7 +29,7 @@ onOpen()
 
 return(
     <div>
-  <form onSubmit={HandleSubmit} className="flex justify-between m-2">
+  <form onSubmit={HandleSubmit} className="flex justify-between m-2 bg-gray-200 p-8 rounded-sm">
     <div>
        <Input int={name} text="Nom"
                            type="text" out={(e)=>setName(e.target.value)} require={true}/>

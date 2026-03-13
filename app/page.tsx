@@ -40,8 +40,8 @@ type student = {
     student_code: string
 }
 const colors=[
- "bg-[#2DAE0D]/70",
- "bg-gray-200"
+  "bg-[#CAF0F8]/25 font-medium",
+  "bg-[#90C3C8]/70 font-medium"
 ]
 //export const dynamic = 'force-dynamic';
 
@@ -81,7 +81,7 @@ function Home() {
    {/* filter query*/}
   <div>
     {/*filter section */}
-    <div className="mb-8">
+    <div className="mb-4 bg-white p-2 rounded-sm">
       <button className="text-[20px] flex w-35 justify-center border rounded-lg hover:bg-gray-300" onClick={()=>setFilter(!filter)}>filter
      {filter ?  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
         strokeWidth="1.5" stroke="currentColor" className="size-6  ml-2 mt-1">
@@ -92,29 +92,33 @@ function Home() {
 </svg> }</button>
     </div>
 
-      <div className="text-gray-600 mb-1">
-        {dat?.length} Résultats
+      <div className="text-gray-600 bg-white pl-3 mb-2 rounded-sm">
+        {dat?.length} Résultats...
       </div>
    {filter ?
   <div className="absolute top-31 w-12.5">
      <form action="/" className="absolute bg-gray-300 w-65 p-5 rounded-xl">
-    <div><input type="radio" name="faculty" value='Génie Civil' /> Génie Civil</div>
-     <div><input type="radio" name="faculty" value='Médecine Générale' />Médecine Générale</div>
-     <div><input type="radio" name="faculty" value='Odontologie' /> Odontologie</div>
-     <div><input type="radio" name="faculty" value='Sciences Infirmières' /> Sciences Infirmières</div>
-     <div><input type="radio" name="faculty" value=' Sciences Administratives' /> Sciences Administratives</div>
-     <div><input type="radio" name="faculty" value='Sciences Comptables' /> Sciences Comptables</div>
-      <div><input type="radio" name="faculty" value='Gestion Des Affaires' /> Gestion des affaires</div>
-       <div><input type="radio" name="faculty" value='Sciences Agronomiques' /> Sciences Agronomiques</div>
-        <div><input type="radio" name="faculty" value='Sciences Economiques' /> Sciences Economiques</div>
-         <div><input type="radio" name="faculty" value={`Sciences De L'Education`} /> Sciences de l'Education</div>
-          <div><input type="radio" name="faculty" value='Sciences Juridiques' /> Sciences Juridiques</div>
-          <div><input type="radio" name="faculty" value='Science Informatique' /> Science Informatique</div>
-           <div><input type="radio" name="faculty" value='Pharmacologies' /> Pharmacologies</div>
-            <div><input type="radio" name="faculty" value='Médecine Vétérinaire' /> Médecine vétérinaire</div>
-             <div><input type="radio" name="faculty" value='Laboratoire Medicale' /> Laboratoire Médicale</div>
-              <div><input type="radio" name="faculty" value='Physiothérapie' /> Physiothérapie</div>
-               <div><input type="radio" name="faculty" value={`Jardinières D'enfants`} /> Jardinières d'enfants</div>
+     <select name="faculty" >
+      <option value="">faculté</option>
+      <option>Génie Civil</option>
+      <option>Médecine Générale</option>
+      <option>Odontologie</option>
+      <option>Odontologie</option>
+      <option>Sciences Infirmières</option>
+      <option>Sciences Administratives</option>
+      <option>Sciences Comptables</option>
+      <option>Gestion des affaires</option>
+      <option>Sciences Agronomiques</option>
+      <option>Sciences Economiques</option>
+      <option>Sciences de l'Education</option>
+      <option>Sciences Juridiques</option>
+      <option>Science Informatique</option>
+      <option>Pharmacologies</option>
+      <option>Médecine vétérinaire</option>
+      <option>Laboratoire Médicale</option>
+      <option>Physiothérapie</option>
+      <option>Jardinières d'enfants</option>
+     </select>
              {/* <select name="niveau" className="m-5" required>
               <option value="">niveau</option>
               <option>1</option>
@@ -128,8 +132,8 @@ function Home() {
    </form>
   </div> : null}
   </div>
-  {search ? (<div className="border-4 border-gray-500 rounded-2xl">{/* header for the list of student by faculty*/}
-    <ol className="w-full flex justify-between p-1 bg-gray-400 rounded-t-xl font-medium">
+  {search ? (<div className="border-4 border-[#B9B8D3] rounded-2xl">{/* header for the list of student by faculty*/}
+    <ol className="w-full flex justify-between p-1 bg-[#759FBC] text-gray-800 rounded-t-xl font-medium">
     <li className="w-full pl-5">Nom et Prénom</li>
   <li className="w-full">Faculté</li>
   <li className="w-full">Niveau</li>
@@ -140,12 +144,13 @@ function Home() {
   {/*list of list of student by faculty */}
    <div className="rounded-b-lg min-h-20 bg-gray-200">{dat.map((compan,index)=>(
   <ol key={compan.id}   className={`flex   ${colors[index % colors.length]}`}>
-    <li className="w-full pl-5 border-r border-gray-500"><Link className="hover:text-blue-800 hover:text-[18px] hover:font-bold" href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>
+    <li className="w-full pl-5 border-r font-black text-gray-700 border-gray-500">
+      <Link className="hover:text-blue-600 hover:text-[18px] hover:font-bold" href={`search?nom=${compan.last_name}&prenom=${compan.first_name}`}>
     {compan.last_name} {compan.first_name}</Link></li>
   <li className="w-full pl-5 border-r border-gray-500">{compan.faculty}</li>
   <li className="w-full pl-5 border-r border-gray-500"><Filter2 id={compan.id} bool/></li>
   <li className="w-full pl-5 border-r border-gray-500">{compan.academy}</li>
-  <li className="w-full pl-5 border-r border-gray-500">{compan.student_code}</li>
+  <li className="w-full pl-5 border-r font-bold text-[#0077B6] border-gray-500">{compan.student_code}</li>
   <li className="w-full pl-5 border-r border-gray-500"><Delete_button name={`${compan.last_name} ${compan.first_name}`} id={compan.id} value="student"/></li>
   </ol>
 ))}

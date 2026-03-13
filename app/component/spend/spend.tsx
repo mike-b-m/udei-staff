@@ -52,7 +52,7 @@ export default function Spend() {
   return (
 <>
 <div className="w-full justify-center">
-    <div className="flex justify-center">
+    <div className="flex justify-center bg-gray-200 p-4 mb-4 rounded-sm">
        <ChartProgress data={chart}/>
       <div className="w-60 h-30 text-center bg-gray-100/50 m-10 p-3 shadow-lg outline
        outline-[#2DAE0D] rounded-sm text-[16px] font-bold text-gray-800 flex flex-col">
@@ -60,7 +60,7 @@ export default function Spend() {
         dépenser pour cette année</div>
     </div>
    {/* filter query*/}
-  <div>
+  <div className="bg-gray-200 p-4 rounded-sm mb-2">
     <select onChange={(e)=>setYear(e.target.value)} disabled>
       <option value="2027-01-01 00:00:00">2027</option>
       <option value="2026-01-01 00:00:00">2026</option>
