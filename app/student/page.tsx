@@ -4,22 +4,37 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Stu } from "../component/add-payment/addpayment";
 import { Filter2 } from "../component/filter/filter";
-import Input from "../component/input/input-comp";
+import { ReadNote, ReadNote2 } from "../component/teacher/teacher";
 
 export default function Student_dashboard(){
     const [user,setUser] =useState<any[]>([])
+    const [status,setStatus] = useState<any[]>([])
     const searchpara= useSearchParams()
         const search = searchpara.get('code')
+
+      
+
      useEffect(() => {
         const getData = async ()=> {
-            const { data, error } = await supabase
+            const { data:theData, error } = await supabase
   .from('student')
-  .select('id,last_name,first_name,student_code,faculty').eq('student_code',search)
+  .select('id,last_name,first_name,student_code,faculty')
+  .eq('student_code',search)
         if (error) console.error(error.message)
-        else setUser(data)};
+        else {
+    setUser(theData)
+    const { data:dat, error:Err } = await supabase
+  .from('student_status')
+  .select('id,student_id,year_study')
+  .eq('student_id', theData[0]?.id)
+        if (Err) console.error(Err.message)
+        else setStatus(dat)
+        }
+   
+        };
     getData()},[])
     return(
-        <div className="bg-sky-300 w-full p-15">
+        <div className="bg-gray-200 rounded-xl w-full p-15">
             <form action="/student" >
                 <input type="text" name="code" className="focus:outline-none border"/>
                 <button type="submit">search</button>
@@ -43,6 +58,21 @@ export default function Student_dashboard(){
                 <div className="bg-gray-300  text-[20px] font-bold p-10 rounded-2xl">
                     <div>2/10/20XX</div>exam date</div>
             </div>)}
+
+                <div className="m-10"> session 1
+                    <div>
+              <div className="flex bg-gray-100">
+              <div className="w-20 m-2">Name</div>
+              <div className="w-27 m-2">Matière</div>
+              <div className="w-10 m-2">Intra</div>
+              <div className="w-10 m-2">Final</div>
+            </div>
+                </div>
+                {status.map((stat)=>
+                <ol key={stat.id}>
+                    <ReadNote2 year={stat.year_study} session={1} id={stat.student_id} matiere={''} faculty={''} name=""/>
+                </ol>)}
+                </div>
 
             <div className="grid grid-cols-2">
                 <div className="border border-gray-500 bg-gray-300 w-[90%] pl-5 rounded mt-5">1 semester</div>

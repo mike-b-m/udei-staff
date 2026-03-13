@@ -7,7 +7,7 @@ interface int{
     matiere: string | null
     year: number | string | null
     id: number
-    faculty: string 
+    faculty: string | null
 }
 const colors=[
  "bg-[#2DAE0D]/70",
@@ -190,6 +190,53 @@ export function ReadNote({session,year,id}:int){
                 <li className="w-10 mr-2 ml-2">{not.final}</li>
                 <li className="w-10 mr-2 ml-2">{not.year}</li>
                 <li className="w-25 mr-2 ml-2">{not.faculty}</li>
+            </ol>)}
+             <ol className={`flex`}>
+                <li className="w-30 mr-2 ml-2">
+             Total
+                    </li>
+                <li className="w-10 mr-2 ml-2">
+             {note?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.intra), 0)}
+                    </li>
+                <li className="w-10 mr-2 ml-2">
+             {note?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.final), 0)}
+                    </li>
+            </ol>
+            </div>
+        </div>
+    )
+}
+
+export function ReadNote2({session,year,id}:int){
+    const [note,setNote] = useState<any[]>([])
+    const [fullname,setFullname] = useState<any[]>([])
+
+     useEffect(() => {
+            const getData = async () => {
+              const { data:stud, error:second } =  await supabase.from('student')
+              .select('id,last_name,first_name').eq('id', id);
+              if (second) console.error(second.message)
+                else setFullname(stud)
+              ;}
+               getData()},[])
+    useEffect(() => {
+            const getData = async () => {
+            const {data , error } =  await supabase.from('exam')
+        .select('*')
+        .eq('student_id', id).eq('session',session).eq('year',year)
+        if (error) console.error(error.message)
+            else setNote(data)
+              ;}
+               getData()},[])
+    return(
+        <div className="flex">
+            {fullname[0]?.last_name} {fullname[0]?.first_name} 
+            <div>
+                {note.map((not,index)=>
+            <ol key={not.id} className={`${colors[index % colors.length]} flex`}>
+                <li className="w-30 mr-2 ml-2">{not.matiere}</li>
+                <li className="w-10 mr-2 ml-2">{not.intra}</li>
+                <li className="w-10 mr-2 ml-2">{not.final}</li>
             </ol>)}
              <ol className={`flex`}>
                 <li className="w-30 mr-2 ml-2">
