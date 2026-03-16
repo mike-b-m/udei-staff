@@ -28,6 +28,8 @@ export function Delete_button({id,value,name}:nam){
     const [desable,setDisable]= useState(false)
     const [confirm,setConfirm] = useState('')
     const [cOpen,setCOpen] = useState(false)
+    const [Error,setError] = useState('')
+    const [opError,setOpError] = useState(false)
     const handleDelete= async ()=> {
         if(name === confirm){
             setDisable(true)
@@ -41,18 +43,30 @@ export function Delete_button({id,value,name}:nam){
             console.log('saved')
             setOpen(!open)
             setTimeout(() => {setOpen(false)   
-            }, 2000);
+            }, 3000);
             setCOpen(false)
         }
         }
         else {
-            console.error('error')
+            setError(`vous n'avez pas confirmé la suppression`)
+            setOpError(true)
+            setTimeout(() => {setOpError(false) }, 2000);
             setCOpen(false)
 
         }
         }
     return(
         <div className="static">
+            {/*error message */}
+            {opError ? (<div className="fixed top-0 right-0 bg-red-100 p-7 text-red-600 flex border border-red-500 rounded-lg">
+                        {Error}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+  <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 
+  9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 
+  0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 
+  1 0-1.06-1.06L12 10.94l-1.72-1.72Z" clipRule="evenodd" />
+</svg>
+        </div> ) : ''}
             {/* set save  */}
                 
                     {open ? (<div className="fixed top-0 right-0 bg-red-100 p-7 text-red-600 flex border border-red-500 rounded-lg">
@@ -72,7 +86,7 @@ export function Delete_button({id,value,name}:nam){
 </svg>
 </button>
         {/* confirm section */}
-        { cOpen ? <div className="fixed left-[30%] top-25 w-100 bg-gray-300 rounded-xl justify-items-center p-10 text-[20px]">
+        { cOpen ? <div className="fixed left-18 top-16 w-100 bg-gray-300 rounded-xl justify-items-center p-10 text-[20px]">
             <div className="mt-10 mb-2">
                 Confirmer la suppression en écrivant ce nom <span className="font-bold">"{name}"</span>
             </div>

@@ -38,6 +38,7 @@ type user = {
     enrol_date: string
     seen_by: string
     photo_url: string
+    academy: string
 }
 // interface prop{
 //   nom: string
@@ -181,7 +182,7 @@ export default function StudentInfos(){
             <li className="" key={user.id}>
                 {/*infos perso */}
                  <div className="flex ">
-                  <div className="w-32 h-32 rounded-full border-2 border-gray-400 overflow-hidden bg-gray-300 flex items-center justify-center mt-10 m-2">
+                  <div className="size-50 rounded-2xl border-2 border-gray-400 overflow-hidden bg-gray-300 flex items-center justify-center m-2">
                     {user.photo_url? (<Image src={user.photo_url} alt="Preview" width={128} height={128} 
                   className="w-full h-full object-cover rounded-xl" />) 
                   : (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-500">
@@ -189,7 +190,7 @@ export default function StudentInfos(){
                       </svg>
                     )}</div>
 
-                <div className="grid grid-flow-col grid-rows-3 w-full p-2">
+                <div className=" w-full p-2">
                   <Lecture int="Nom" out={user.last_name} />
                  <Lecture int="Prenom" out={user.first_name} />
                   <Lecture int="Email" out={user.email} />
@@ -202,6 +203,7 @@ export default function StudentInfos(){
                       <Lecture int="Telephone" out={user.phone_number} />
                       <Lecture int="Faculté" out={user.faculty} />
                       <Lecture int="code" out={user.student_code} />
+                       <Lecture int="Année academie" out={user.academy} />
                   </div>
                  </div>
                   {/*link */}
@@ -211,7 +213,7 @@ export default function StudentInfos(){
 </svg><span className="ml-2">payment</span></Link>: null}
                 {/*status section*/}
              <h6 className="text-center m-2 underline text-[16px]">statut de progression de l'étudiant</h6>
-             <div className="flex">
+             <div className="">
                <Lecture int="Année actuel" out={status[0]?.year_study} />
              <Lecture int="Année complete" out={status[0]?.year_completed} />
              <Lecture int="Vue par" out={studentInfos[0]?.seen_by} />
@@ -224,7 +226,7 @@ export default function StudentInfos(){
 
                  {/*family infos for mother*/}
                <h3 className="text-center m-2 underline text-[16px]">Information familiales </h3>
-                 <div className="grid grid-cols-3"> 
+                 <div className=""> 
                     <Lecture int="Mère" out={user.mother_name ? `${user.mother_name}`:'vide'} />
                       <Lecture int="Lieu de naissance" out={user.mother_birth ? `${user.mother_birth}`:'vide'} />
                         <Lecture int="Domicile" out={user.mother_residence  ? `${user.mother_residence}`:'vide'} />
@@ -232,7 +234,7 @@ export default function StudentInfos(){
                         <Lecture int="Profession" out={user.mother_profesion ? `${user.mother_profesion}`:'vide'} />
                   </div> 
                 {/*family infos for father*/}
-                 <div className="grid grid-cols-3">                  
+                 <div>                  
                   <Lecture int="Père" out={user.father_name ? `${user.father_name}`:'vide'} />
                  <Lecture int="Lieu de naissance" out={user.father_birth ? `${user.father_birth}`:'vide'} />
                         <Lecture int="Domicile" out={user.father_residence ? `${user.father_residence}`:'vide'} />

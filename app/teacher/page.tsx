@@ -102,18 +102,19 @@ export default function Teacher(){
           </form>
        
         {/*button */}
-        <div><button onClick={()=>{setRead(true) 
+        <div className="border border-gray-400 rounded-full p-1 m-4 w-68.5 ">
+          <button onClick={()=>{setRead(true) 
         setIntra(false)}} 
-          className={`${read ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3'
-          :'bg-gray-100 rounded-2xl text-[16px] hover:bg-green-700 w-20 h-6 ml-3'}`}>read</button>
+          className={`${read ? 'bg-[#0077B6] rounded-2xl text-white text-[16px] w-20 h-6 '
+          :'bg-gray-100 rounded-2xl text-[16px] hover:bg-blue-400 w-20 h-6'}`}>read</button>
           <button onClick={()=>{setIntra(true)
             setRead(false)
           }} 
-          className={`${intra ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3'
-          :'bg-gray-100 rounded-2xl text-[16px] hover:bg-green-700 w-20 h-6 ml-3'}`}>intra</button>
+          className={`${intra ? 'bg-[#0077B6] rounded-2xl text-white text-[16px] w-20 h-6 ml-3'
+          :'bg-gray-100 rounded-2xl text-[16px] hover:bg-blue-400 w-20 h-6 ml-3'}`}>intra</button>
          <button onClick={()=>setIntra(false)}
-          className={`${!intra && read===false ? 'bg-[#2DAE0D] rounded-2xl text-white text-[16px] hover:bg-green-700 w-20 h-6 ml-3'
-          :'bg-gray-100 rounded-2xl text-[16px] border hover:bg-green-700 w-20 h-6 ml-3'}`}>Final</button></div>
+          className={`${!intra && read===false ? 'bg-[#0077B6] rounded-2xl text-white text-[16px] w-20 h-6 ml-3'
+          :'bg-gray-100 rounded-2xl text-[16px] hover:bg-blue-400 w-20 h-6 ml-3'}`}>Final</button></div>
 
           {/*show filter selected */}
           <div className="flex">

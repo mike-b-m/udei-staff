@@ -5,7 +5,7 @@ import Link from "next/link";
 import {supabase} from "../db";
 import { UUID } from "crypto";
 import { redirect, usePathname } from "next/navigation";
-
+//import { useAuth } from "@/app/component/provider/AuthProvider"
 type prof = {
   id: UUID
   full_name: string
@@ -20,6 +20,7 @@ export default function Header(){
      const [ses, setSes] =useState <any>()
      const [tOpen,setTOpen] = useState (false)
     const pathname = usePathname()
+    //const {role, user, loading} = useAuth()
 
     const signOutall = async () => {
   
@@ -34,7 +35,7 @@ export default function Header(){
           if (error) console.log('Error',error.message);
           
           else {
-            setUser(user)
+            //setUser(user)
             setTOpen(true)
             setSes(session)
           }
@@ -55,12 +56,12 @@ export default function Header(){
             console.error('not session find')
           }
         else if (error) console.error(error?.message);
-        //else setUser(user)
+        else setUser(user)
         }; 
         getData()},[])
 
     return(
-        <div className="flex justify-between xl:top-0 xl:right-0 border-b-2 w-[100%] border-gray-400">
+        <div className="flex justify-between xl:top-0 xl:right-0 border-b-2 w-full border-gray-400">
         <div className="flex xl:justify-between  xl:m-3 xl:ml-10 ml-2 mt-2 static w-[30%]">
             <Link href="/"><Image
          src="/image/logo.png"
