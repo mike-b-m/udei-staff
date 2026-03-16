@@ -10,8 +10,8 @@ interface int{
     faculty: string | null
 }
 const colors=[
- "bg-[#2DAE0D]/70",
- "bg-gray-200"
+  "bg-[#CAF0F8]/25 font-medium",
+  "bg-[#90C3C8]/70 font-medium"
 ]
 export default function TheacherInput({session,name,matiere,id,year,faculty}:int){
     const [note, setNote] = useState('')
@@ -181,7 +181,7 @@ export function ReadNote({session,year,id}:int){
                getData()},[])
     return(
         <div className="flex">
-            {fullname[0]?.last_name} {fullname[0]?.first_name} 
+            <div className="w-35">{fullname[0]?.last_name} {fullname[0]?.first_name} </div>
             <div>
                 {note.map((not,index)=>
             <ol key={not.id} className={`${colors[index % colors.length]} flex`}>
@@ -230,7 +230,7 @@ export function ReadNote2({session,year,id}:int){
                getData()},[])
     return(
         <div className="flex">
-            {fullname[0]?.last_name} {fullname[0]?.first_name} 
+            <div className="w-50">{fullname[0]?.last_name} {fullname[0]?.first_name} </div>
             <div>
                 {note.map((not,index)=>
             <ol key={not.id} className={`${colors[index % colors.length]} flex`}>

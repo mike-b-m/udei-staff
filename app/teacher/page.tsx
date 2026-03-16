@@ -3,9 +3,13 @@ import { supabase } from "../component/db";
 import { useState,useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import TheacherInput, { ReadNote, TheacherInput2 } from "../component/teacher/teacher";
+// const colors=[
+//  "bg-[#2DAE0D]/70",
+//  "bg-gray-200"
+// ]
 const colors=[
- "bg-[#2DAE0D]/70",
- "bg-gray-200"
+  "bg-[#CAF0F8]/25 font-medium",
+  "bg-[#90C3C8]/70 font-medium"
 ]
 export default function Teacher(){
     const [exam,setExam] = useState<any[]>([])
@@ -118,9 +122,9 @@ export default function Teacher(){
 
           {/*show filter selected */}
           <div className="flex">
-              {search ? (<div className=" m-4 p-1 rounded shadow-sm shadow-green-400">{search}</div>):null}
-              {search3 ? (<div className=" m-4 p-1 rounded shadow-sm shadow-green-400">Niveau: {search3}</div>):null}
-              {search4 ? (<div className=" m-4 p-1 rounded shadow-sm shadow-green-400">Session: {search4}</div>):null}
+              {search ? (<div className=" m-4 p-1 rounded shadow-sm shadow-[#0077B6]">{search}</div>):null}
+              {search3 ? (<div className=" m-4 p-1 rounded shadow-sm shadow-[#0077B6]">Niveau: {search3}</div>):null}
+              {search4 ? (<div className=" m-4 p-1 rounded shadow-sm shadow-[#0077B6]">Session: {search4}</div>):null}
           </div>
              {faculty ? <h3 className="text-center font-bold">matière sélectionné: {faculty}</h3>: <h3 className="text-center">Veuillez sélectionner une matiere dans la section filtre des matière.</h3>}
           {/*teacher enter intra*/}
