@@ -39,7 +39,7 @@ export default function Nav(){
          xl:min-w-[75px] xl:min-h-100`}>
     <ul className=" h-[80%] ">
         {/* home section nav */}
-       {role.role ==='admin' ? 
+       {role.role ? 
 
        <Link className="pl-3 " href="/admin"><li className={`m-2 ${hover ? 'w-[90%]':null} text-center rounded-2xl pl-3 
          flex ${pathname === '/admin' ? 'bg-[#0077B6] border-b-[4px] font-bold border-blue-200 text-white rounded-[8px]'
