@@ -98,7 +98,7 @@ export default function StudentInfos(){
           .eq('student_code', thecode || search);
         if (error) console.error(error.message)
           else {
-       const studebId = comp[0]?.id | search 
+       const studebId:any = comp[0]?.id | search 
        if (studebId){
         const { data:com, error:status_error } =  await supabase.from('student_status').select('*')
           .eq('student_id', comp[0]?.id);
@@ -295,7 +295,7 @@ export  function StudentInfos2({search,fullnamex}:p){
           .eq('student_code', search);
         if (error) console.error(error.message)
           else {
-       const studebId = comp[0]?.id | search 
+       const studebId:any = comp[0]?.id | search 
        if (studebId){
         const { data:com, error:status_error } =  await supabase.from('student_status').select('*')
           .eq('student_id', comp[0]?.id);
