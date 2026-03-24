@@ -1,5 +1,5 @@
 'use client'
-import { supabase } from "../component/db";
+import { supabase } from "@/app/component/db";
 import { useState, useEffect, use } from "react";
 import { useSearchParams } from "next/navigation";
 

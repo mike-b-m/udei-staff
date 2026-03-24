@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev ",
     "build": "node --max-old-space-size=8192 node_modules/.bin/next build",
     "start": "next start",
     "lint": "eslint"
@@ -11,7 +11,10 @@
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.91.1",
+    "@yudiel/react-qr-scanner": "^2.5.1",
+    "html2pdf.js": "^0.14.0",
     "next": "^16.1.6",
+    "next-qrcode": "^2.5.1",
     "postcss": "^8.5.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

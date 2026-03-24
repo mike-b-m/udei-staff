@@ -1,8 +1,8 @@
 'use client'
 import { Suspense, useState, useEffect } from "react";
-import { supabase } from "../component/db";
-import Input from "../component/input/input-comp";
-import TheTable from "../component/table/table";
+import { supabase } from "@/app/component/db";
+import Input from "@/app/component/input/input-comp";
+import TheTable from "@/app/component/table/table";
 import { useSearchParams } from "next/navigation";
 
 type prog = {
@@ -51,10 +51,9 @@ setVeri(false)}
         if (error) console.error(error.message)
         else setProgram(data)};
     getData()},[])
-    const sum = program
     return(
         <div className="w-full bg-gray-200 mt-3 rounded-xl mr-3 static"> 
-        <form action="/program" className="text-center">
+        <form action="/admin/program" className="text-center">
         {/*<input type="text" name="faculty"  className="border-2" />*/}
                 <select name="faculty"
                     className="px-4 focus:outline-none hover:bg-gray-400 hover:text-gray-900

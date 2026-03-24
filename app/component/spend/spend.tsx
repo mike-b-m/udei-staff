@@ -15,8 +15,8 @@ type company ={
   decribe_motive: string
 }
 const colors=[
- "bg-[#2DAE0D]",
- "bg-gray-200"
+  "bg-[#CAF0F8]/25 font-medium",
+  "bg-[#90C3C8]/70 font-medium"
 ]
 export default function Spend() {
   const [dat, setDat]= useState<company[]>([])
@@ -72,7 +72,7 @@ export default function Spend() {
   <Add_botton/>
   <div className="rounded-xl border-4 pb-0.1 mt-3 border-gray-500 bg-gray-200">
     {/* header for the list of spent */}
-   <h3 className="text-center text-[20px]">Money spent</h3>
+   <h3 className="text-center text-[20px]">Argent dépensé</h3>
     <ol className="flex justify-between bg-gray-300 font-poppins border-b border-t border-gray-400">
     <div className="bg-gray-300 min-w-50 text-center "><li className="ml-5:">nom</li></div>
   <li className="bg-gray-300 min-w-50 text-center">montant</li>

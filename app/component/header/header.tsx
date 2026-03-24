@@ -35,7 +35,7 @@ export default function Header(){
           if (error) console.log('Error',error.message);
           
           else {
-            //setUser(user)
+            setUser(user)
             setTOpen(true)
             setSes(session)
           }
@@ -49,8 +49,7 @@ export default function Header(){
     else setProfiles(data)
 
         }
-        if (!session && pathname !== '/login') redirect('/login')
-        if (session && pathname === '/login') redirect('/')
+        if (session && pathname === '/login') redirect('/admin')
         if (!session) 
           {
             console.error('not session find')
@@ -63,7 +62,7 @@ export default function Header(){
     return(
         <div className="flex justify-between xl:top-0 xl:right-0 border-b-2 w-full border-gray-400">
         <div className="flex xl:justify-between  xl:m-3 xl:ml-10 ml-2 mt-2 static w-[30%]">
-            <Link href="/"><Image
+            <Link href="/"><img
          src="/image/logo.png"
       width={150}
       height={150}
@@ -76,7 +75,7 @@ export default function Header(){
 
              <div className="text-[16] pb-2">
               <div className="flex justify-between">
-                <Image
+                <img
          src="/profil.png"
       width={30}
       height={30}
@@ -109,7 +108,7 @@ log out</button></div>
          max-h-10 mt-3 mr-3
         justify-between p-1 border-gray-400">
       <button onClick={()=>setOpen(!open)} className="flex justify-between">
-      <Image src="/profil.png"
+      <img src="/profil.png"
       width={30}
       height={40}
       alt="user profil"/>

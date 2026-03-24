@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react"
 import {supabase} from "../db";
+import Link from "next/link";
+import {Loading2} from "@/app/component/loading/loading";
 
 type AuthContextType = {
   user: any
@@ -23,10 +25,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data } = await supabase.auth.getUser()
+      const { data, error } = await supabase.auth.getUser()
 
       setUser(data.user)
-
+      if (error) console.error(error.message)
       if (data.user) {
         const { data: profile } = await supabase
           .from("profiles")
@@ -43,10 +45,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getUser()
   }, [])
 
-  return (
+  return (<div>{loading ? (<Loading2/>) : user ? (
     <AuthContext.Provider value={{ user, role, loading }}>
-      {children}
-    </AuthContext.Provider>
+      {children} 
+    </AuthContext.Provider>) :
+     !user ? (<div className="text-center mt-10 text-[20px]">Vous n'êtes pas encore connecté. Veuillez vous 
+  connecter pour pouvoir accéder à la 
+  plateforme.<div><Link className="text-gray-700 hover:text-blue-800"
+   href='/login'>Log-in</Link></div> </div>): null}
+    </div>
   )
 }
 

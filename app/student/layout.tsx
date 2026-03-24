@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
-import "./globals.css";
-import Header from "./component/header/header";
-import Footer from "./component/footer/fouter";
-import Nav from "./component/nav/nav";
+import "@/app/globals.css";
+import Footer from "@/app/component/footer/fouter";
+
 
 export const dynamic = 'force-dynamic';
 
@@ -30,14 +29,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      
-      <body
+    <body
         className={`${inter.className} ${poppins.className} antialiased`}
       >
-        <Header/> 
         <div className="flex  right-0 pb-10 bg-gray-400">
-          <Nav/>
-              <div className="ml-[32px] mr-[32px] justify-items-center mt-[24px] w-full">{children }</div>
+              <div className="ml-8 mr-8 justify-items-center mt-8 w-full">{children }</div>
           </div>
         <Footer/>
       </body>

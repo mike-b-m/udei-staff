@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Time from "../time/time";
 import { Filter2 } from "../filter/filter";
+import Input from "../input/input-comp";
 
 interface int{
 id: number
@@ -39,10 +40,9 @@ type ide={
     id: number
 }
 const colors=[
- "bg-[#2DAE0D]/50 text-[16px] font-inter text-gray-800",
- "bg-gray-100 text-[16px] font-inter text-gray-800"
+  "bg-[#CAF0F8]/25 font-medium",
+  "bg-[#90C3C8]/70 font-medium"
 ]
-
 
 export default function Pay({id,history,balance}:int){
     const [theAmount, setTheAmount] = useState(Number)
@@ -115,7 +115,10 @@ export  function Price(){
         .insert([{faculty,price}])
         .select('*')
             if (status_error) console.error(status_error.message)
-            else console.log('saved')
+            else {
+        console.log('saved')
+        setOpen(false)
+            }
     }
    
      useEffect(() => {
@@ -129,14 +132,15 @@ export  function Price(){
             getData()},[])
     return(
         <div className="m-1">
-          {open ? <form action={handleUpdate} className="flex flex-col min-h-25 justify-between">
-            <h4>ajouter la faculté et le prix</h4>
-            <input type="text" placeholder="faculté" value={faculty} 
-            className="border" onChange={(e)=>setFaculty(e.target.value)}/>
+          {open ? <form action={handleUpdate} className="min-h-25  justify-items-center">
+            <h4 >ajouter la faculté et le prix</h4>
+            <div>
+                <Input int={faculty} text="faculté"
+                                 type="text" out={(e)=>setFaculty(e.target.value)} require={false}/> 
+            <Input int={price} text="Prix (HTG)"
+                                 type="number" out={(e)=>setPrice(e.target.value)} require={false}/> 
 
-            <input type="number" placeholder="prix" value={price} 
-            className="border" onChange={(e:any)=>setPrice(e.target.value)} />
-
+            </div>
            <div className="flex p-2">
              <button className="bg-gray-500 rounded-2xl
              text-white text-[16px] hover:bg-gray-700 w-20 h-6" onClick={(e)=>setOpen(false)}>Cancel</button>
@@ -205,7 +209,7 @@ export function Stu({id}:ide){
              </div>
            {student.map((stund,index)=>
         <ol key={stund.id} className={`${colors[index % colors.length]}`}>
-            <Link href={`/payment?id=${stund.id}`} className="w-full flex justify-between ">
+            <Link href={`/admin/payment?id=${stund.id}`} className="w-full flex justify-between ">
             <li className="ml-2 w-50 pl-5 border-r border-gray-500">{stund.last_name} {stund.first_name} </li>
             <li className="w-50 pl-5 border-r border-gray-500"><Stu id={stund.id}/></li>
             <li className="w-50 pl-5 border-r border-gray-500">{stund.faculty}</li>

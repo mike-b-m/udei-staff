@@ -1,4 +1,4 @@
-import Student_input from "../component/student-input/page";
+import Student_input from "@/app/component/student-input/page";
 import { Suspense } from "react";
 export default function Enroll(){
     return(

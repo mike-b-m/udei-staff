@@ -1,8 +1,8 @@
 'use client'
-import { supabase } from "../component/db";
+import { supabase } from "@/app/component/db";
 import { useState,useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import TheacherInput, { ReadNote, TheacherInput2 } from "../component/teacher/teacher";
+import TheacherInput, { ReadNote, TheacherInput2 } from "@/app/component/teacher/teacher";
 // const colors=[
 //  "bg-[#2DAE0D]/70",
 //  "bg-gray-200"
@@ -58,7 +58,7 @@ export default function Teacher(){
         <div className="bg-gray-200 mt-3 w-full rounded-xl">
           <h2 className="text-center m-3 font-bold text-[16px]">Note</h2>
           {/*filter */}
-          <form action='/teacher' className="p-10">
+          <form action='/admin/teacher' className="p-10">
             <select name="matiere" id="" className="mr-5" onChange={(e)=>setFaculty(e.target.value)}>
               <option value="">matière</option>
               {program.map((pro)=>
@@ -94,6 +94,7 @@ export default function Teacher(){
               <option>3</option>
               <option>4</option>
               <option>5</option>
+              <option>6</option>
             </select>
             {/*session */}
             {/* <label>session</label> */}
@@ -152,19 +153,22 @@ export default function Teacher(){
         </ol>)}
             </div>):null}
             {/*read session */}
-            {read ? <div>
-              <div className="flex bg-gray-100">
+            {read ? <div className="">
+              <div className="flex bg-gray-100 font-semibold text-black/78">
               <div className="w-30 m-2">Name</div>
               <div className="w-30 m-2">Matière</div>
               <div className="w-10 m-2">Intra</div>
+              <div className="w-13 m-2">reprise</div>
               <div className="w-10 m-2">Final</div>
+              <div className="w-13 m-2">reprise</div>
+              <div className="w-15 m-2">Session</div>
               <div className="w-10 m-2">nivo</div>
-              <div className="w-30 m-2">Faculté</div>
+              <div className="w-30 m-2 text-center">Faculté</div>
+              <div className="w-25 m-2">session</div>
             </div>
             {student.map((stud)=>
             <ol key={stud.id} className="flex border-b">
               <li ><ReadNote faculty="" session={search4} year={search3} id={stud.student_id} name="" matiere=''/></li>
-              <li className="w-30 m-2">{stud.faculty}</li>
               </ol>)}
             </div>
             : null}

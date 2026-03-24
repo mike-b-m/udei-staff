@@ -1,7 +1,7 @@
 'use client'
 import { useState} from "react";
-import { supabase } from "../component/db";
-import Input from "../component/input/input-comp";
+import { supabase } from "@/app//component/db";
+import Input from "@/app//component/input/input-comp";
 import Image from "next/image";
 
 export default function Login(){
@@ -25,7 +25,7 @@ export default function Login(){
     setMess(error.message)
     setLoad(false)
   }
-  else window.location.href = '/'
+  else window.location.href = '/admin'
 }        
 return(
     <div className=" flex border-2 rounded-4xl border-gray-300  bg-gray-200 shadow-lg">

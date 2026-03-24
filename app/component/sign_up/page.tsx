@@ -118,7 +118,7 @@ return(
     </form>
 
     <div className="bg-gray-200 mt-3 p-4 rounded-xl">
-      <h3 className="text-center font-bold text-[20px] p-2">account created</h3>
+      <h3 className="text-center font-bold text-[20px] p-2">compte créé</h3>
       <div className="flex justify-between bg-[#0077B6] text-gray-300 p-2">
         <div className="w-50">Nom et Prénom</div>
         <div className="w-50">role</div>
