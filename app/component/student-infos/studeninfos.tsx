@@ -57,6 +57,10 @@ type stat ={
 interface ph{
   dat: string
 }
+interface p{
+  search: string
+  fullnamex: string
+}
 
 export default function StudentInfos(){
      const [studentInfos, setStudentInfos] = useState<user[]>([])
@@ -255,7 +259,7 @@ export default function StudentInfos(){
 
 //infos student 
 
-export  function StudentInfos2({search,fullnamex}:string){
+export  function StudentInfos2({search,fullnamex}:p){
      const [studentInfos, setStudentInfos] = useState<user[]>([])
      const [first_name,setFirst_name]=useState('')
      const [last_name, setLast_name]= useState('')
