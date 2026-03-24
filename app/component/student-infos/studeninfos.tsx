@@ -73,10 +73,6 @@ export default function StudentInfos(){
     const [send,setSend] = useState(false)
     const [load,setLoad] = useState(false)
 
-     const searchpara = useSearchParams();
-        const search = searchpara.get('c') || '';
-        //const search2 = searchpara.get('prenom') || '';
-       
       useEffect(() => {
             const getData = async () => {
               if (first_name || last_name){
@@ -95,10 +91,10 @@ export default function StudentInfos(){
             const { data:comp, error } =  await supabase.from('student').select('*')
           // .eq('last_name', last_name)
           // .eq('first_name', first_name)
-          .eq('student_code', thecode || search);
+          .eq('student_code', thecode );
         if (error) console.error(error.message)
           else {
-       const studebId:any = comp[0]?.id | search 
+       const studebId:any = comp[0]?.id 
        if (studebId){
         const { data:com, error:status_error } =  await supabase.from('student_status').select('*')
           .eq('student_id', comp[0]?.id);
@@ -295,7 +291,7 @@ export  function StudentInfos2({search,fullnamex}:p){
           .eq('student_code', search);
         if (error) console.error(error.message)
           else {
-       const studebId:any = comp[0]?.id | search 
+       const studebId:any =  search 
        if (studebId){
         const { data:com, error:status_error } =  await supabase.from('student_status').select('*')
           .eq('student_id', comp[0]?.id);
