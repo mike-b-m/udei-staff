@@ -6,7 +6,6 @@ import  Lecture  from "../lect_input/lecture";
 import Link from "next/link";
 import { Filter } from "../filter/filter";
 import Image from "next/image";
-import DownloadPDFButton from "../download_PDF/download_pdf";
 
 type user = {
     id: number
