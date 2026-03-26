@@ -103,9 +103,22 @@ export function Filter({id,bool,year,year_complt}:statu){
     return (
         <div className="static">    
             {open ? <form action={handleUpdate} className="flex flex-col relative right-0 w-55 absolute bg-gray-100 p-3 rounded-xl border border-gray-600">
-                <Input int={yea} out={(e)=>setYea(e.target.value)} type="number" text="année actuel" require={false}/>
-                  <Input int={year_completed} out={(e)=>setYear_comppleted(e.target.value)} 
-                  type="number" text="année complete" require={false}/>
+                <Input
+                                label="année actuelle"
+                                type="number"
+                                value={yea}
+                                onChange={(e:any)=>setYea(e.target.value)}
+                                required={false}
+                                error={''}
+                              />
+                              <Input
+                                label="année complete"
+                                type="number"
+                                value={year_completed}
+                                onChange={(e:any)=>setYear_comppleted(e.target.value)}
+                                required={false}
+                                error={''}
+                              />
 
 
                 <div className="text-center">

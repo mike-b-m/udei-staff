@@ -113,11 +113,12 @@ export default function StudentInput() {
       const { data, error } = await supabase
         .from('student')
         .select('id', { count: 'exact' })
-        .gte('created_at', new Date(new Date().getFullYear(), 0, 1).toISOString())
+        .gte('enroll_date', new Date(new Date().getFullYear(), 0, 1).toISOString())
 
       if (!error && data) {
         setSequenceNumber(data.length + 1)
       }
+      else console.error(error.message)
     }
     getNextSequence()
   }, [])
@@ -525,7 +526,6 @@ export default function StudentInput() {
               onChange={handleInputChange('seen_by')}
             />
           </section>
-                    {sequenceNumber}
           <Code
             sequenceNumber={sequenceNumber}
             faculty={formData.faculty}
