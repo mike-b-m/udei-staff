@@ -1,42 +1,30 @@
 'use client'
-import { useState,useEffect } from "react";
-import { supabase } from "../db";
-interface date{
-    one: number | string
-    third: string
-    out: (e:any)=> void
+import { useState, useEffect } from "react"
+import { supabase } from "../db"
+
+interface CodeProps {
+  sequenceNumber: number
+  faculty: string
+  onCodeGenerated: (code: string) => void
 }
-export function Code({one,third,out}:date){
-    const [list,setList] =useState(0)
-    //const [code,setcode]= useState('')
-    const time =  Date().split(' ')
 
-    // if (third=== 'Gestion des affaires' || 
-    //     third=== `Jardin d'enfant` 
-    //     || third=== `Sciences de l'Education`)
-    useEffect(() => {
-        const getData = async () => {
-            const { data:comp, error } =  await supabase.from('student').select('id')
-            .gte('enroll_date', '2024-01-01')
-            .lte('enroll_date', '2027-01-01')
-            ;
-            if (error) console.error(error.message)
-                else setList(comp.length) 
-        };
-        getData()},[]) ;
-        const time2 = time[3]
-       const code= third.split(' ')
-       const code3= code[1]
-      const code4=code3?.[0] || ''
-       const code2 = code[0][0]
+export function Code({ sequenceNumber, faculty, onCodeGenerated }: CodeProps) {
+  useEffect(() => {
+    // Only generate when sequenceNumber is available
+    if (sequenceNumber === 0) return
 
-//out(list)
-out(`F${code2}${code4}-${time2[2]+time2[3]}-${list.toString().padStart(4, "0")}`)
-    return(
-        <div>
-            {/* <input type="text" onChange={(e)=> out(e)} />
-            <input type="text" value={one} onChange={()=> out(` F${code2}${code4}-${time2[2]+time2[3]}-${list.toString().padStart(4, "0")}`)} />
-            F{code2}{code4}-{time2[2]+time2[3]}-{list.toString().padStart(4, "0")} */}
-        </div>
-    )
+    // Generate code: F{FacultyFirstLetter}{FacultySecondChar}-{YearLastTwoDigits}-{SequentialNumber}
+    // Faculty can be empty initially, just use default chars
+    const facultyParts = faculty ? faculty.split(' ') : []
+    const firstChar = facultyParts[0]?.[0] || 'X'
+    const secondChar = facultyParts[1]?.[0] || facultyParts[0]?.[1] || 'X'
+
+    const year = new Date().getFullYear()
+    const yearLastTwo = year.toString().slice(-2)
+
+    const generatedCode = `F${firstChar}${secondChar}-${yearLastTwo}-${sequenceNumber.toString().padStart(4, '0')}`
+    onCodeGenerated(generatedCode)
+  }, [sequenceNumber, faculty, onCodeGenerated])
+
+  return null
 }

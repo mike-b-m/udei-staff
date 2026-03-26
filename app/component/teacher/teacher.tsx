@@ -2,17 +2,19 @@
 import { supabase } from "../db";
 import { useState, useEffect } from "react";
 import Notation from "../notation/notation";
-interface int{
-    session: number |string | null 
+
+interface TeacherInputProps {
+    session: number | string | null 
     name: string | number
     matiere: string | null
     year: number | string | null
     id: number
     faculty: string | null
 }
-interface rep{
-    session: number |string | null 
-    not:number
+
+interface RepriseInputProps {
+    session: number | string | null 
+    not: number
     name: number
     matiere: string | null
     year: number | string | null
@@ -20,353 +22,719 @@ interface rep{
     faculty: string | null
     nbr: number
 }
-interface note{
+
+interface NoteProps {
     intra: number
     final: number 
     repri_final: number
     repri_intra: number
 }
-const colors=[
-  "bg-[#CAF0F8]/25 font-medium",
-  "bg-[#90C3C8]/70 font-medium"
+
+const rowColors = [
+  "bg-blue-50 hover:bg-blue-100",
+  "bg-white hover:bg-blue-50"
 ]
-export default function TheacherInput({session,name,matiere,id,year,faculty}:int){
-    const [note, setNote] = useState('')
-    const [read,setRead] =useState(false)
-    const [fullname,setFullname] = useState<any[]>([])
 
-     useEffect(() => {
-            const getData = async () => {
-              const { data:stud, error:second } =  await supabase.from('student')
-              .select('id,last_name,first_name').eq('id', id);
-              if (second) console.error(second.message)
-                else setFullname(stud)
-              ;}
-               getData()},[])
+const TABLE_HEADER_CLASS = "bg-linear-to-r from-blue-600 to-blue-500 text-white font-semibold";
 
-               useEffect(() => {
-            const getData = async () => {
-                const { data:stud, error:second } =  await supabase.from('student')
-              .select('id,last_name,first_name').eq('id', id);
-              if (second) console.error(second.message)
-                else setFullname(stud)
+// Reprise Modal Component
+interface RepriseModalProps {
+    isOpen: boolean
+    onClose: () => void
+    studentName: string
+    matiere: string
+    currentScore: number
+    repriseType: 'intra' | 'final'
+    onSave: (value: number) => Promise<void>
+}
 
-            const {data , error } =  await supabase.from('exam')
-        .select('*')
-        .eq('student_id', id).eq('matiere',matiere).eq('session',session).eq('year',year).maybeSingle();
-        if (data?.matiere === matiere){
-            setRead(false)
+function RepriseModal({ isOpen, onClose, studentName, matiere, currentScore, repriseType, onSave }: RepriseModalProps) {
+    const [repriseScore, setRepriseScore] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState('')
+
+    const handleSave = async () => {
+        if (!repriseScore || repriseScore === '0') {
+            setError('Veuillez entrer une note valide');
+            return;
         }
-        else if(matiere) setRead(true)
+
+        const score = parseFloat(repriseScore);
+        if (score < 0 || score > 100) {
+            setError('La note doit être entre 0 et 100');
+            return;
+        }
+
+        setIsLoading(true);
+        setError('');
+        try {
+            await onSave(score);
+            setRepriseScore('');
+            onClose();
+        } catch (err) {
+            setError('Erreur lors de la sauvegarde');
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-in">
+                {/* Header */}
+                <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                        Reprise - {repriseType === 'intra' ? 'Note Intra' : 'Note Finale'}
+                    </h2>
+                    <div className="h-1 w-16 bg-linear-to-r from-blue-600 to-blue-500 rounded-full"></div>
+                </div>
+
+                {/* Student Info */}
+                <div className="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-200">
+                    <p className="text-sm text-gray-600 mb-1">Étudiant</p>
+                    <p className="font-semibold text-gray-900">{studentName}</p>
+                    <p className="text-sm text-gray-600 mt-2">Matière: <span className="font-medium">{matiere}</span></p>
+                    <p className="text-sm text-gray-600">Note actuelle: <span className="font-bold text-blue-600">{currentScore}/100</span></p>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                        {error}
+                    </div>
+                )}
+
+                {/* Input */}
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nouvelle note ({repriseType === 'intra' ? 'Reprise Intra' : 'Reprise Finale'})
+                    </label>
+                    <input
+                        type="number"
+                        value={repriseScore}
+                        onChange={(e) => setRepriseScore(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSave()}
+                        placeholder="Ex: 75"
+                        min={0}
+                        max={100}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition text-lg"
+                        autoFocus
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Note: Entrez une valeur entre 0 et 100</p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={isLoading}
+                        className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition disabled:bg-gray-100"
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={isLoading}
+                        className="flex-1 px-4 py-3 bg-linear-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-600 transition disabled:from-gray-400 disabled:to-gray-400 flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <>
+                                <span className="inline-block animate-spin">⟳</span>
+                                Enregistrement...
+                            </>
+                        ) : (
+                            'Enregistrer'
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// Reprise Button Component
+interface RepriseButtonProps {
+    score: number | null
+    repriseScore: number | null
+    studentName: string
+    matiere: string
+    repriseType: 'intra' | 'final'
+    examId: number
+    studentId: number
+    session: number | string | null
+    year: number | string | null
+    onSuccess?: () => void
+}
+
+function RepriseButton({ 
+    score, 
+    repriseScore, 
+    studentName, 
+    matiere, 
+    repriseType, 
+    examId,
+    studentId,
+    session,
+    year,
+    onSuccess 
+}: RepriseButtonProps) {
+    const [isModalOpen, setIsModalOpen] = useState(false)
+
+    // Show button only if original score is between 50-64 and reprise doesn't exist
+    const shouldShow = score && score >= 50 && score <= 64 && !repriseScore;
+
+    const handleSaveReprise = async (value: number) => {
+        const field = repriseType === 'intra' ? 'repri_intra' : 'repri_final';
+        
+        const { error } = await supabase
+            .from('exam')
+            .update({ [field]: value })
+            .eq('id', examId);
+
         if (error) {
-            console.error(error.message)
-            //console.error('exist')
+            throw new Error(error.message);
+        }
+        
+        if (onSuccess) {
+            onSuccess();
+        }
+    }
+
+    if (!shouldShow) {
+        return null;
+    }
+
+    return (
+        <>
+            <button
+                onClick={() => setIsModalOpen(true)}
+                className="px-3 py-2 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition whitespace-nowrap"
+            >
+                + Ajouter Reprise
+            </button>
+            <RepriseModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                studentName={studentName}
+                matiere={matiere}
+                currentScore={score || 0}
+                repriseType={repriseType}
+                onSave={handleSaveReprise}
+            />
+        </>
+    )
+}
+
+export default function TeacherInput({session, name, matiere, id, year, faculty}: TeacherInputProps) {
+    const [note, setNote] = useState('')
+    const [read, setRead] = useState(false)
+    const [fullname, setFullname] = useState<any[]>([])
+    const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        const getData = async () => {
+            const { data: stud, error: second } = await supabase.from('student')
+                .select('id,last_name,first_name').eq('id', id);
+            if (second) console.error(second.message)
+            else setFullname(stud)
+        }
+        getData()
+    }, [id])
+
+    useEffect(() => {
+        const getData = async () => {
+            const { data: stud, error: second } = await supabase.from('student')
+                .select('id,last_name,first_name').eq('id', id);
+            if (second) console.error(second.message)
+            else setFullname(stud)
+
+            const { data, error } = await supabase.from('exam')
+                .select('*')
+                .eq('student_id', id).eq('matiere', matiere).eq('session', session).eq('year', year).maybeSingle();
+            if (data?.matiere === matiere) {
+                setRead(false)
             }
-            //else setRead(true)
-              ;}
-               getData()},[matiere])
-    const handleSave= async ()=> { 
-        const {data , error } =  await supabase.from('exam')
-        .select('*')
-        .eq('student_id', id).eq('matiere',matiere).single();
-        if (data?.matiere !== null){
-            if (matiere){
-                
-        const {error:status_error } =  await supabase.from('exam')
-        .insert([{intra: note,matiere, session,year,faculty,student_id:id}])
-        .select('*')
-        .eq('student_id',id);
-            if (status_error) console.error(status_error.message)
+            else if (matiere) setRead(true)
+            if (error) {
+                console.error(error.message)
+            }
+        }
+        getData()
+    }, [matiere, id, session, year])
+
+    const handleSave = async () => {
+        if (!note || note === '0') {
+            alert('Veuillez entrer une note');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase.from('exam')
+                .select('*')
+                .eq('student_id', id).eq('matiere', matiere).single();
+            
+            if (data?.matiere !== null) {
+                if (matiere) {
+                    const { error: status_error } = await supabase.from('exam')
+                        .insert([{ intra: note, matiere, session, year, faculty, student_id: id }])
+                        .select('*')
+                        .eq('student_id', id);
+                    
+                    if (status_error) {
+                        console.error(status_error.message)
+                        alert('Erreur lors de la sauvegarde')
+                    } else {
+                        console.log('Note intra sauvegardée')
+                        setNote('')
+                        setRead(false)
+                    }
+                }
+                else console.error('matiere non selected')
+            }
             else {
-        console.log('saved')
-        setRead(false)
-    }
+                console.error('donnees non existent')
             }
-            else console.error('matiere non selected')
-        }
-        else {
-           console.error('dont exist') 
+        } finally {
+            setIsLoading(false);
         }
     }
-    return(
-        <div>
-            {read ? <form action={handleSave} className="flex">
-          <div className="w-40 pl-2 mr-3">{fullname[0]?.last_name} {fullname[0]?.first_name} {name}</div><input type="number" value={note} max={100} min={0}
-          className="w-20 border mr-3" onChange={(e)=>setNote(e.target.value)}/>
-          <button>save</button>
-        </form>: null}
+
+    return (
+        <div className="w-full">
+            {read ? (
+                <div className="flex items-center gap-3 p-3">
+                    <div className="flex-1 text-sm font-medium">{fullname[0]?.last_name} {fullname[0]?.first_name}</div>
+                    <input 
+                        type="number" 
+                        value={note} 
+                        max={100} 
+                        min={0}
+                        placeholder="0"
+                        className="w-20 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                        onChange={(e) => setNote(e.target.value)}
+                    />
+                    <button 
+                        onClick={handleSave}
+                        disabled={isLoading}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
+                    >
+                        {isLoading ? 'Saving...' : 'Enregistrer'}
+                    </button>
+                </div>
+            ) : null}
         </div>
     )
 }
 
 
-export  function TheacherInput2({session,name,matiere,id,year}:int){
+export function TeacherInput2({session, name, matiere, id, year}: TeacherInputProps) {
     const [note, setNote] = useState('')
-    const [read,setRead] =useState(false)
-    const [dat,setdat] = useState<any>()
-    const [fullname,setFullname] = useState<any[]>([])
+    const [read, setRead] = useState(false)
+    const [dat, setdat] = useState<any>()
+    const [fullname, setFullname] = useState<any[]>([])
+    const [isLoading, setIsLoading] = useState(false)
 
-     useEffect(() => {
-            const getData = async () => {
-              const { data:stud, error:second } =  await supabase.from('student')
-              .select('id,last_name,first_name').eq('id', id);
-              if (second) console.error(second.message)
-                else setFullname(stud)
-              ;}
-               getData()},[])
-               
     useEffect(() => {
-            const getData = async () => {
-            const {data , error } =  await supabase.from('exam')
-        .select('*')
-        .eq('student_id', id).eq('matiere',matiere).eq('session',session).eq('year',year).maybeSingle();
-        if (data?.intra !== null && data?.final === null) {
-             setRead(true) 
-             setdat(data)
+        const getData = async () => {
+            const { data: stud, error: second } = await supabase.from('student')
+                .select('id,last_name,first_name').eq('id', id);
+            if (second) console.error(second.message)
+            else setFullname(stud)
+        }
+        getData()
+    }, [id])
+
+    useEffect(() => {
+        const getData = async () => {
+            const { data, error } = await supabase.from('exam')
+                .select('*')
+                .eq('student_id', id).eq('matiere', matiere).eq('session', session).eq('year', year).maybeSingle();
+            if (data?.intra !== null && data?.final === null) {
+                setRead(true)
+                setdat(data)
             }
             else {
                 setRead(false)
             }
-              ;}
-               getData()},[matiere])
-    const handleSave= async ()=> {
-        const {data , error } =  await supabase.from('exam')
-        .select('final')
-        .eq('student_id', id).eq('matiere',matiere).single();
-        if (data?.final !== null) console.error('exist')
-        
-        const {error:status_error } =  await supabase.from('exam')
-        .update([{final: note,}])
-        .select('*')
-        .eq('student_id',id).eq('matiere',matiere).eq('session',session).eq('year',year);
-            if (status_error) console.error(status_error.message)
-            else {
-        console.log('saved')
-        setRead(false)}
-    }
-    return(
-        <div>
-            {read ? <form action={handleSave} className="flex">
-          <div className="w-40 pl-2 mr-3">{fullname[0]?.last_name} {fullname[0]?.first_name} </div> <div className="w-20 text-center">{dat?.intra}</div>
-          <input type="number" value={note} max={100} min={0}
-          className="w-20 border mr-3" onChange={(e)=>setNote(e.target.value)}/>
-          <button>save</button>
-        </form>: null}
-        </div>
-    )
-}
+        }
+        getData()
+    }, [matiere, id, session, year])
 
-export  function RepriseInput({session,not,matiere,name,nbr,id,year}:rep){
-    const [note, setNote] = useState('')
-    const [read,setRead] =useState(false)
-    const [dat,setdat] = useState<any>()
-    const [fullname,setFullname] = useState<any[]>([])
-    const [dis,setDis] = useState(false)
+    const handleSave = async () => {
+        if (!note || note === '0') {
+            alert('Veuillez entrer une note');
+            return;
+        }
 
-     useEffect(() => {
-            const getData = async () => {
-              if (not <= 65 && not >= 50 && !name || not <= 65 && not >= 50 && name >= 50 && name < 65 ) {
-                setDis(false)
-              }
-              else setDis(true)
-              ;}
-               getData()},[])
-               
-    useEffect(() => {
-            const getData = async () => {
-            const {data , error } =  await supabase.from('exam')
-        .select('*')
-        .eq('student_id', id).eq('matiere',matiere).eq('session',session).eq('year',year).maybeSingle();
-        if (data?.intra !== null && data?.final === null) {
-             //setRead(true) 
-             setdat(data)
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase.from('exam')
+                .select('final')
+                .eq('student_id', id).eq('matiere', matiere).single();
+            
+            if (data?.final !== null) {
+                console.error('Note finale déjà existante')
+                return;
             }
-            else {
-                //setRead(false)
-            }
-              ;}
-               getData()},[matiere])
 
-    const handleSave= async ()=> {    
-        if (nbr ===1){
-            const {error:status_error } =  await supabase.from('exam')
-        .update([{repri_intra: note}])
-        .select('*')
-        .eq('id',id)
-            if (status_error) console.error(status_error.message)
-            else {
-        console.log('saved')
-        setRead(false)}}
-        else if (nbr===2){
-           const {error:status_error } =  await supabase.from('exam')
-        .update([{repri_final: note}])
-        .select('*')
-        .eq('id',id)
-            if (status_error) console.error(status_error.message)
-            else {
-        console.log('saved')
-        setRead(false)} 
+            const { error: status_error } = await supabase.from('exam')
+                .update([{ final: note }])
+                .select('*')
+                .eq('student_id', id).eq('matiere', matiere).eq('session', session).eq('year', year);
+
+            if (status_error) {
+                console.error(status_error.message)
+                alert('Erreur lors de la sauvegarde')
+            } else {
+                console.log('Note finale sauvegardée')
+                setNote('')
+                setRead(false)
+            }
+        } finally {
+            setIsLoading(false);
         }
     }
-    return(
-        <div className="text-center">
-            <button  disabled={dis} onClick={()=>setRead(!read)}>{not <= 65 && not >= 50 && !name  ? 
-            <div className="text-red-500 font-bold">ajouter</div> :
-             <span className={`${name < 65 && name >= 50 ? 'text-red-600':''}`}>{name}</span>}</button>
-            {read ? <form action={handleSave} className="flex">
-          <input type="Reprise" value={note} max={100} min={0}
-          className="w-20 border mr-3" onChange={(e)=>setNote(e.target.value)}/>
-          <button>save</button>
-        </form>: null}
+
+    return (
+        <div className="w-full">
+            {read ? (
+                <div className="flex items-center gap-3 p-3">
+                    <div className="flex-1 text-sm font-medium">{fullname[0]?.last_name} {fullname[0]?.first_name}</div>
+                    <div className="w-20 text-center px-2 py-2 bg-blue-100 rounded-lg font-medium">{dat?.intra}</div>
+                    <input 
+                        type="number" 
+                        value={note} 
+                        max={100} 
+                        min={0}
+                        placeholder="0"
+                        className="w-20 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                        onChange={(e) => setNote(e.target.value)}
+                    />
+                    <button 
+                        onClick={handleSave}
+                        disabled={isLoading}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
+                    >
+                        {isLoading ? 'Saving...' : 'Enregistrer'}
+                    </button>
+                </div>
+            ) : null}
         </div>
     )
 }
-export function teacherUpdate({session,id,matiere,year}:int){
-    const [update,setUpdate] = useState('')
-    const [update2,setUpdate2] = useState('')
 
-    const handleUpdate= async ()=> {  
-        const {error:status_error } =  await supabase.from('exam')
-        .update([{intra: update, final: update2}])
-        .select('*')
-        .eq('student_id',id).eq('matiere',matiere).eq('session',session).eq('year',year);
-            if (status_error) console.error(status_error.message)
+export function RepriseInput({session, not, matiere, name, nbr, id, year, faculty}: RepriseInputProps) {
+    const [note, setNote] = useState('')
+    const [read, setRead] = useState(false)
+    const [dat, setdat] = useState<any>()
+    const [fullname, setFullname] = useState<any[]>([])
+    const [dis, setDis] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        if (not <= 65 && not >= 50 && !name || not <= 65 && not >= 50 && name >= 50 && name < 65) {
+            setDis(false)
+        }
+        else setDis(true)
+    }, [not, name])
+
+    useEffect(() => {
+        const getData = async () => {
+            const { data, error } = await supabase.from('exam')
+                .select('*')
+                .eq('student_id', id).eq('matiere', matiere).eq('session', session).eq('year', year).maybeSingle();
+            if (data?.intra !== null && data?.final === null) {
+                setdat(data)
             }
+        }
+        getData()
+    }, [matiere, id, session, year])
+
+    const handleSave = async () => {
+        if (!note || note === '0') {
+            alert('Veuillez entrer une note');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            if (nbr === 1) {
+                const { error: status_error } = await supabase.from('exam')
+                    .update([{ repri_intra: note }])
+                    .select('*')
+                    .eq('id', id)
+                if (status_error) {
+                    console.error(status_error.message)
+                    alert('Erreur lors de la sauvegarde')
+                } else {
+                    console.log('Note reprise intra sauvegardée')
+                    setNote('')
+                    setRead(false)
+                }
+            }
+            else if (nbr === 2) {
+                const { error: status_error } = await supabase.from('exam')
+                    .update([{ repri_final: note }])
+                    .select('*')
+                    .eq('id', id)
+                if (status_error) {
+                    console.error(status_error.message)
+                    alert('Erreur lors de la sauvegarde')
+                } else {
+                    console.log('Note reprise finale sauvegardée')
+                    setNote('')
+                    setRead(false)
+                }
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    const getButtonLabel = () => {
+        if (not <= 65 && not >= 50 && !name) {
+            return <span className="text-red-600 font-semibold">Ajouter</span>
+        }
+        return <span className={name < 65 && name >= 50 ? 'text-red-600 font-semibold' : 'text-green-600'}>{name}</span>
+    }
+
     return (
         <div>
-            <input type="number" value={update} onChange={(e)=>setUpdate(e.target.value)}/>
-            <input type="number" value={update2} onChange={(e)=>setUpdate2(e.target.value)}/>
-            <button onClick={handleUpdate}></button>
+            <button
+                disabled={dis}
+                onClick={() => setRead(!read)}
+                className={`px-3 py-2 rounded-lg font-medium transition ${dis ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-blue-50 text-blue-600'}`}
+            >
+                {getButtonLabel()}
+            </button>
+            {read ? (
+                <div className="flex gap-2 mt-2 p-2 bg-blue-50 rounded-lg">
+                    <input
+                        type="number"
+                        value={note}
+                        max={100}
+                        min={0}
+                        placeholder="0"
+                        className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onChange={(e) => setNote(e.target.value)}
+                    />
+                    <button
+                        onClick={handleSave}
+                        disabled={isLoading}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
+                    >
+                        {isLoading ? 'Saving...' : 'Enregistrer'}
+                    </button>
+                </div>
+            ) : null}
         </div>
     )
 }
-export function ReadNote({session,year,id}:int){
-    const [note,setNote] = useState<any[]>([])
-    const [fullname,setFullname] = useState<any[]>([])
 
-     useEffect(() => {
-            const getData = async () => {
-              const { data:stud, error:second } =  await supabase.from('student')
-              .select('id,last_name,first_name').eq('id', id);
-              if (second) console.error(second.message)
-                else setFullname(stud)
-              ;}
-               getData()},[])
+export function ReadNote({ session, year, id }: TeacherInputProps) {
+    const [note, setNote] = useState<any[]>([])
+    const [fullname, setFullname] = useState<any[]>([])
+    const [selectedMatiere, setSelectedMatiere] = useState<string | null>(null)
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
+
     useEffect(() => {
-            const getData = async () => {
-            const {data , error } =  await supabase.from('exam')
-        .select('*')
-        .eq('student_id', id).eq('session',session).eq('year',year)
-        if (error) console.error(error.message)
-            else setNote(data)
-              ;}
-               getData()},[])
-    return(
-        <div className="flex">
-            <div className="w-33 ml-2">{fullname[0]?.last_name} {fullname[0]?.first_name} </div>
-            <div>
-                {note.map((not,index)=>
-            <ol key={not.id} className={`${colors[index % colors.length]} flex`}>
-                <li className="w-30 mr-2 ml-2">{not.matiere}</li>
-                <li className="w-10 mr-2 ml-2">{not.intra}</li>
-                <li className="w-13 mr-2 ml-2">
-                    <RepriseInput nbr={1} session={not.session} id={not.id} faculty={''} year={not.year} matiere={not.matiere} not={not.intra} name={not.repri_intra} /></li>
-                <li className="w-10 mr-2 ml-2">{not.final}</li>
-                <li className="w-13 mr-2 ml-2">
-                     <RepriseInput nbr={2} session={not.session} id={not.id} faculty={''} year={not.year} matiere={not.matiere} not={not.final} name={not.repri_final} />
-                </li>
-                <li className="w-15 m-2">
-                    <CalculSession final={not.final} intra={not.intra} repri_final={not.repri_final} repri_intra={not.repri_intra}/>
-                </li>
-                {/* <li className="w-10 mr-2 ml-2">{not.year}</li>
-                <li className="w-25 mr-2 ml-2">{not.faculty}</li> */}
-            </ol>)}
-             <ol className={`flex`}>
-                <li className="w-30 mr-2 ml-2">
-             Total
-                    </li>
-                <li className="w-10 mr-2 ml-2">
-             {note?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.intra), 0)}
-                    </li>
-                    <li className="w-13 m-2"></li>
-                <li className="w-10 mr-2 ml-2">
-             {note?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.final), 0)}
-                    </li>
-            </ol>
-            </div>
-            <ol className="flex">
-                 <li className="w-10 mr-2 text-center">{note[0]?.year}</li>
-                <li className="w-30  text-center">{note[0]?.faculty}</li>
-                 <li className="w-25 mr-2 text-center ">{note[0]?.session}</li>
-            </ol>
-        </div>
-    )
-}
+        const getData = async () => {
+            const { data: stud, error: second } = await supabase.from('student')
+                .select('id,last_name,first_name').eq('id', id);
+            if (second) console.error(second.message)
+            else setFullname(stud)
+        }
+        getData()
+    }, [id])
 
-export function ReadNote2({session,year,id}:int){
-    const [note,setNote] = useState<any[]>([])
-    const [fullname,setFullname] = useState<any[]>([])
-
-     useEffect(() => {
-            const getData = async () => {
-              const { data:stud, error:second } =  await supabase.from('student')
-              .select('id,last_name,first_name').eq('id', id);
-              if (second) console.error(second.message)
-                else setFullname(stud)
-              ;}
-               getData()},[])
     useEffect(() => {
-            const getData = async () => {
-            const {data , error } =  await supabase.from('exam')
-        .select('*')
-        .eq('student_id', id).eq('session',session).eq('year',year)
-        if (error) console.error(error.message)
-            else setNote(data)
-              ;}
-               getData()},[])
-    return(
-        <div className="flex">
-            <div className="w-50 m-2">{fullname[0]?.last_name} {fullname[0]?.first_name} </div>
-            <div>
-                {note.map((not,index)=>
-            <ol key={not.id} className={`${colors[index % colors.length]} flex`}>
-                <li className="w-50 mr-2 ml-2">{not.matiere}</li>
-                <li className="w-10 mr-2 ml-2 text-center">{not.intra}</li>
-                <li className="w-10 mr-2 ml-2 text-center">{not.final}</li>
-                {/* <li className="w-10 mr-2 ml-2 text-center"><Notation id={((not.final + not.intra)/2)} /> </li> */}
-            </ol>)}
-             <ol className={`flex`}>
-                <li className="w-50 mr-2 ml-2">
-             Total
-                    </li>
-                <li className="w-10 mr-2 ml-2 text-center">
-             {note?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.intra), 0)}
-                    </li>
-                <li className="w-10 mr-2 ml-2 text-center">
-             {note?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.final), 0)}
-                    </li>
-            </ol>
+        const getData = async () => {
+            const { data, error } = await supabase.from('exam')
+                .select('*')
+                .eq('student_id', id).eq('session', session).eq('year', year)
+            if (error) console.error(error.message)
+            else setNote(data || [])
+        }
+        getData()
+    }, [id, session, year, refreshTrigger])
+
+    const calculateFinal = (intra: number, final: number, repri_intra: number, repri_final: number) => {
+        const finalIntra = Math.max(intra, repri_intra || 0);
+        const finalFinal = Math.max(final, repri_final || 0);
+        return ((finalIntra + finalFinal) / 2).toFixed(2);
+    }
+
+    const handleRepriseSuccess = () => {
+        // Refetch the data after a reprise is saved
+        setRefreshTrigger(prev => prev + 1);
+    }
+
+    const totalIntra = note?.reduce((acc: number, item: any) => acc + Number(item.intra || 0), 0) || 0;
+    const totalFinal = note?.reduce((acc: number, item: any) => acc + Number(item.final || 0), 0) || 0;
+
+    return (
+        <div className="w-full bg-white p-4 rounded-2xl">
+            {/* Student Header */}
+            <div className={`${TABLE_HEADER_CLASS} rounded-xl p-4 mb-4`}>
+                <h3 className="text-lg font-bold">
+                    {fullname[0]?.last_name} {fullname[0]?.first_name}
+                </h3>
+                <div className="text-sm mt-2 space-y-1">
+                    <p>Année: <span className="font-semibold">{year}</span></p>
+                    <p>Session: <span className="font-semibold">{session}</span></p>
+                    <p>Faculté: <span className="font-semibold">{note[0]?.faculty || 'N/A'}</span></p>
+                </div>
             </div>
+
+            {/* Notes Table */}
+            {note.length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <table className="w-full">
+                        <thead>
+                            <tr className={TABLE_HEADER_CLASS}>
+                                <th className="px-4 py-3 text-left">Matière</th>
+                                <th className="px-4 py-3 text-center">Note Intra</th>
+                                <th className="px-4 py-3 text-center">Reprise Intra</th>
+                                <th className="px-4 py-3 text-center">Note Finale</th>
+                                <th className="px-4 py-3 text-center">Reprise Finale</th>
+                                <th className="px-4 py-3 text-center">Moyenne</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {note.map((not, index) => {
+                                const moyenne = calculateFinal(not.intra, not.final, not.repri_intra, not.repri_final);
+                                const moyenneNum = parseFloat(moyenne);
+                                let statusColor = 'bg-red-50';
+                                let statusText = 'text-red-700';
+                                if (moyenneNum >= 70) {
+                                    statusColor = 'bg-green-50';
+                                    statusText = 'text-green-700';
+                                } else if (moyenneNum >= 50) {
+                                    statusColor = 'bg-amber-50';
+                                    statusText = 'text-amber-700';
+                                }
+
+                                return (
+                                    <tr
+                                        key={not.id}
+                                        className={`${rowColors[index % rowColors.length]} border-t border-gray-200 transition hover:shadow-md`}
+                                    >
+                                        <td className="px-4 py-3 font-medium text-gray-800">{not.matiere}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full">
+                                                {not.intra || '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {not.repri_intra ? (
+                                                <span className="inline-block bg-orange-100 text-orange-900 font-semibold px-3 py-1 rounded-full">
+                                                    {not.repri_intra}
+                                                </span>
+                                            ) : (
+                                                <RepriseButton
+                                                    score={not.intra}
+                                                    repriseScore={not.repri_intra}
+                                                    studentName={`${fullname[0]?.last_name} ${fullname[0]?.first_name}`}
+                                                    matiere={not.matiere}
+                                                    repriseType="intra"
+                                                    examId={not.id}
+                                                    studentId={id}
+                                                    session={not.session}
+                                                    year={not.year}
+                                                    onSuccess={handleRepriseSuccess}
+                                                />
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full">
+                                                {not.final || '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {not.repri_final ? (
+                                                <span className="inline-block bg-orange-100 text-orange-900 font-semibold px-3 py-1 rounded-full">
+                                                    {not.repri_final}
+                                                </span>
+                                            ) : (
+                                                <RepriseButton
+                                                    score={not.final}
+                                                    repriseScore={not.repri_final}
+                                                    studentName={`${fullname[0]?.last_name} ${fullname[0]?.first_name}`}
+                                                    matiere={not.matiere}
+                                                    repriseType="final"
+                                                    examId={not.id}
+                                                    studentId={id}
+                                                    session={not.session}
+                                                    year={not.year}
+                                                    onSuccess={handleRepriseSuccess}
+                                                />
+                                            )}
+                                        </td>
+                                        <td className={`px-4 py-3 text-center`}>
+                                            <span className={`inline-block ${statusColor} ${statusText} font-bold px-3 py-1 rounded-full`}>
+                                                {moyenne}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {/* Totals Row */}
+                            <tr className="bg-blue-600 text-white font-bold">
+                                <td className="px-4 py-3">Total</td>
+                                <td className="px-4 py-3 text-center">{totalIntra}</td>
+                                <td className="px-4 py-3 text-center">-</td>
+                                <td className="px-4 py-3 text-center">{totalFinal}</td>
+                                <td className="px-4 py-3 text-center">-</td>
+                                <td className="px-4 py-3 text-center">
+                                    {((totalIntra + totalFinal) / (note.length * 2)).toFixed(2)}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <div className="text-center py-8 text-gray-500">
+                    <p className="text-lg">Aucune note disponible pour cet étudiant</p>
+                </div>
+            )}
         </div>
     )
 }
-export function CalculSession({intra,final,repri_final,repri_intra}:note){
- const [fin,setFin] = useState(Number)
- const [int,setInt] = useState(Number)
 
- useEffect(() => {
-            const getData = async () => {
-              if (intra > repri_intra) setInt(intra)
-                else if(intra< repri_intra) setInt(repri_intra)
-            if (final > repri_final) setFin(final)
-                else if (final< repri_final) setFin(repri_final)
-              ;}
-               getData()},[])
+export function CalculSession({ intra, final, repri_final, repri_intra }: NoteProps) {
+    const [fin, setFin] = useState<number>(0)
+    const [int, setInt] = useState<number>(0)
 
-    return(
-        <div className="text-center">
-            {(fin + int)/2}
-             {/* {note?.reduce((accumulator : number, currentItem:any) => accumulator + Number(currentItem.intra), 0)} */}
+    useEffect(() => {
+        if (intra > (repri_intra || 0)) setInt(intra)
+        else if (intra < (repri_intra || 0)) setInt(repri_intra)
+        else setInt(intra)
+
+        if (final > (repri_final || 0)) setFin(final)
+        else if (final < (repri_final || 0)) setFin(repri_final)
+        else setFin(final)
+    }, [intra, final, repri_intra, repri_final])
+
+    const moyenne = ((fin + int) / 2).toFixed(2);
+    const moyenneNum = parseFloat(moyenne);
+
+    let statusColor = 'text-red-600 font-bold';
+    if (moyenneNum >= 70) {
+        statusColor = 'text-green-600 font-bold';
+    } else if (moyenneNum >= 50) {
+        statusColor = 'text-amber-600 font-bold';
+    }
+
+    return (
+        <div className={`text-center ${statusColor} px-3 py-1 bg-gray-100 rounded-lg`}>
+            {moyenne}
         </div>
     )
 }
+
+// Backward compatibility exports
+export const TheacherInput = TeacherInput;
+export const TheacherInput2 = TeacherInput2;

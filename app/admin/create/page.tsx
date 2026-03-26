@@ -4,7 +4,7 @@ export default function Create(){
     return (
         <>
         <Suspense fallback={<div>chargement..</div>}>
-         <SignUp/>
+        <SignUp/>
          </Suspense>
         </>
     )

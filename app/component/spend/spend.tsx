@@ -1,98 +1,193 @@
 'use client'
 
 import { supabase } from "../db";
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import Add_botton from "../add-buuton/add_button";
 import Time from "../time/time";
 import ChartProgress from "../chart components/chartComponent";
 
-type company ={
+type Company = {
   id: number
   name: string
   date_time: string
-  amount: string
+  amount: number
   pay_method: string
   decribe_motive: string
 }
-const colors=[
-  "bg-[#CAF0F8]/25 font-medium",
-  "bg-[#90C3C8]/70 font-medium"
-]
-export default function Spend() {
-  const [dat, setDat]= useState<company[]>([])
-  const [year, setYear] =useState('2026-01-01 00:00:00')
-  const [chart,setchart] = useState<company[]>([])
-  const [interval,setInterval] = useState<any[]>([])
 
-  const date= Date().split(' ')
+const ROW_COLORS = [
+  "bg-blue-50 hover:bg-blue-100",
+  "bg-white hover:bg-gray-50"
+]
+
+export default function Spend() {
+  const [expenses, setExpenses] = useState<Company[]>([])
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const currentYear = new Date().getFullYear()
+  const availableYears = Array.from({ length: 5 }, (_, i) => currentYear - i)
+
+  const totalAmount = expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+  const formattedTotal = new Intl.NumberFormat('en-US').format(totalAmount)
 
   useEffect(() => {
-    const getData = async () => {
-      const { data:comp, error } =  await supabase.from('spent_in_company').select('*')
-      .gte('date_time', year)
-      .order('date_time', { ascending: false });
-    if (error) console.error(error)
-      else setDat(comp)
-    
-    const { data:com, error:Error } =  await supabase.from('spent_in_company').select('*')
-      .gte('date_time', year)
-      .order('date_time', { ascending: true });
-    if (Error) console.error(Error)
-      else setchart(com)
-   
-    const { data:co, error:Erro } =  await supabase.from('spent_in_company').select('amount,id')
-      .gte('date_time', `${date[3]}-01-01`).lte('date_time', `${date[3]}-12-31`)
-      .order('date_time',  { ascending: true });
-    if (Erro) console.error(Erro.message)
-      else setInterval(co)
-    }; 
-    getData()},[])
- 
- 
-  return (
-<>
-<div className="w-full justify-center">
-    <div className="flex justify-center bg-gray-200 p-4 mb-4 rounded-sm">
-       <ChartProgress data={chart}/>
-      <div className="w-60 h-30 text-center bg-gray-100/50 m-10 p-3 shadow-lg outline
-       outline-[#2DAE0D] rounded-sm text-[16px] font-bold text-gray-800 flex flex-col">
-        <div className="font-medium text-[20px] pt-3">HTG {interval.reduce((accumulator : number, currentItem) => accumulator + Number(currentItem.amount), 0)} </div>
-        dépenser pour cette année</div>
-    </div>
-   {/* filter query*/}
-  <div className="bg-gray-200 p-4 rounded-sm mb-2">
-    <select onChange={(e)=>setYear(e.target.value)} disabled>
-      <option value="2027-01-01 00:00:00">2027</option>
-      <option value="2026-01-01 00:00:00">2026</option>
-      <option value="2025-01-01 00:00:00">2025</option>
-      <option value="2024-01-01 00:00:00">2024</option>
-      <option value="2023-01-01 00:00:00">2023</option>
-    </select>
-  </div>
-  <Add_botton/>
-  <div className="rounded-xl border-4 pb-0.1 mt-3 border-gray-500 bg-gray-200">
-    {/* header for the list of spent */}
-   <h3 className="text-center text-[20px]">Argent dépensé</h3>
-    <ol className="flex justify-between bg-gray-300 font-poppins border-b border-t border-gray-400">
-    <div className="bg-gray-300 min-w-50 text-center "><li className="ml-5:">nom</li></div>
-  <li className="bg-gray-300 min-w-50 text-center">montant</li>
-  <li className="bg-gray-300 min-w-50 text-center">date</li>
-  <li className="bg-gray-300 min-w-50 text-center">description</li>
-  <li className="bg-gray-300 min-w-50 mr-5 text-center">mode de paiement</li>
-  </ol>
-  {/*list of company spent */}
-  <div className="rounded-b-lg  bg-gray-200">
-   {dat.map((compan,index)=>(
-  <ol key={compan.id}   className={`flex justify-between text-center w-full  border-b-2 border-gray-400 ${colors[index  % colors.length]}`}>
-    <li className={`min-w-50  border-b-0.5`}>{compan.name}</li>
-  <li className={`min-w-50  border-b-0.5`}>HTG  {compan.amount}</li>
-  <li className={`min-w-50 border-b-0.5`}><Time open={compan.date_time}/></li>
-  <li className={`min-w-50  max-w-50  border-b-0.5`}>{compan.decribe_motive}</li>
-  <li className={`mr-5 min-w-50  border-b-0.5`}>{compan.pay_method}</li></ol>
-))}</div>
-  </div>
-</div>
+    fetchExpenses()
+  }, [selectedYear])
 
-</>
+  const fetchExpenses = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const startDate = `${selectedYear}-01-01`
+      const endDate = `${selectedYear}-12-31 23:59:59`
+
+      const { data, error: fetchError } = await supabase
+        .from('spent_in_company')
+        .select('*')
+        .gte('date_time', startDate)
+        .lte('date_time', endDate)
+        .order('date_time', { ascending: false })
+
+      if (fetchError) throw fetchError
+
+      setExpenses(data || [])
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du chargement des données')
+      console.error(err)
+      setExpenses([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Gestion des Dépenses</h1>
+          <p className="text-gray-600">Suivi détaillé des dépenses de l&apos;entreprise</p>
+        </div>
+
+        {/* Summary Card */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-xl shadow-md p-8 border-l-4 border-green-500">
+              <ChartProgress data={expenses} />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md p-8 text-white flex flex-col justify-center">
+            <p className="text-green-100 text-sm font-semibold mb-2">Total des Dépenses</p>
+            <p className="text-4xl font-bold mb-1">HTG {formattedTotal}</p>
+            <p className="text-green-100 text-sm">Année {selectedYear}</p>
+          </div>
+        </div>
+
+        {/* Filter Section */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Filtrer par année
+              </label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+              >
+                {availableYears.map((year) => (
+                  <option key={year} value={year.toString()}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="pt-6">
+              <Add_botton />
+            </div>
+          </div>
+        </div>
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-8">
+            <p className="text-red-700 font-semibold">Erreur</p>
+            <p className="text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="bg-white rounded-xl shadow-md p-12 text-center">
+            <div className="inline-block">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+            </div>
+            <p className="text-gray-600 mt-4">Chargement des dépenses...</p>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && expenses.length === 0 && !error && (
+          <div className="bg-white rounded-xl shadow-md p-12 text-center">
+            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p className="text-gray-600 text-lg">Aucune dépense trouvée pour l&apos;année {selectedYear}</p>
+          </div>
+        )}
+
+        {/* Table */}
+        {!loading && expenses.length > 0 && (
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b-2 border-gray-200">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Nom</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Montant</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Date</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Description</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Mode Paiement</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {expenses.map((expense, index) => (
+                    <tr key={expense.id} className={`${ROW_COLORS[index % ROW_COLORS.length]} transition`}>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{expense.name}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                        HTG {new Intl.NumberFormat('en-US').format(Number(expense.amount))}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        <Time open={expense.date_time} />
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">{expense.decribe_motive}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                          {expense.pay_method}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table Footer */}
+            <div className="bg-gray-50 border-t-2 border-gray-200 px-6 py-4 flex justify-between items-center">
+              <p className="text-sm text-gray-600">
+                <span className="font-semibold">{expenses.length}</span> dépense{expenses.length > 1 ? 's' : ''} affichée{expenses.length > 1 ? 's' : ''}
+              </p>
+              <p className="text-sm font-semibold text-gray-900">
+                Total: <span className="text-green-600">HTG {formattedTotal}</span>
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

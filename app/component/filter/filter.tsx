@@ -64,7 +64,7 @@ export function Filter2({id}:stat){
             <div>
                   {filter.map((filt:any)=>
         <ol key={filt.id}>
-            <li>{filt.year_study}</li>
+            <li className="font-bold ">{filt.year_study}</li>
         </ol>)}  
             </div>
         )

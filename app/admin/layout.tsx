@@ -8,8 +8,6 @@ import { AuthProvider } from "../component/provider/AuthProvider";
 
 export const dynamic = 'force-dynamic';
 
-
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -17,18 +15,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      
-      <body
-        className={`antialiased`}
-      ><AuthProvider>
-         <Header/>  
-        <div className="flex  right-0 pb-10 bg-gray-400">
-          <Nav/>
-              <div className="ml-[32px] mr-[32px] justify-items-center mt-[24px] w-full">{children }</div>
+      <body className="antialiased bg-gray-50">
+        <AuthProvider>
+          <Nav />
+          
+          {/* Main Layout Container */}
+          <div className="md:ml-20 md:group-hover:ml-64 transition-all duration-300">
+            {/* Mobile spacer for fixed header - Hidden on desktop */}
+            <div className="md:hidden h-16" />
+            
+            {/* Header */}
+            <Header />
+            
+            {/* Main Content */}
+            <main className="min-h-screen">
+              {children}
+            </main>
+            
+            {/* Footer */}
+            <Footer />
           </div>
-        <Footer/>
-      </AuthProvider>
-       
+        </AuthProvider>
       </body>
     </html>
   );
