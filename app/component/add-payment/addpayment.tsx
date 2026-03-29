@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Time from "../time/time"
 import { Filter2 } from "../filter/filter"
-import Input from "../input/input-comp"
+import { exportToCSV, printHTML } from "../export/exportUtils"
 
 // ============ TYPES ============
 interface PaymentProps {
@@ -20,6 +20,148 @@ interface PaymentRecord {
   balance: number | string
 }
 
+//======= section for download infos =======
+interface CourseProgram {
+  id: number
+  courses: string
+  credit: number
+  session_subjet: number
+  hour_session: number
+  total_hour: number
+  year: number
+  session: number
+  created_at?: string
+}
+
+const TABLE_COLUMNS = [
+  { key: 'courses', label: 'Cours', width: 'w-1/4' },
+  { key: 'credit', label: 'Crédit', width: 'w-1/6' },
+  { key: 'session_subjet', label: 'Séances/Mois', width: 'w-1/6' },
+  { key: 'hour_session', label: 'H/Séance', width: 'w-1/6' },
+  { key: 'total_hour', label: 'Total Heures', width: 'w-1/6' }
+]
+
+const printTable = (data: StudentPayment, faculty: string | null, year: number, user:User) => {
+  const printWindow = window.open('', '', 'height=600,width=900')
+  if (!printWindow) return
+
+  let html = `
+    <html>
+      <head>
+        <title>${user.first_name} ${user.last_name} - ${faculty} - Année ${year} Hist-paiements </title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          h2 { color: #0077B6; margin-bottom: 20px; }
+          .info { margin-bottom: 15px; font-size: 14px; }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          th {
+            background-color: #0077B6;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+          }
+          td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+          }
+          tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          .total-row {
+            font-weight: bold;
+            background-color: #e3f2fd;
+          }
+          @media print {
+            body { margin: 0; }
+          }
+            .payment-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+/* Cell padding (px-6 py-4 equivalent) */
+.payment-table th, 
+.payment-table td {
+  padding: 1rem 1.5rem;
+  vertical-align: middle;
+}
+
+/* Container and Grid */
+.payment-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.5rem;
+}
+
+/* Typography Base */
+.label-text {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #4b5563; /* gray-600 */
+  font-weight: 500;
+}
+
+.value-text {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+}
+
+/* Colors */
+.text-amber { color: #d97706; }
+.text-blue { color: #2563eb; }
+.text-gray-dark { 
+  color: #1f2937; 
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+
+        </style>
+      </head><body>
+        <h2>Historique des paiements</h2>
+        <div class="info">
+        <p><strong>Nom:</strong> ${user.last_name}</p>
+        <p><strong>Prénom:</strong> ${user.first_name}</p>
+        <p><strong>Code Étudiant:</strong> ${user.student_code}</p>
+          <p><strong>Faculté:</strong> ${faculty}</p>
+          <p><strong>Année:</strong> ${year}</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+            <td>Montant</td> 
+             <td>Solde après</td>
+            <td>Date</td>
+            </tr>
+          </thead>
+          <tbody>
+            ${data?.payment_history?.map((payment: PaymentRecord, index: number) =>`
+              <tr>
+                <td> ${formatCurrency(payment.amount)} ${CURRENCY}</td>
+                  <td> ${formatCurrency(payment.balance)}  ${CURRENCY}L</td>
+                  <td>  <Time open=${typeof payment.date === 'string' ? payment.date : payment.date instanceof Date ? payment.date.toISOString() : new Date(payment.date).toISOString()} /></td>
+              </tr>
+   `).join('')}
+          </tbody>
+        </table>
+      </body> 
+    </html>
+  `
+
+  printWindow.document.write(html)
+  printWindow.document.close()
+  setTimeout(() => printWindow.print(), 250)
+}
 // ============ HELPER FUNCTIONS ============
 const toNumber = (value: any): number => {
   const num = parseFloat(value)
@@ -41,6 +183,7 @@ interface User {
   first_name: string
   last_name: string
   faculty: string
+  student_code: string
 }
 
 interface StudentPayment {
@@ -578,7 +721,7 @@ export function Student_pay() {
       try {
         const { data, error } = await supabase
           .from('student')
-          .select('last_name, first_name, id, faculty')
+          .select('last_name, first_name, id, faculty,student_code')
           .order('last_name', { ascending: true })
 
         if (error) throw error
@@ -693,7 +836,7 @@ export function Payments() {
 
         const { data: studentData, error: studentError } = await supabase
           .from('student')
-          .select('last_name, first_name, id, faculty')
+          .select('last_name, first_name, id, faculty,student_code')
           .eq('id', studentId)
           .single()
 
@@ -762,6 +905,66 @@ export function Payments() {
           </div>
           <p className="text-blue-100 text-sm">ID Étudiant: #{student.id}</p>
         </div>
+
+        {/* Export Buttons */}
+        {currentPayment?.payment_history && currentPayment.payment_history.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                const title = `Historique Paiements - ${student.last_name} ${student.first_name}`
+                const html = `
+                  <h2>${title}</h2>
+                  <div class="info">
+                    <p><strong>Code:</strong> ${student.student_code}</p>
+                    <p><strong>Faculté:</strong> ${student.faculty}</p>
+                    <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+                  </div>
+                  <table>
+                    <thead><tr><th>Montant</th><th>Solde après</th><th>Date</th></tr></thead>
+                    <tbody>
+                      ${currentPayment.payment_history.map((p: PaymentRecord) => `
+                        <tr>
+                          <td>${formatCurrency(p.amount)} ${CURRENCY}</td>
+                          <td>${formatCurrency(p.balance)} ${CURRENCY}</td>
+                          <td>${typeof p.date === 'string' ? new Date(p.date).toLocaleDateString('fr-FR') : new Date(p.date).toLocaleDateString('fr-FR')}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                `
+                printHTML(title, html)
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              PDF
+            </button>
+            <button
+              onClick={() => {
+                const headers = ['Montant', 'Solde après', 'Date']
+                const rows = currentPayment.payment_history.map((p: PaymentRecord) => [
+                  `${formatCurrency(p.amount)} ${CURRENCY}`,
+                  `${formatCurrency(p.balance)} ${CURRENCY}`,
+                  typeof p.date === 'string' ? new Date(p.date).toLocaleDateString('fr-FR') : new Date(p.date).toLocaleDateString('fr-FR'),
+                ])
+                exportToCSV(headers, rows, `paiements_${student.student_code}`)
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition text-sm font-medium"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+              Excel
+            </button>
+            <button
+              onClick={() => {
+                printTable(currentPayment, student?.faculty, 1, student)
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+              Imprimer
+            </button>
+          </div>
+        )}
 
         {/* Payment Info Cards */}
         {currentPayment && (

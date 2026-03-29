@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
     <body className={`${inter.className} ${poppins.className} antialiased`}>
-      <Nav />
+    {/* <Nav /> */}
       
       {/* Main Content Area */}
       <div className="md:ml-20 md:group-hover:ml-64 transition-all duration-300">

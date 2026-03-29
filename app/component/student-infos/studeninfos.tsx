@@ -6,7 +6,9 @@ import Link from 'next/link'
 import Lecture from '../lect_input/lecture'
 import { useStudentData, useStudentSearch } from './useStudentData'
 import { ADMIN_ROLES, EDITOR_ROLES } from './constants'
-import { StudentSearchProps } from './types'
+import { StudentSearchProps, StudentData, StudentStatus } from './types'
+import { supabase } from '../db'
+import { exportToCSV, printHTML } from '../export/exportUtils'
 
 
 /**
@@ -280,6 +282,164 @@ interface StudentDisplayContentProps {
   canEdit: boolean
 }
 
+// ===== EXPORT HELPERS FOR STUDENT INFO =====
+function getStudentPersonalAndFamilyHTML(student: any) {
+  return `
+    <h2>Fiche Étudiant</h2>
+    <div class="info">
+      <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+    </div>
+    <div class="section-title">Informations Personnelles</div>
+    <table>
+      <tbody>
+        <tr><td><strong>Nom</strong></td><td>${student.last_name || '—'}</td></tr>
+        <tr><td><strong>Prénom</strong></td><td>${student.first_name || '—'}</td></tr>
+        <tr><td><strong>Code Étudiant</strong></td><td>${student.student_code || '—'}</td></tr>
+        <tr><td><strong>Année Académique</strong></td><td>${student.academy || '—'}</td></tr>
+        <tr><td><strong>Email</strong></td><td>${student.email || '—'}</td></tr>
+        <tr><td><strong>Téléphone</strong></td><td>${student.phone_number || '—'}</td></tr>
+        <tr><td><strong>Faculté</strong></td><td>${student.faculty || '—'}</td></tr>
+        <tr><td><strong>Sexe</strong></td><td>${student.sex || '—'}</td></tr>
+        <tr><td><strong>Statut Matrimonial</strong></td><td>${student.marital_status || '—'}</td></tr>
+        <tr><td><strong>Date de Naissance</strong></td><td>${student.date_birth || '—'}</td></tr>
+        <tr><td><strong>Lieu de Naissance</strong></td><td>${student.place_of_birth || '—'}</td></tr>
+        <tr><td><strong>NIF/CIN</strong></td><td>${student.nif_cin || '—'}</td></tr>
+        <tr><td><strong>Adresse</strong></td><td>${student.adress || '—'}</td></tr>
+      </tbody>
+    </table>
+    <div class="section-title">Informations Familiales — Mère</div>
+    <table>
+      <tbody>
+        <tr><td><strong>Nom</strong></td><td>${student.mother_name || '—'}</td></tr>
+        <tr><td><strong>Lieu de Naissance</strong></td><td>${student.mother_birth || '—'}</td></tr>
+        <tr><td><strong>Domicile</strong></td><td>${student.mother_residence || '—'}</td></tr>
+        <tr><td><strong>Téléphone</strong></td><td>${student.mother_phone || '—'}</td></tr>
+        <tr><td><strong>Profession</strong></td><td>${student.mother_profesion || '—'}</td></tr>
+      </tbody>
+    </table>
+    <div class="section-title">Informations Familiales — Père</div>
+    <table>
+      <tbody>
+        <tr><td><strong>Nom</strong></td><td>${student.father_name || '—'}</td></tr>
+        <tr><td><strong>Lieu de Naissance</strong></td><td>${student.father_birth || '—'}</td></tr>
+        <tr><td><strong>Domicile</strong></td><td>${student.father_residence || '—'}</td></tr>
+        <tr><td><strong>Téléphone</strong></td><td>${student.father_phone || '—'}</td></tr>
+        <tr><td><strong>Profession</strong></td><td>${student.father_profesion || '—'}</td></tr>
+      </tbody>
+    </table>
+  `
+}
+
+function exportStudentCSV(student: any) {
+  const headers = ['Champ', 'Valeur']
+  const rows = [
+    ['Nom', student.last_name || ''],
+    ['Prénom', student.first_name || ''],
+    ['Code Étudiant', student.student_code || ''],
+    ['Année Académique', student.academy || ''],
+    ['Email', student.email || ''],
+    ['Téléphone', student.phone_number || ''],
+    ['Faculté', student.faculty || ''],
+    ['Sexe', student.sex || ''],
+    ['Statut Matrimonial', student.marital_status || ''],
+    ['Date de Naissance', student.date_birth || ''],
+    ['Lieu de Naissance', student.place_of_birth || ''],
+    ['NIF/CIN', student.nif_cin || ''],
+    ['Adresse', student.adress || ''],
+    ['--- Mère ---', ''],
+    ['Nom Mère', student.mother_name || ''],
+    ['Lieu Naissance Mère', student.mother_birth || ''],
+    ['Domicile Mère', student.mother_residence || ''],
+    ['Téléphone Mère', student.mother_phone || ''],
+    ['Profession Mère', student.mother_profesion || ''],
+    ['--- Père ---', ''],
+    ['Nom Père', student.father_name || ''],
+    ['Lieu Naissance Père', student.father_birth || ''],
+    ['Domicile Père', student.father_residence || ''],
+    ['Téléphone Père', student.father_phone || ''],
+    ['Profession Père', student.father_profesion || ''],
+  ]
+  exportToCSV(headers, rows, `etudiant_${student.student_code}`)
+}
+
+// ===== EDIT MODAL =====
+function EditFieldModal({ isOpen, onClose, title, fields, onSave }: {
+  isOpen: boolean
+  onClose: () => void
+  title: string
+  fields: { label: string; key: string; value: string; type?: string }[]
+  onSave: (values: Record<string, string>) => Promise<void>
+}) {
+  const [values, setValues] = useState<Record<string, string>>(
+    Object.fromEntries(fields.map(f => [f.key, f.value || '']))
+  )
+  const [saving, setSaving] = useState(false)
+
+  if (!isOpen) return null
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await onSave(values)
+      onClose()
+    } catch {
+      alert('Erreur lors de la sauvegarde')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[85vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4 pb-3 border-b">
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl">✕</button>
+        </div>
+        <div className="space-y-3">
+          {fields.map(f => (
+            <div key={f.key}>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">{f.label}</label>
+              <input
+                type={f.type || 'text'}
+                value={values[f.key] || ''}
+                onChange={e => setValues({ ...values, [f.key]: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} disabled={saving} className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition">Annuler</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2">
+            {saving ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ===== EXPORT BUTTONS BAR =====
+function ExportBar({ onPrint, onExcel, onPDF }: { onPrint: () => void; onExcel: () => void; onPDF: () => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button onClick={onPDF} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+        PDF
+      </button>
+      <button onClick={onExcel} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition text-sm font-medium">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+        Excel
+      </button>
+      <button onClick={onPrint} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition text-sm font-medium">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+        Imprimer
+      </button>
+    </div>
+  )
+}
+
 function StudentDisplayContent({
   student,
   status,
@@ -287,13 +447,80 @@ function StudentDisplayContent({
   canViewPayment,
   canEdit
 }: StudentDisplayContentProps) {
+  const [editInfoOpen, setEditInfoOpen] = useState(false)
+  const [editStatusOpen, setEditStatusOpen] = useState(false)
+
+  const handleExportPrint = () => {
+    printHTML(`Fiche ${student.last_name} ${student.first_name}`, getStudentPersonalAndFamilyHTML(student))
+  }
+  const handleExportPDF = handleExportPrint // PDF via print dialog (Save as PDF)
+  const handleExportExcel = () => exportStudentCSV(student)
+
+  const handleSaveInfo = async (values: Record<string, string>) => {
+    const { error } = await supabase.from('student').update(values).eq('id', student.id)
+    if (error) throw error
+    window.location.reload()
+  }
+
+  const handleSaveStatus = async (values: Record<string, string>) => {
+    const payload: Record<string, any> = { ...values }
+    if (values.year_study) payload.year_study = parseInt(values.year_study)
+    if (values.year_completed) payload.year_completed = parseInt(values.year_completed)
+    const { error } = await supabase.from('student_status').update(payload).eq('student_id', student.id)
+    if (error) throw error
+    window.location.reload()
+  }
   return (
     <div className="space-y-8">
+      {/* Export & Edit Modals */}
+      <EditFieldModal
+        isOpen={editInfoOpen}
+        onClose={() => setEditInfoOpen(false)}
+        title="Modifier Informations Personnelles"
+        fields={[
+          { label: 'Nom', key: 'last_name', value: student.last_name || '' },
+          { label: 'Prénom', key: 'first_name', value: student.first_name || '' },
+          { label: 'Email', key: 'email', value: student.email || '', type: 'email' },
+          { label: 'Téléphone', key: 'phone_number', value: student.phone_number || '', type: 'tel' },
+          { label: 'Adresse', key: 'adress', value: student.adress || '' },
+          { label: 'Sexe', key: 'sex', value: student.sex || '' },
+          { label: 'Statut Matrimonial', key: 'marital_status', value: student.marital_status || '' },
+          { label: 'NIF/CIN', key: 'nif_cin', value: student.nif_cin || '' },
+        ]}
+        onSave={handleSaveInfo}
+      />
+      {status && (
+        <EditFieldModal
+          isOpen={editStatusOpen}
+          onClose={() => setEditStatusOpen(false)}
+          title="Modifier Statut Académique"
+          fields={[
+            { label: 'Année Actuelle', key: 'year_study', value: String(status.year_study || ''), type: 'number' },
+            { label: 'Année Complétée', key: 'year_completed', value: String(status.year_completed || ''), type: 'number' },
+          ]}
+          onSave={handleSaveStatus}
+        />
+      )}
+
+      {/* Export Buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h3 className="text-lg font-bold text-gray-900">Fiche Étudiant</h3>
+        <ExportBar onPrint={handleExportPrint} onExcel={handleExportExcel} onPDF={handleExportPDF} />
+      </div>
+
       {/* Personal Information */}
       <div>
-        <h3 className="text-xl font-bold text-gray-900 mb-4 pb-3 border-b-2 border-blue-500">
-          📋 Informations Personnelles
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 pb-3 border-b-2 border-blue-500">
+          <h3 className="text-xl font-bold text-gray-900">
+            📋 Informations Personnelles
+          </h3>
+          {canEdit && (
+            <button onClick={() => setEditInfoOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition text-sm font-medium mt-2 sm:mt-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              Modifier
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Photo */}
           <div className="md:col-span-1">
@@ -349,9 +576,17 @@ function StudentDisplayContent({
       {/* Academic Status */}
       {status && (
         <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-4 pb-3 border-b-2 border-green-500">
-            🎓 Statut Académique
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 pb-3 border-b-2 border-green-500">
+            <h3 className="text-xl font-bold text-gray-900">
+              🎓 Statut Académique
+            </h3>
+            {canEdit && (
+              <button onClick={() => setEditStatusOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition text-sm font-medium mt-2 sm:mt-0">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                Modifier
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-green-50 p-4 rounded-lg">
             <Lecture int="Année Actuelle" out={status.year_study} />
             <Lecture int="Année Complétée" out={status.year_completed} />

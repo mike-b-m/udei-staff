@@ -2,7 +2,6 @@
 import { supabase } from "@/app//component/db";
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 
 export default function LogIn() {
   const router = useRouter()

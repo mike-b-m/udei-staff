@@ -1,7 +1,7 @@
 'use client'
 import { supabase } from "../db";
 import { useState, useEffect } from "react";
-import Notation from "../notation/notation";
+import { exportToCSV, printHTML } from "../export/exportUtils";
 
 interface TeacherInputProps {
     session: number | string | null 
@@ -588,6 +588,88 @@ export function ReadNote({ session, year, id }: TeacherInputProps) {
                     <p>Faculté: <span className="font-semibold">{note[0]?.faculty || 'N/A'}</span></p>
                 </div>
             </div>
+
+            {/* Export Buttons */}
+            {note.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                    <button
+                        onClick={() => {
+                            const studentName = `${fullname[0]?.last_name || ''} ${fullname[0]?.first_name || ''}`
+                            const title = `Notes - ${studentName} - Session ${session} - Année ${year}`
+                            const html = `
+                                <h2>${title}</h2>
+                                <div class="info">
+                                    <p><strong>Faculté:</strong> ${note[0]?.faculty || 'N/A'}</p>
+                                    <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+                                </div>
+                                <table>
+                                    <thead><tr><th>Matière</th><th>Note Intra</th><th>Reprise Intra</th><th>Note Finale</th><th>Reprise Finale</th><th>Moyenne</th></tr></thead>
+                                    <tbody>
+                                        ${note.map((n: any) => {
+                                            const avg = calculateFinal(n.intra, n.final, n.repri_intra, n.repri_final)
+                                            return `<tr><td>${n.matiere}</td><td>${n.intra || '-'}</td><td>${n.repri_intra || '-'}</td><td>${n.final || '-'}</td><td>${n.repri_final || '-'}</td><td>${avg}</td></tr>`
+                                        }).join('')}
+                                        <tr class="total-row"><td>Total</td><td>${totalIntra}</td><td>-</td><td>${totalFinal}</td><td>-</td><td>${((totalIntra + totalFinal) / (note.length * 2)).toFixed(2)}</td></tr>
+                                    </tbody>
+                                </table>
+                            `
+                            printHTML(title, html)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                        PDF
+                    </button>
+                    <button
+                        onClick={() => {
+                            const headers = ['Matière', 'Note Intra', 'Reprise Intra', 'Note Finale', 'Reprise Finale', 'Moyenne']
+                            const rows = note.map((n: any) => [
+                                n.matiere || '',
+                                String(n.intra || '-'),
+                                String(n.repri_intra || '-'),
+                                String(n.final || '-'),
+                                String(n.repri_final || '-'),
+                                calculateFinal(n.intra, n.final, n.repri_intra, n.repri_final),
+                            ])
+                            rows.push(['Total', String(totalIntra), '-', String(totalFinal), '-', ((totalIntra + totalFinal) / (note.length * 2)).toFixed(2)])
+                            const studentName = `${fullname[0]?.last_name || ''}_${fullname[0]?.first_name || ''}`
+                            exportToCSV(headers, rows, `notes_${studentName}_s${session}_y${year}`)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition text-sm font-medium"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                        Excel
+                    </button>
+                    <button
+                        onClick={() => {
+                            const studentName = `${fullname[0]?.last_name || ''} ${fullname[0]?.first_name || ''}`
+                            const title = `Notes - ${studentName} - Session ${session} - Année ${year}`
+                            const html = `
+                                <h2>${title}</h2>
+                                <div class="info">
+                                    <p><strong>Faculté:</strong> ${note[0]?.faculty || 'N/A'}</p>
+                                    <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+                                </div>
+                                <table>
+                                    <thead><tr><th>Matière</th><th>Note Intra</th><th>Reprise Intra</th><th>Note Finale</th><th>Reprise Finale</th><th>Moyenne</th></tr></thead>
+                                    <tbody>
+                                        ${note.map((n: any) => {
+                                            const avg = calculateFinal(n.intra, n.final, n.repri_intra, n.repri_final)
+                                            return `<tr><td>${n.matiere}</td><td>${n.intra || '-'}</td><td>${n.repri_intra || '-'}</td><td>${n.final || '-'}</td><td>${n.repri_final || '-'}</td><td>${avg}</td></tr>`
+                                        }).join('')}
+                                        <tr class="total-row"><td>Total</td><td>${totalIntra}</td><td>-</td><td>${totalFinal}</td><td>-</td><td>${((totalIntra + totalFinal) / (note.length * 2)).toFixed(2)}</td></tr>
+                                    </tbody>
+                                </table>
+                            `
+                            printHTML(title, html)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        Imprimer
+                    </button>
+                </div>
+            )}
 
             {/* Notes Table */}
             {note.length > 0 ? (

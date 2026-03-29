@@ -3,7 +3,6 @@ import { supabase } from "@/app/component/db";
 import { useState, useEffect } from "react";
 import { Filter2 } from "@/app/component/filter/filter";
 import {  ReadNote } from "@/app/component/teacher/teacher";
-import Input from "../component/input/input-comp";
 
 export default function Student_dashboard(){
     const [userX,setUser] =useState<any[]>([])

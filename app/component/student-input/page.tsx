@@ -518,6 +518,7 @@ export default function StudentInput() {
                 />
               </div>
             </div>
+            
 
             <Input
               label="Vu par"
