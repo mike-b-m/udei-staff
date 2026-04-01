@@ -1,7 +1,7 @@
 'use client'
 import { supabase } from "@/app/component/db"
 import { useState, useEffect } from "react"
-import { FACULTIES } from "@/app/component/student-infos/constants"
+import { useFaculties } from "@/app/component/student-infos/useFaculties"
 
 interface Homework {
     id: number
@@ -26,6 +26,7 @@ interface Submission {
 }
 
 export default function HomeworkPage() {
+    const { facultyNames } = useFaculties()
     const [homeworks, setHomeworks] = useState<Homework[]>([])
     const [submissions, setSubmissions] = useState<Submission[]>([])
     const [loading, setLoading] = useState(true)
@@ -190,7 +191,7 @@ export default function HomeworkPage() {
                                 <select value={form.faculty} onChange={e => setForm({ ...form, faculty: e.target.value })}
                                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                                     <option value="">-- Sélectionner --</option>
-                                    {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                                    {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
                                 </select>
                             </div>
                             <div>

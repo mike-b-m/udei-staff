@@ -1,7 +1,7 @@
 'use client'
 import { supabase } from "@/app/component/db"
 import { useState, useEffect } from "react"
-import { FACULTIES } from "@/app/component/student-infos/constants"
+import { useFaculties } from "@/app/component/student-infos/useFaculties"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 
 interface FacultyStats {
@@ -13,6 +13,7 @@ interface FacultyStats {
 }
 
 export default function ReportsPage() {
+  const { facultyNames } = useFaculties()
   const [facultyStats, setFacultyStats] = useState<FacultyStats[]>([])
   const [totalStudents, setTotalStudents] = useState(0)
   const [totalRevenue, setTotalRevenue] = useState(0)
@@ -45,7 +46,7 @@ export default function ReportsPage() {
     setTotalSpend(totalSp)
 
     // Build per-faculty stats
-    const stats: FacultyStats[] = FACULTIES.map(faculty => {
+    const stats: FacultyStats[] = facultyNames.map(faculty => {
       const facultyStudents = students.filter(s => s.faculty === faculty)
       const studentIds = new Set(facultyStudents.map(s => s.id))
       const facultyPayments = payments.filter(p => studentIds.has(p.student_id))

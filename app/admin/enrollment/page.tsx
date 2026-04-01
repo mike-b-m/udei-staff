@@ -1,7 +1,7 @@
 'use client'
 import { supabase } from "@/app/component/db"
 import { useState, useEffect } from "react"
-import { FACULTIES } from "@/app/component/student-infos/constants"
+import { useFaculties } from "@/app/component/student-infos/useFaculties"
 
 interface Enrollment {
   id: number
@@ -27,6 +27,7 @@ interface Semester {
 }
 
 export default function EnrollmentPage() {
+  const { facultyNames } = useFaculties()
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [semesters, setSemesters] = useState<Semester[]>([])
   const [loading, setLoading] = useState(true)
@@ -195,7 +196,7 @@ export default function EnrollmentPage() {
                 className="px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
               >
                 <option value="">Toutes les facultés</option>
-                {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
               <select
                 value={filterStatus}

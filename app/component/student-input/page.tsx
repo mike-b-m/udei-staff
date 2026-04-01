@@ -5,6 +5,8 @@ import Input from "../input/input-comp"
 import { Code } from "../code/code"
 import Image from "next/image"
 
+import { useFaculties } from "@/app/component/student-infos/useFaculties"
+
 interface FormData {
   first_name: string
   last_name: string
@@ -52,27 +54,8 @@ const REQUIRED_FIELDS = [
   'academy'
 ]
 
-const FACULTIES = [
-  'Génie Civil',
-  'Médecine Générale',
-  'Odontologie',
-  'Sciences Infirmières',
-  'Sciences Administratives',
-  'Sciences Comptables',
-  'Science Informatique',
-  'Gestion Des Affaires',
-  'Sciences Agronomiques',
-  'Sciences Economiques',
-  'Sciences De L\'Education',
-  'Sciences Juridiques',
-  'Pharmacologies',
-  'Médecine Vétérinaire',
-  'Laboratoire Médicale',
-  'Physiothérapie',
-  'Jardinières D\'enfants'
-]
-
 export default function StudentInput() {
+  const { facultyNames } = useFaculties()
   const [formData, setFormData] = useState<FormData>({
     first_name: '',
     last_name: '',
@@ -434,7 +417,7 @@ export default function StudentInput() {
                   }`}
                 >
                   <option value="">Sélectionner une faculté</option>
-                  {FACULTIES.map(f => <option key={f}>{f}</option>)}
+                  {facultyNames.map(f => <option key={f}>{f}</option>)}
                 </select>
                 {errors.faculty && <p className="mt-1 text-sm text-red-600">{errors.faculty}</p>}
               </div>

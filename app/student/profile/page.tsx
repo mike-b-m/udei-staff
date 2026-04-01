@@ -1,7 +1,6 @@
 'use client'
 import { supabase } from "@/app/component/db"
 import { useState, useEffect } from "react"
-import { FACULTIES } from "@/app/component/student-infos/constants"
 
 interface StudentProfile {
     id: number

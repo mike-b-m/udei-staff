@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { Filter2 } from "@/app/component/filter/filter";
 import { ReadNote } from "@/app/component/teacher/teacher";
 import { getGradeInfo, calculateGPA, type GradeEntry } from "@/app/lib/gpa";
-import { FACULTIES } from "@/app/component/student-infos/constants";
+import { useFaculties } from "@/app/component/student-infos/useFaculties";
 
 // ============ Account Creation Form ============
 function StudentAccountForm({ email, onCreated }: { email: string; onCreated: () => void }) {
+    const { facultyNames } = useFaculties()
     const [form, setForm] = useState({
         first_name: '', last_name: '', faculty: '',
         date_birth: '', place_of_birth: '', sex: 'M',
@@ -111,7 +112,7 @@ function StudentAccountForm({ email, onCreated }: { email: string; onCreated: ()
                                 <select value={form.faculty} onChange={e => handleChange('faculty', e.target.value)}
                                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                                     <option value="">-- Sélectionner --</option>
-                                    {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                                    {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
                                 </select>
                             </div>
                             <div>
@@ -244,7 +245,8 @@ function PaymentSection({ paymentRecord }: { paymentRecord: any }) {
     const history: any[] = paymentRecord?.payment_history || []
     const currentBalance = paymentRecord?.balance ?? 0
     const totalPrice = paymentRecord?.price ?? paymentRecord?.amount ?? 0
-    const totalPaid = totalPrice - currentBalance
+    const discount = paymentRecord?.discount ?? 0
+    const totalPaid = totalPrice - discount - currentBalance
 
     return (
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -256,11 +258,17 @@ function PaymentSection({ paymentRecord }: { paymentRecord: any }) {
                     </svg>
                     Historique des Paiements
                 </h3>
-                <div className="grid grid-cols-3 gap-4 mt-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                     <div className="bg-white/15 rounded-lg p-3 text-center">
                         <p className="text-green-100 text-xs font-medium">Frais Total</p>
                         <p className="text-lg font-bold">{Number(totalPrice).toLocaleString()} HTG</p>
                     </div>
+                    {discount > 0 && (
+                        <div className="bg-white/15 rounded-lg p-3 text-center">
+                            <p className="text-green-100 text-xs font-medium">Remise</p>
+                            <p className="text-lg font-bold">-{Number(discount).toLocaleString()} HTG</p>
+                        </div>
+                    )}
                     <div className="bg-white/15 rounded-lg p-3 text-center">
                         <p className="text-green-100 text-xs font-medium">Total Payé</p>
                         <p className="text-lg font-bold">{Number(totalPaid).toLocaleString()} HTG</p>
@@ -276,11 +284,11 @@ function PaymentSection({ paymentRecord }: { paymentRecord: any }) {
             <div className="px-6 pt-4">
                 <div className="flex justify-between text-xs text-gray-500 mb-1">
                     <span>Progression</span>
-                    <span>{totalPrice > 0 ? Math.round((totalPaid / totalPrice) * 100) : 0}%</span>
+                    <span>{(totalPrice - discount) > 0 ? Math.round((totalPaid / (totalPrice - discount)) * 100) : 0}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                     <div className="bg-linear-to-r from-green-500 to-emerald-400 h-2.5 rounded-full transition-all duration-500"
-                        style={{ width: `${totalPrice > 0 ? Math.min((totalPaid / totalPrice) * 100, 100) : 0}%` }} />
+                        style={{ width: `${(totalPrice - discount) > 0 ? Math.min((totalPaid / (totalPrice - discount)) * 100, 100) : 0}%` }} />
                 </div>
             </div>
 
@@ -524,7 +532,7 @@ export default function Student_dashboard(){
         getData()
     }, [sendCode, authLoaded])
 
-    const totalPaid = paymentRecord ? (Number(paymentRecord.price || paymentRecord.amount || 0) - Number(paymentRecord.balance || 0)) : 0
+    const totalPaid = paymentRecord ? (Number(paymentRecord.price || paymentRecord.amount || 0) - Number(paymentRecord.discount || 0) - Number(paymentRecord.balance || 0)) : 0
     const paymentCount = paymentRecord?.payment_history?.length || 0
 
     const handleDownloadTranscript = () => {

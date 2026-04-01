@@ -3,55 +3,205 @@ import { supabase } from "@/app/component/db";
 import { useState, useEffect } from "react";
 import { Filter2 } from "@/app/component/filter/filter";
 import { ReadNote, Readsession } from "@/app/component/teacher/teacher";
-import { getGradeInfo, calculateGPA, type GradeEntry } from "@/app/lib/gpa";
+import { calculateGPA, type GradeEntry } from "@/app/lib/gpa";
 
-const theTime = [
-    'lundi',
-    'mardi',
-    'mercredi',
-    'jeudi',
-    'vendredi',
-]
+// ============ Payment History Section ============
+function PaymentSection({ paymentRecord }: { paymentRecord: any }) {
+    const history: any[] = paymentRecord?.payment_history || []
+    const currentBalance = paymentRecord?.balance ?? 0
+    const totalPrice = paymentRecord?.price ?? paymentRecord?.amount ?? 0
+    const discount = paymentRecord?.discount ?? 0
+    const totalPaid = totalPrice - discount - currentBalance
 
-export default function Student_dashboard(){
+    return (
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-linear-to-r from-green-600 to-emerald-500 p-6 text-white">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+                    </svg>
+                    Historique des Paiements
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                    <div className="bg-white/15 rounded-lg p-3 text-center">
+                        <p className="text-green-100 text-xs font-medium">Frais Total</p>
+                        <p className="text-lg font-bold">{Number(totalPrice).toLocaleString()} HTG</p>
+                    </div>
+                    {discount > 0 && (
+                        <div className="bg-white/15 rounded-lg p-3 text-center">
+                            <p className="text-green-100 text-xs font-medium">Remise</p>
+                            <p className="text-lg font-bold">-{Number(discount).toLocaleString()} HTG</p>
+                        </div>
+                    )}
+                    <div className="bg-white/15 rounded-lg p-3 text-center">
+                        <p className="text-green-100 text-xs font-medium">Total Payé</p>
+                        <p className="text-lg font-bold">{Number(totalPaid).toLocaleString()} HTG</p>
+                    </div>
+                    <div className="bg-white/15 rounded-lg p-3 text-center">
+                        <p className="text-green-100 text-xs font-medium">Solde Restant</p>
+                        <p className="text-lg font-bold">{Number(currentBalance).toLocaleString()} HTG</p>
+                    </div>
+                </div>
+            </div>
+            <div className="px-6 pt-4">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Progression</span>
+                    <span>{(totalPrice - discount) > 0 ? Math.round((totalPaid / (totalPrice - discount)) * 100) : 0}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="bg-linear-to-r from-green-500 to-emerald-400 h-2.5 rounded-full transition-all duration-500"
+                        style={{ width: `${(totalPrice - discount) > 0 ? Math.min((totalPaid / (totalPrice - discount)) * 100, 100) : 0}%` }} />
+                </div>
+            </div>
+            <div className="p-6">
+                {history.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="bg-gray-50 text-gray-700">
+                                    <th className="py-3 px-4 text-left font-semibold">#</th>
+                                    <th className="py-3 px-4 text-left font-semibold">Date</th>
+                                    <th className="py-3 px-4 text-right font-semibold">Montant</th>
+                                    <th className="py-3 px-4 text-right font-semibold">Solde Après</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {history.map((entry: any, i: number) => (
+                                    <tr key={i} className={`border-t border-gray-100 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-green-50 transition`}>
+                                        <td className="py-3 px-4 text-gray-500 font-medium">{i + 1}</td>
+                                        <td className="py-3 px-4 text-gray-700">
+                                            {entry.date ? new Date(entry.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                        </td>
+                                        <td className="py-3 px-4 text-right">
+                                            <span className="inline-flex items-center gap-1 text-green-700 font-semibold bg-green-50 px-2 py-0.5 rounded-full">
+                                                + {Number(entry.amount || 0).toLocaleString()} HTG
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-right font-medium text-gray-700">
+                                            {Number(entry.balance || 0).toLocaleString()} HTG
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="text-center py-8 text-gray-500">
+                        <p className="font-medium">Aucun paiement enregistré</p>
+                        <p className="text-sm mt-1">Les paiements apparaîtront ici une fois effectués</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ============ Program by Semester Section ============
+function ProgramSection({ program }: { program: any[] }) {
+    const sem1 = program.filter(p => p.session === 1)
+    const sem2 = program.filter(p => p.session === 2)
+
+    const renderTable = (courses: any[], title: string) => (
+        <div className="mb-6">
+            <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                {title}
+            </h4>
+            {courses.length > 0 ? (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-blue-50 text-blue-800">
+                                <th className="py-2 px-3 text-left font-semibold">Matière</th>
+                                <th className="py-2 px-3 text-left font-semibold">Crédits</th>
+                                <th className="py-2 px-3 text-left font-semibold">Séances/Mois</th>
+                                <th className="py-2 px-3 text-left font-semibold">H/Séance</th>
+                                <th className="py-2 px-3 text-left font-semibold">Total H</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {courses.map((c: any, i: number) => (
+                                <tr key={c.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                    <td className="py-2 px-3 font-medium">{c.courses || c.course_name}</td>
+                                    <td className="py-2 px-3">{c.credit || c.credits}</td>
+                                    <td className="py-2 px-3">{c.session_subjet}</td>
+                                    <td className="py-2 px-3">{c.hour_session}</td>
+                                    <td className="py-2 px-3">{c.total_hour}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <p className="text-gray-500 text-sm italic">Pas encore de cours assigné</p>
+            )}
+        </div>
+    )
+
+    return (
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-purple-600 rounded"></span>
+                Programme d&apos;Études
+            </h3>
+            {renderTable(sem1, 'Semestre 1')}
+            {renderTable(sem2, 'Semestre 2')}
+        </div>
+    )
+}
+
+// ============ Important Dates Section ============
+function ImportantDatesSection() {
+    const [dat, setDat] = useState<any[]>([])
+    useEffect(() => {
+        const load = async () => {
+            const { data } = await supabase.from('imp_date').select('*')
+            if (data) setDat(data)
+        }
+        load()
+    }, [])
+
+    const icons = ['📚', '📝', '🎄', '📋', '📚', '📋', '🎉', '📖']
+    return (
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-orange-500 rounded"></span>
+                Dates Importantes
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {dat.map((d, i) => (
+                    <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 hover:bg-blue-50 transition">
+                        <span className="text-2xl">{icons[i % icons.length]}</span>
+                        <div>
+                            <p className="font-medium text-gray-900 text-sm">{d.tittle}</p>
+                            <p className="text-xs text-gray-500">{d.date}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+export default function ResultDashboard(){
     const [userX,setUser] = useState<any[]>([])
     const [status,setStatus] = useState<any[]>([])
     const [session,setSession] = useState(false)
+    const [session2,setSession2] = useState(false)
     const [mat,setMat] = useState(false)
+    const [showPayments, setShowPayments] = useState(false)
+    const [showProgram, setShowProgram] = useState(false)
+    const [showDates, setShowDates] = useState(false)
     const [code,setCode] = useState('')
     const [sendCode,setsenCode] = useState(false)
-    const [load,setLoad] = useState(true)
+    const [load,setLoad] = useState(false)
     const [result,setResult] = useState(false)
     const [program,setProgram] = useState<any[]>([])
-    const [payments,setPayments] = useState<any[]>([])
+    const [paymentRecord,setPaymentRecord] = useState<any>(null)
     const [grades,setGrades] = useState<any[]>([])
     const [gpa,setGpa] = useState(0)
-    const [authLoaded,setAuthLoaded] = useState(false)
 
-    // Auto-load by auth email on mount
-    useEffect(() => {
-        const autoLoad = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user?.email) {
-                const { data } = await supabase
-                    .from('student')
-                    .select('student_code')
-                    .eq('email', user.email)
-                    .maybeSingle()
-                if (data?.student_code) {
-                    setCode(data.student_code)
-                    setAuthLoaded(true)
-                } else {
-                    setLoad(false)
-                }
-            } else {
-                setLoad(false)
-            }
-        }
-        autoLoad()
-    }, [])
-
-    // Trigger search when auth loads code or manual search
+    // Trigger search on manual search
     useEffect(() => {
         if (!code) { setLoad(false); return }
         const getData = async ()=> {
@@ -69,16 +219,15 @@ export default function Student_dashboard(){
             const [programRes, statusRes, paymentRes, gradeRes] = await Promise.all([
                 supabase.from('course_program').select('*').eq('faculty', faculty),
                 supabase.from('student_status').select('id,student_id,year_study').eq('student_id', studentId),
-                supabase.from('student_payment').select('*').eq('student_id', studentId).order('created_at', { ascending: false }),
+                supabase.from('student_payment').select('*').eq('student_id', studentId).maybeSingle(),
                 supabase.from('exam').select('*').eq('student_id', studentId),
             ])
 
-            if (programRes.data) setProgram(programRes.data.filter((item: any) => item.year === statusRes.data?.[0]?.year_study || ''))
+            if (programRes.data) setProgram(programRes.data)
             if (statusRes.data) setStatus(statusRes.data)
-            if (paymentRes.data) setPayments(paymentRes.data)
+            if (paymentRes.data) setPaymentRecord(paymentRes.data)
             if (gradeRes.data) {
                 setGrades(gradeRes.data)
-                // Calculate GPA
                 const entries: GradeEntry[] = gradeRes.data.map((g: any) => {
                     const score = g.reprise ?? g.final ?? 0
                     const course = programRes.data?.find((p: any) => p.course_name === g.matière)
@@ -91,33 +240,35 @@ export default function Student_dashboard(){
             setLoad(false)
         }
         getData()
-    }, [sendCode, authLoaded])
+    }, [sendCode])
 
-    const totalPaid = payments.reduce((sum, p) => sum + (Number(p.prize)|| 0), 0)
+    const totalPaid = paymentRecord ? (Number(paymentRecord.price || paymentRecord.amount || 0) - Number(paymentRecord.discount || 0) - Number(paymentRecord.balance || 0)) : 0
+    const paymentCount = paymentRecord?.payment_history?.length || 0
 
     const handleDownloadTranscript = () => {
         if (!userX[0]?.id) return
         window.open(`/api/pdf/transcript?student_id=${userX[0].id}`, '_blank')
     }
+
     return(
-        <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-indigo-100 p-6">
-            {/* Header Section */}
+        <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-indigo-100 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">Tableau de Bord Étudiant</h1>
-                    <p className="text-gray-600">Consultez vos informations académiques et votre planning</p>
+                    <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Recherche Étudiant</h1>
+                    <p className="text-gray-600">Consultez les résultats et informations académiques</p>
                 </div>
 
                 {/* Search Section */}
                 <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
                     <div className="flex gap-4 items-end flex-wrap">
-                        <div className="flex-1 min-w-xs">
+                        <div className="flex-1 min-w-[200px]">
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Code Étudiant</label>
                             <input 
                                 type="text" 
                                 value={code}
                                 onChange={(e)=>setCode(e.target.value)}
-                                placeholder="Entrez votre code (ex: STU001)"
+                                onKeyDown={(e) => e.key === 'Enter' && setsenCode(!sendCode)}
+                                placeholder="Entrez le code (ex: STU001)"
                                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition text-base"
                             />
                         </div>
@@ -142,27 +293,27 @@ export default function Student_dashboard(){
                 ) : result ? (
                     <div className="space-y-6">
                         {/* Student Info Header */}
-                        <div className="bg-linear-to-r from-blue-600 to-blue-500 rounded-2xl shadow-xl p-8 text-white">
+                        <div className="bg-linear-to-r from-blue-600 to-blue-500 rounded-2xl shadow-xl p-6 md:p-8 text-white">
                             <div className="flex justify-between items-start flex-wrap gap-4">
                                 <div>
-                                    <h2 className="text-3xl font-bold mb-2">{userX[0]?.last_name} {userX[0]?.first_name}</h2>
+                                    <h2 className="text-2xl md:text-3xl font-bold mb-2">{userX[0]?.last_name} {userX[0]?.first_name}</h2>
                                     <p className="text-blue-100 flex items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3.042.525A9.006 9.006 0 0 0 3 9.694M12 6.042c1.052 0 2.062.18 3.042.525A9.006 9.006 0 0 1 21 9.694M12 6.042A8.968 8.968 0 0 1 18 3.75c1.052 0 2.062.18 3.042.525A9.006 9.006 0 0 1 21 9.694M9 19.5a9 9 0 1 1 12 0A9 9 0 0 1 9 19.5Z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
                                         </svg>
                                         Faculté: <span className="font-semibold">{userX[0]?.faculty}</span>
                                     </p>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-blue-100 text-sm mb-1">Code Étudiant</p>
-                                    <p className="text-2xl font-bold">{userX[0]?.student_code}</p>
+                                    <p className="text-xl md:text-2xl font-bold">{userX[0]?.student_code}</p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-shadow">
                                 <div className="text-sm text-gray-500 font-semibold mb-2">GPA</div>
                                 <div className="text-3xl font-bold text-blue-600">{gpa.toFixed(2)}</div>
                                 <div className="text-xs text-gray-400 mt-2">
@@ -170,20 +321,23 @@ export default function Student_dashboard(){
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                            <div className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-shadow">
                                 <div className="text-sm text-gray-500 font-semibold mb-2">Année d&apos;Étude</div>
                                 <div className="flex items-center gap-2">
                                     <Filter2 id={userX[0]?.id} bool/>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                            <div className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-shadow">
                                 <div className="text-sm text-gray-500 font-semibold mb-2">Total Payé</div>
-                                <div className="text-2xl font-bold text-green-600">${payments.map(p=> <div>{p.balance}</div>)}{totalPaid.toLocaleString()}</div>
-                                <div className="text-xs text-gray-400 mt-2">{payments.length} paiement(s)</div>
+                                <div className="text-2xl font-bold text-green-600">{totalPaid.toLocaleString()} HTG</div>
+                                <div className="text-xs text-gray-400 mt-2">{paymentCount} paiement(s)</div>
+                                {paymentRecord?.balance > 0 && (
+                                    <div className="text-xs text-orange-500 mt-1">Solde: {Number(paymentRecord.balance).toLocaleString()} HTG</div>
+                                )}
                             </div>
 
-                            <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                            <div className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-shadow">
                                 <div className="text-sm text-gray-500 font-semibold mb-2">Matières</div>
                                 <div className="text-2xl font-bold text-purple-600">{grades.length}</div>
                                 <div className="text-xs text-gray-400 mt-2">
@@ -194,11 +348,11 @@ export default function Student_dashboard(){
 
                         {/* Action Buttons */}
                         <div className="bg-white rounded-2xl shadow-lg p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">Consultez vos Résultats</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <h3 className="text-lg font-bold text-gray-900 mb-4">Consultez les Résultats</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                 <button 
-                                    onClick={()=>{setSession(!session)}} 
-                                    className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                                    onClick={()=>{setSession(!session); if(session2) setSession2(false)}} 
+                                    className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm ${
                                         session 
                                             ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-lg' 
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -211,7 +365,12 @@ export default function Student_dashboard(){
                                 </button>
 
                                 <button 
-                                    className="py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                    onClick={()=>{setSession2(!session2); if(session) setSession(false)}}
+                                    className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm ${
+                                        session2
+                                            ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-lg' 
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
@@ -221,35 +380,68 @@ export default function Student_dashboard(){
 
                                 <button 
                                     onClick={()=>{setMat(!mat)}} 
-                                    className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                                    className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm ${
                                         mat 
-                                            ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-lg' 
+                                            ? 'bg-linear-to-r from-purple-600 to-purple-500 text-white shadow-lg' 
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41.75.75 0 1 1 .494 1.425 50.123 50.123 0 0 0-8.514 4.462c-.068.06-.136.12-.203.182a48.997 48.997 0 0 1-7.707-7.707.75.75 0 0 1 .896-1.159zm19.474-6.423c.78.797 1.26 1.887 1.26 3.077 0 2.871-2.612 5.190-5.824 5.190-.842 0-1.659-.257-2.324-.743l-.841 3.059.02-.02a48.039 48.039 0 0 1-7.773 3.276c-2.896.168-4.979-1.630-5.191-4.576-.04-.559-.031-1.126.061-1.682 0-.855.07-1.679.194-2.476a.75.75 0 0 1 1.439-.54c.166.682.292 1.359.315 2.066a46.591 46.591 0 0 0-.52 3.95c-.518 4.02 3.271 7.286 8.577 5.33a50.115 50.115 0 0 0 5.9-2.5.75.75 0 0 1 .898 1.128 51.69 51.69 0 0 1-6.06 2.619c-2.29.878-4.576 1.106-6.815.892-2.238-.214-4.268-1.17-5.657-2.653l-.181-.182a.75.75 0 1 1 1.06-1.061l.182.181c1.08 1.079 2.74 1.927 4.677 2.105 1.938.177 3.873-.003 5.82-.753.504-.193.984-.435 1.436-.722l.841-3.058a6.694 6.694 0 0 1-2.324.743c-3.212 0-5.824-2.319-5.824-5.19 0-1.19.48-2.28 1.26-3.077.768-.778 1.801-1.30 2.995-1.30 1.194 0 2.227.522 2.995 1.3.78.797 1.26 1.887 1.26 3.077 0 1.19-.48 2.28-1.26 3.077a4.001 4.001 0 0 1-2.995 1.3c-.483 0-.945-.088-1.382-.26l-.841 3.059a6.657 6.657 0 0 0 2.223.26c3.212 0 5.824-2.319 5.824-5.19 0-1.19-.48-2.28-1.26-3.077-.768-.778-1.801-1.30-2.995-1.30z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                                     </svg>
                                     Matières
                                 </button>
 
                                 <button 
-                                    className="py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                    onClick={() => setShowProgram(!showProgram)}
+                                    className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm ${
+                                        showProgram 
+                                            ? 'bg-linear-to-r from-indigo-600 to-indigo-500 text-white shadow-lg' 
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.251 2.251 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />
+                                    </svg>
+                                    Programme
+                                </button>
+
+                                <button 
+                                    onClick={() => setShowPayments(!showPayments)}
+                                    className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm ${
+                                        showPayments
+                                            ? 'bg-linear-to-r from-green-600 to-green-500 text-white shadow-lg' 
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+                                    </svg>
+                                    Paiements
+                                </button>
+
+                                <button 
+                                    onClick={() => setShowDates(!showDates)}
+                                    className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm ${
+                                        showDates
+                                            ? 'bg-linear-to-r from-orange-600 to-orange-500 text-white shadow-lg' 
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
-                                    Horaire
+                                    Dates
                                 </button>
 
                                 <button 
                                     onClick={handleDownloadTranscript}
-                                    className="py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-r from-green-600 to-green-500 text-white shadow-lg hover:from-green-700 hover:to-green-600"
+                                    className="py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm bg-linear-to-r from-green-600 to-green-500 text-white shadow-lg hover:from-green-700 hover:to-green-600"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                     </svg>
-                                    Relevé de Notes
+                                    Relevé
                                 </button>
                             </div>
                         </div>
@@ -259,13 +451,36 @@ export default function Student_dashboard(){
                             <div className="bg-white rounded-2xl shadow-lg p-6">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                                     <span className="w-1 h-6 bg-blue-600 rounded"></span>
-                                    Résultats - Semestre {session ? '1' : '2'}
+                                    Résultats - Semestre 1
                                 </h3>
                                 <div className="space-y-4">
                                     {status.length > 0 ? (
                                         status.map((stat: any) => (
                                             <div key={stat.id} className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-100">
-                                                <Readsession  year={stat.year_study} session={1} id={stat.student_id} matiere={''} faculty={userX[0]?.faculty} name=""/>
+                                                <Readsession year={stat.year_study} session={1} id={stat.student_id} matiere={''} faculty={userX[0]?.faculty} name=""/>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8 text-gray-500">
+                                            <p>Aucune donnée disponible</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Session 2 Results */}
+                        {session2 && (
+                            <div className="bg-white rounded-2xl shadow-lg p-6">
+                                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <span className="w-1 h-6 bg-blue-600 rounded"></span>
+                                    Résultats - Semestre 2
+                                </h3>
+                                <div className="space-y-4">
+                                    {status.length > 0 ? (
+                                        status.map((stat: any) => (
+                                            <div key={stat.id} className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-100">
+                                                <Readsession year={stat.year_study} session={2} id={stat.student_id} matiere={''} faculty={userX[0]?.faculty} name=""/>
                                             </div>
                                         ))
                                     ) : (
@@ -281,33 +496,37 @@ export default function Student_dashboard(){
                         {mat && (
                             <div className="bg-white rounded-2xl shadow-lg p-6">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    <span className="w-1 h-6 bg-blue-600 rounded"></span>
-                                    Vos Matières
+                                    <span className="w-1 h-6 bg-purple-600 rounded"></span>
+                                    Matières
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {program.map((prog: any) => (
                                         <div key={prog.id} className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-100 hover:shadow-md transition-shadow">
-                                            <h4 className="font-bold text-gray-900 mb-2">{prog.courses || 'Matière'}</h4>
-                                            <p className="text-sm text-gray-600 mb-3">{prog.credit || '3'} crédits</p>
-                                            <button className="text-blue-600 hover:text-blue-700 font-semibold text-sm flex items-center gap-1">
-                                                Voir détails
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                                                </svg>
-                                            </button>
+                                            <h4 className="font-bold text-gray-900 mb-2">{prog.courses || prog.course_name || 'Matière'}</h4>
+                                            <p className="text-sm text-gray-600 mb-1">{prog.credit || prog.credits || '3'} crédits</p>
+                                            <p className="text-xs text-gray-500">Session {prog.session}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
+
+                        {/* Program by Semester */}
+                        {showProgram && <ProgramSection program={program} />}
+
+                        {/* Payment History */}
+                        {showPayments && <PaymentSection paymentRecord={paymentRecord} />}
+
+                        {/* Important Dates */}
+                        {showDates && <ImportantDatesSection />}
                     </div>
                 ) : (
                     <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-gray-400 mx-auto mb-4">
                             <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.5 5.5a7.5 7.5 0 0 0 10.5 10.5Z" />
                         </svg>
-                        <p className="text-lg text-gray-600 font-medium">Saisissez votre code étudiant dans la section de recherche</p>
-                        <p className="text-gray-500 mt-2">pour consulter vos informations académiques.</p>
+                        <p className="text-lg text-gray-600 font-medium">Saisissez un code étudiant pour consulter les résultats</p>
+                        <p className="text-gray-500 mt-2">Utilisez la barre de recherche ci-dessus</p>
                     </div>
                 )}
             </div>

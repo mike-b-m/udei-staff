@@ -134,6 +134,9 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
         <p><strong>Code Étudiant:</strong> ${user.student_code}</p>
           <p><strong>Faculté:</strong> ${faculty}</p>
           <p><strong>Année:</strong> ${year}</p>
+          <p><strong>Prix:</strong> ${formatCurrency(data?.price)} ${CURRENCY}</p>
+          <p><strong>Remise:</strong> ${formatCurrency(data?.discount)} ${CURRENCY}</p>
+          <p><strong>Solde:</strong> ${formatCurrency(data?.balance)} ${CURRENCY}</p>
           <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
         </div>
         <table>
@@ -192,6 +195,7 @@ interface StudentPayment {
   payment_history: PaymentRecord[]
   amount: number
   balance: number
+  discount: number
   faculty: string
   price: number
 }
@@ -917,6 +921,9 @@ export function Payments() {
                   <div class="info">
                     <p><strong>Code:</strong> ${student.student_code}</p>
                     <p><strong>Faculté:</strong> ${student.faculty}</p>
+                    <p><strong>Prix:</strong> ${formatCurrency(currentPayment.price)} ${CURRENCY}</p>
+                    <p><strong>Remise:</strong> ${formatCurrency(toNumber(currentPayment.discount))} ${CURRENCY}</p>
+                    <p><strong>Solde:</strong> ${formatCurrency(currentPayment.balance)} ${CURRENCY}</p>
                     <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
                   </div>
                   <table>
@@ -968,7 +975,19 @@ export function Payments() {
 
         {/* Payment Info Cards */}
         {currentPayment && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg border-2 border-green-200 shadow-md p-6">
+              <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Prix/An</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">{formatCurrency(currentPayment.price)}</p>
+              <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
+            </div>
+
+            <div className="bg-white rounded-lg border-2 border-orange-200 shadow-md p-6">
+              <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Remise</p>
+              <p className="text-3xl font-bold text-orange-600 mt-2">{formatCurrency(toNumber(currentPayment.discount))}</p>
+              <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
+            </div>
+
             <div className="bg-white rounded-lg border-2 border-blue-200 shadow-md p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Solde actuel</p>
               <p className="text-3xl font-bold text-blue-600 mt-2">{formatCurrency(currentPayment.balance)}</p>
@@ -977,13 +996,7 @@ export function Payments() {
 
             <div className="bg-white rounded-lg border-2 border-gray-200 shadow-md p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Faculté</p>
-              <p className="text-2xl font-bold text-gray-800 mt-2">{currentPayment.faculty}</p>
-            </div>
-
-            <div className="bg-white rounded-lg border-2 border-green-200 shadow-md p-6">
-              <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Prix/An</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">{formatCurrency(currentPayment.price)}</p>
-              <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
+              <p className="text-lg font-bold text-gray-800 mt-2">{currentPayment.faculty}</p>
             </div>
           </div>
         )}

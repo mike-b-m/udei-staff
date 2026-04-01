@@ -1,7 +1,7 @@
 'use client'
 import { supabase } from "@/app/component/db";
 import { useState, useEffect } from "react";
-import { FACULTIES } from "@/app/component/student-infos/constants";
+import { useFaculties } from "@/app/component/student-infos/useFaculties";
 import { getGradeInfo } from "@/app/lib/gpa";
 
 interface ExamRecord {
@@ -25,6 +25,7 @@ interface Course {
 }
 
 export default function Exam() {
+  const { facultyNames } = useFaculties()
   const [exams, setExams] = useState<ExamRecord[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
@@ -159,7 +160,7 @@ export default function Exam() {
             className="px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           >
             <option value="">Toutes les facultés</option>
-            {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+            {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
           <select
             value={filterCourse}

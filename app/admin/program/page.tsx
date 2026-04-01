@@ -5,6 +5,8 @@ import Input from '@/app/component/input/input-comp'
 import TheTable from '@/app/component/table/table'
 import { useSearchParams } from 'next/navigation'
 
+import { useFaculties } from '@/app/component/student-infos/useFaculties'
+
 interface Program {
   id: number
   created_at: string
@@ -26,26 +28,6 @@ interface FormRow {
   total_hour: string
 }
 
-
-const FACULTIES = [
-  'Génie Civil',
-  'Médecine Générale',
-  'Odontologie',
-  'Sciences Infirmières',
-  'Sciences Administratives',
-  'Sciences Comptables',
-  'Science Informatique',
-  'Gestion Des Affaires',
-  'Sciences Agronomiques',
-  'Sciences Economiques',
-  'Sciences De L\'Education',
-  'Sciences Juridiques',
-  'Pharmacologies',
-  'Médecine Vétérinaire',
-  'Laboratoire Médicale',
-  'Physiothérapie',
-  'Jardinières D\'enfants'
-]
 
 const YEARS = [1, 2, 3, 4, 5]
 const SESSIONS = [1, 2]
@@ -217,6 +199,7 @@ function UplaodimportantDates() {
   )
 }
 function Program() {
+  const { facultyNames } = useFaculties()
   const [programs, setPrograms] = useState<Program[]>([])
   const [selectedFaculty, setSelectedFaculty] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -390,7 +373,7 @@ function Program() {
               className="w-full px-4 py-2.5 rounded-lg border-2 border-gray-300 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 font-medium transition-all"
             >
               <option value="">Choisir une faculté...</option>
-              {FACULTIES.map(fac => (
+              {facultyNames.map(fac => (
                 <option key={fac} value={fac}>{fac}</option>
               ))}
             </select>
@@ -442,7 +425,7 @@ function Program() {
                       }`}
                     >
                       <option value="">Sélectionner...</option>
-                      {FACULTIES.map(fac => (
+                      {facultyNames.map(fac => (
                         <option key={fac} value={fac}>{fac}</option>
                       ))}
                     </select>

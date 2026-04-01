@@ -1,7 +1,7 @@
 'use client'
 import { supabase } from "@/app/component/db"
 import { useState, useEffect } from "react"
-import { FACULTIES } from "@/app/component/student-infos/constants"
+import { useFaculties } from "@/app/component/student-infos/useFaculties"
 
 interface Professor {
     id: string
@@ -32,6 +32,7 @@ interface LectureUpload {
 }
 
 export default function ManageProfPage() {
+    const { facultyNames } = useFaculties()
     const [professors, setProfessors] = useState<Professor[]>([])
     const [assignments, setAssignments] = useState<ProfAssignment[]>([])
     const [lectures, setLectures] = useState<LectureUpload[]>([])
@@ -278,7 +279,7 @@ export default function ManageProfPage() {
                                         <select value={assignForm.faculty} onChange={e => setAssignForm({ ...assignForm, faculty: e.target.value })}
                                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                                             <option value="">-- Sélectionner --</option>
-                                            {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                                            {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
                                         </select>
                                     </div>
                                     <div>
@@ -338,7 +339,7 @@ export default function ManageProfPage() {
                                             <select value={lectureForm.faculty} onChange={e => setLectureForm({ ...lectureForm, faculty: e.target.value })}
                                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                                                 <option value="">-- Sélectionner --</option>
-                                                {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                                                {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
                                             </select>
                                         </div>
                                         <div>
