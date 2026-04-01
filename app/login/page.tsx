@@ -11,6 +11,8 @@ export default function LogIn() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [forgotMode, setForgotMode] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   // Check if user is already logged in
   useEffect(() => {
@@ -32,9 +34,9 @@ export default function LogIn() {
 
             // Redirect based on role
             if (profile?.role === 'student') {
-              router.push('/student')
+              window.location.href = '/student'
             } else {
-              router.push('/admin')
+              window.location.href = '/admin'
             }
           }
         }
@@ -79,12 +81,12 @@ export default function LogIn() {
         setEmail('')
         setPassword('')
 
-        // Redirect based on role
+        // Hard redirect so middleware sees the new cookies
         setTimeout(() => {
           if (profile?.role === 'student') {
-            router.push('/student')
+            window.location.href = '/student'
           } else {
-            router.push('/admin')
+            window.location.href = '/admin'
           }
         }, 1500)
       }
@@ -94,6 +96,24 @@ export default function LogIn() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleForgotPassword = async () => {
+    setError('')
+    if (!email) {
+      setError('Entrez votre email d\'abord')
+      return
+    }
+    setLoading(true)
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/api/auth/callback?next=/reset-password`,
+    })
+    if (resetError) {
+      setError(resetError.message)
+    } else {
+      setResetSent(true)
+    }
+    setLoading(false)
   }
 
   return (
@@ -221,6 +241,19 @@ export default function LogIn() {
 
           {/* Footer Links */}
           <div className="border-t border-gray-200 pt-6 space-y-3">
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={loading || success}
+              className="text-blue-600 hover:text-blue-700 font-semibold text-sm transition disabled:opacity-50"
+            >
+              Mot de passe oublié?
+            </button>
+            {resetSent && (
+              <p className="text-green-600 text-sm font-medium">
+                Un email de réinitialisation a été envoyé à {email}
+              </p>
+            )}
             <div className="flex gap-2 text-sm">
               <span className="text-gray-600">Besoin d'aide?</span>
               <a href="#" className="text-blue-600 hover:text-blue-700 font-semibold transition">

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { supabase } from "../db"
 
 interface CodeProps {
@@ -9,6 +9,9 @@ interface CodeProps {
 }
 
 export function Code({ sequenceNumber, faculty, onCodeGenerated }: CodeProps) {
+  const onCodeGeneratedRef = useRef(onCodeGenerated)
+  onCodeGeneratedRef.current = onCodeGenerated
+
   useEffect(() => {
     // Only generate when sequenceNumber is available
     if (sequenceNumber === 0) return
@@ -23,8 +26,8 @@ export function Code({ sequenceNumber, faculty, onCodeGenerated }: CodeProps) {
     const yearLastTwo = year.toString().slice(-2)
 
     const generatedCode = `F${firstChar}${secondChar}-${yearLastTwo}-${sequenceNumber.toString().padStart(4, '0')}`
-    onCodeGenerated(generatedCode)
-  }, [sequenceNumber, faculty, onCodeGenerated])
+    onCodeGeneratedRef.current(generatedCode)
+  }, [sequenceNumber, faculty])
 
   return null
 }

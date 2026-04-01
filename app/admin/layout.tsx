@@ -16,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased bg-gray-50">
-        <AuthProvider>
+        {/* <AuthProvider> */}
           <Nav />
           
           {/* Main Layout Container */}
@@ -35,7 +35,7 @@ export default function RootLayout({
             {/* Footer */}
             <Footer />
           </div>
-        </AuthProvider>
+        {/* </AuthProvider> */}
       </body>
     </html>
   );

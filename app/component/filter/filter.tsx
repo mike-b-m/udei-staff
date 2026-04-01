@@ -25,6 +25,27 @@ interface statu{
     year_complt: number
 }
 
+export function Filter4({id}:stat){
+    const [filter, setFilter] = useState<any>([])
+    
+     useEffect(() => {
+        const getData = async () => {
+          const { data:comp, error } =  await supabase.from('student_status').select('year_study,student_id,id,academic_year')
+          .eq('student_id', id);
+        if (error) console.error(error.message)
+          else setFilter(comp)
+        }; 
+        getData()},[])
+        return(
+            <div>
+                  {filter.map((filt:any)=>
+        <ol key={filt.id}>
+            <li className="font-bold ">{filt.academic_year}</li>
+        </ol>)}  
+            </div>
+        )
+}
+
 export function Filter3({id,bool}:stat){
     const [filter, setFilter] = useState<any>([])
     

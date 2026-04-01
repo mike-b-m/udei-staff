@@ -2,7 +2,7 @@
 import { supabase } from "@/app/component/db";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import TheacherInput, { ReadNote, TheacherInput2 } from "@/app/component/teacher/teacher";
+import TheacherInput, { ReadNote, Readsession, TeacherSession, TheacherInput2 } from "@/app/component/teacher/teacher";
 
 export default function Teacher() {
     const [exam, setExam] = useState<any[]>([])
@@ -11,6 +11,7 @@ export default function Teacher() {
     const [faculty, setFaculty] = useState('')
     const [intra, setIntra] = useState(true)
     const [read, setRead] = useState(false)
+    const [sessionTab, setSessionTab] = useState(false)
     const [loading, setLoading] = useState(false)
 
     const [student, setStudent] = useState<any[]>([])
@@ -175,8 +176,8 @@ export default function Teacher() {
                 {/* Tab Navigation */}
                 <div className="bg-white rounded-2xl p-2 mb-6 shadow-sm border border-gray-100 flex flex-wrap gap-2">
                     <button
-                        onClick={() => { setIntra(true); setRead(false); }}
-                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${intra
+                        onClick={() => { setIntra(true); setRead(false); setSessionTab(false); }}
+                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${intra && !read && !sessionTab
                             ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-md'
                             : 'text-gray-700 hover:bg-gray-100'
                             }`}
@@ -184,8 +185,8 @@ export default function Teacher() {
                         Note Intra
                     </button>
                     <button
-                        onClick={() => { setIntra(false); setRead(false); }}
-                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${!intra && !read
+                        onClick={() => { setIntra(false); setRead(false); setSessionTab(false); }}
+                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${!intra && !read && !sessionTab
                             ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-md'
                             : 'text-gray-700 hover:bg-gray-100'
                             }`}
@@ -193,7 +194,16 @@ export default function Teacher() {
                         Note Finale
                     </button>
                     <button
-                        onClick={() => { setRead(true); setIntra(false); }}
+                        onClick={() => { setSessionTab(true); setIntra(false); setRead(false); }}
+                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${sessionTab
+                            ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-md'
+                            : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                    >
+                        Session
+                    </button>
+                    <button
+                        onClick={() => { setRead(true); setIntra(false); setSessionTab(false); }}
                         className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${read
                             ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-md'
                             : 'text-gray-700 hover:bg-gray-100'
@@ -220,7 +230,7 @@ export default function Teacher() {
                 {faculty && (
                     <div>
                         {/* Intra Notes Section */}
-                        {intra && (
+                        {intra && !sessionTab && (
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                                 <div className="bg-linear-to-r from-blue-600 to-blue-500 text-white p-4">
                                     <h3 className="text-lg font-semibold">Saisie des Notes Intra</h3>
@@ -262,7 +272,7 @@ export default function Teacher() {
                         )}
 
                         {/* Final Notes Section */}
-                        {!intra && !read && (
+                        {!intra && !read && !sessionTab && (
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                                 <div className="bg-linear-to-r from-blue-600 to-blue-500 text-white p-4">
                                     <h3 className="text-lg font-semibold">Saisie des Notes Finales</h3>
@@ -314,8 +324,8 @@ export default function Teacher() {
                                 ) : student.length > 0 ? (
                                     <div className="space-y-6">
                                         {student.map((stud) => (
+                                           <div key={stud.id}>
                                             <ReadNote
-                                                key={stud.id}
                                                 faculty=""
                                                 session={search4}
                                                 year={search3}
@@ -323,6 +333,16 @@ export default function Teacher() {
                                                 name=""
                                                 matiere=''
                                             />
+                                            <Readsession
+                                                faculty=""
+                                                session={search4}
+                                                year={search3}
+                                                id={stud.student_id}
+                                                name=""
+                                                matiere=''
+                                            />
+                                           </div>
+
                                         ))}
                                     </div>
                                 ) : (
@@ -330,6 +350,49 @@ export default function Teacher() {
                                         Aucun étudiant trouvé avec les critères sélectionnés
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Session Notes Section */}
+                        {sessionTab && (
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="bg-linear-to-r from-purple-600 to-purple-500 text-white p-4">
+                                    <h3 className="text-lg font-semibold">Saisie des Notes de Session</h3>
+                                    <p className="text-sm text-purple-100 mt-1">Notes enregistrées dans la table exam_1</p>
+                                </div>
+                                <div className="p-6">
+                                    {loading ? (
+                                        <div className="text-center py-8">
+                                            <p className="text-gray-500">Chargement...</p>
+                                        </div>
+                                    ) : student.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {/* Header */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg font-semibold text-gray-700">
+                                                <div>Nom et Prénom</div>
+                                                <div className="text-center">Note</div>
+                                                <div className="text-center">Action</div>
+                                            </div>
+                                            {/* Student Rows */}
+                                            {student.map((exa: any, index) => (
+                                                <div key={exa.id} className={`p-4 rounded-lg ${index % 2 === 0 ? 'bg-purple-50' : 'bg-white'} border border-gray-100`}>
+                                                    <TeacherSession
+                                                        faculty={search}
+                                                        session={search4}
+                                                        year={search3}
+                                                        name={''}
+                                                        matiere={faculty}
+                                                        id={exa.student_id}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-gray-500">
+                                            Aucun étudiant trouvé avec les critères sélectionnés
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>

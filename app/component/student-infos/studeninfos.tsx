@@ -497,6 +497,7 @@ function StudentDisplayContent({
           fields={[
             { label: 'Année Actuelle', key: 'year_study', value: String(status.year_study || ''), type: 'number' },
             { label: 'Année Complétée', key: 'year_completed', value: String(status.year_completed || ''), type: 'number' },
+            { label: 'Année Académique', key: 'academic_year', value: String(status.academic_year || ''), type: 'string' },
           ]}
           onSave={handleSaveStatus}
         />
@@ -591,6 +592,7 @@ function StudentDisplayContent({
             <Lecture int="Année Actuelle" out={status.year_study} />
             <Lecture int="Année Complétée" out={status.year_completed} />
             <Lecture int="Vu par" out={student.seen_by || 'Non assigné'} />
+            <Lecture int="Année Académique" out={status.academic_year || 'Non assigné'} />
             <Lecture int="Faculté Complétée" out={status.faculty_completion ? '✅ Oui' : '❌ Non'} />
           </div>
         </div>
