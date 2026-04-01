@@ -38,7 +38,7 @@ export default function ReportsPage() {
 
     setTotalStudents(students.length)
 
-    const totalRev = payments.reduce((sum, p) => sum + (Number(p.payment_history.amount) || 0), 0)
+    const totalRev = payments.reduce((sum, p) => sum + (Number(p.payment_history?.amount) || 0), 0)
     setTotalRevenue(totalRev)
 
     const totalSp = spends.reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
@@ -156,7 +156,7 @@ export default function ReportsPage() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="faculty" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={80} />
                 <YAxis />
-                <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                <Tooltip formatter={(value: any) => `$${value.toLocaleString()}`} />
                 <Bar dataKey="revenue" fill="#10B981" name="Revenus" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

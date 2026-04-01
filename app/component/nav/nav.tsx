@@ -271,30 +271,41 @@ export default function Nav() {
       <nav className={`
         fixed left-0 top-0 md:top-0 h-screen z-40
         bg-white border-r border-gray-200 shadow-xl
-        transition-all duration-300 ease-out overflow-y-auto
+        transition-all duration-300 ease-out
+        flex flex-col
         ${isMobileOpen 
-          ? 'w-64 md:w-20' 
-          : 'w-0 md:w-20'
+          ? 'w-64 translate-x-0' 
+          : '-translate-x-full md:translate-x-0 w-64 md:w-20'
         }
         md:hover:w-64
-        group
+        group/nav
       `}
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
       >
         {/* Desktop Logo/Brand */}
-        <div className="hidden md:flex items-center justify-center h-16 md:h-20 border-b border-gray-100 px-3 sticky top-0 bg-white z-10">
+        <div className="hidden md:flex items-center justify-center h-16 md:h-20 border-b border-gray-100 px-3 shrink-0 bg-white">
           <div className={`
             text-xl font-bold text-blue-600 transition-all duration-300 whitespace-nowrap
             ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0'}
-            group-hover:opacity-100 group-hover:w-auto
+            group-hover/nav:opacity-100 group-hover/nav:w-auto
           `}>
             UDEI
           </div>
         </div>
 
-        {/* Navigation Items */}
-        <ul className="p-2 space-y-1">
+        {/* Mobile Logo */}
+        <div className="md:hidden flex items-center justify-between h-14 border-b border-gray-100 px-4 shrink-0 bg-white">
+          <span className="text-lg font-bold text-blue-600">UDEI</span>
+          <button onClick={() => setIsMobileOpen(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Navigation Items — scrollable */}
+        <ul className="p-2 space-y-1 flex-1 overflow-y-auto scrollbar-thin">
           {filteredItems.map((item) => (
             <NavItem
               key={item.href}
@@ -307,23 +318,17 @@ export default function Nav() {
         </ul>
 
         {/* Footer Info */}
-        <div className={`
-          absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-gray-50
-          transition-all duration-300
-        `}>
+        <div className="shrink-0 p-4 border-t border-gray-100 bg-gray-50">
           <div className={`
             text-xs text-gray-500 text-center overflow-hidden transition-all duration-300
             ${isExpanded || isMobileOpen ? 'opacity-100 h-auto' : 'opacity-0 h-0'}
-            group-hover:opacity-100 group-hover:h-auto
+            group-hover/nav:opacity-100 group-hover/nav:h-auto
           `}>
             <p className="font-semibold">Connecté en tant que</p>
             <p className="text-blue-600 capitalize">{userRole}</p>
           </div>
         </div>
       </nav>
-
-      {/* Content Spacer */}
-      <div className="md:w-20 md:group-hover:w-64 transition-all duration-300" />
     </>
   )
 }

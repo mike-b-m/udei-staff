@@ -54,6 +54,168 @@ interface FormErrors {
   [key: string]: string
 }
 
+interface thedate{
+  tittle: string
+  date: string
+}
+function UplaodimportantDates() {
+  const [dat,setDat] = useState<any[]>([])
+  const [dates,setDates] = useState<thedate>({ tittle: '', date: '' })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [open, setOpen] = useState<'read' | 'add'>('read')
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
+  useEffect(() => {
+    const Load = async () => {
+      setLoading(true)
+      const { data, error } = await supabase.from('imp_date').select('*').order('created_at', { ascending: false })
+      if (error) {
+        setError(error.message)
+      } else {
+        setDat(data || [])
+      }
+      setLoading(false)
+    }
+    Load()
+  }, [])
+
+  const handlesave = async () => {
+    if (!dates.tittle.trim() || !dates.date.trim()) {
+      setError('Veuillez remplir le titre et la date')
+      return
+    }
+    setSaving(true)
+    setError('')
+    setSuccess('')
+    const { data, error: insertErr } = await supabase
+      .from('imp_date')
+      .insert({ tittle: dates.tittle, date: dates.date })
+      .select('*')
+    if (insertErr) {
+      setError(insertErr.message)
+    } else {
+      setDat(prev => [...(data || []), ...prev])
+      setDates({ tittle: '', date: '' })
+      setSuccess('Date ajoutée avec succès')
+      setTimeout(() => setSuccess(''), 3000)
+    }
+    setSaving(false)
+  }
+
+  const handleDelete = async (id: number) => {
+    setDeletingId(id)
+    const { error: delErr } = await supabase.from('imp_date').delete().eq('id', id)
+    if (delErr) {
+      setError(delErr.message)
+    } else {
+      setDat(prev => prev.filter(d => d.id !== id))
+    }
+    setDeletingId(null)
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      {/* Header */}
+      <div className="bg-linear-to-r from-orange-500 to-amber-500 p-5 text-white">
+        <h3 className="text-lg font-bold flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          Dates Importantes
+        </h3>
+      </div>
+
+      {/* Tab Buttons */}
+      <div className="flex border-b border-gray-200">
+        <button onClick={() => setOpen('read')}
+          className={`flex-1 py-3 text-sm font-semibold transition-all ${open === 'read' ? 'text-orange-600 border-b-2 border-orange-500 bg-orange-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>
+          Liste ({dat.length})
+        </button>
+        <button onClick={() => setOpen('add')}
+          className={`flex-1 py-3 text-sm font-semibold transition-all ${open === 'add' ? 'text-orange-600 border-b-2 border-orange-500 bg-orange-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>
+          + Ajouter
+        </button>
+      </div>
+
+      <div className="p-5">
+        {/* Messages */}
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-lg text-sm flex justify-between items-center">
+            {error}
+            <button onClick={() => setError('')} className="font-bold text-red-500 hover:text-red-700">✕</button>
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded-lg text-sm">
+            {success}
+          </div>
+        )}
+
+        {open === 'add' ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
+              <input type="text" value={dates.tittle} placeholder="Ex: Début des cours"
+                onChange={e => setDates({ ...dates, tittle: e.target.value })}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+              <input type="text" value={dates.date} placeholder="Ex: Octobre 2025 ou 21 Décembre 2025"
+                onChange={e => setDates({ ...dates, date: e.target.value })}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition" />
+            </div>
+            <button onClick={handlesave} disabled={saving}
+              className="w-full py-2.5 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition disabled:opacity-50 flex items-center justify-center gap-2">
+              {saving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Enregistrement...
+                </>
+              ) : 'Enregistrer'}
+            </button>
+          </div>
+        ) : loading ? (
+          <div className="flex flex-col items-center justify-center py-10">
+            <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mb-3"></div>
+            <p className="text-gray-500 text-sm">Chargement...</p>
+          </div>
+        ) : dat.length === 0 ? (
+          <div className="text-center py-10 text-gray-500">
+            <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <p className="font-medium">Aucune date enregistrée</p>
+            <p className="text-sm mt-1">Ajoutez des dates importantes pour les étudiants</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {dat.map((d) => (
+              <div key={d.id} className="flex items-center justify-between gap-3 bg-gray-50 rounded-lg p-3 hover:bg-orange-50 transition group">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 text-sm truncate">{d.tittle}</p>
+                    <p className="text-xs text-gray-500">{d.date}</p>
+                  </div>
+                </div>
+                <button onClick={() => handleDelete(d.id)} disabled={deletingId === d.id}
+                  className="shrink-0 opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition-all disabled:opacity-50">
+                  {deletingId === d.id ? (
+                    <div className="w-4 h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin"></div>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 function Program() {
   const [programs, setPrograms] = useState<Program[]>([])
   const [selectedFaculty, setSelectedFaculty] = useState('')
@@ -491,6 +653,8 @@ function Program() {
           Ajouter un Programme
         </button>
       )}
+      {/* add important dates */}
+      <UplaodimportantDates />
 
       {/* Programs Display */}
       {search ? (

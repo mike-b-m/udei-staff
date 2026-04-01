@@ -1,4 +1,5 @@
 'use client'
+import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 
@@ -22,15 +23,18 @@ const STUDENT_ICONS: Record<string, React.ReactNode> = {
 
 export default function StudentNav() {
   const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
     <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <Link href="/student" className="text-xl font-bold text-blue-600">
+        <div className="flex items-center justify-between h-14 sm:h-16">
+          <Link href="/student" className="text-lg sm:text-xl font-bold text-blue-600 shrink-0">
             UDEI Étudiant
           </Link>
-          <div className="flex items-center gap-2">
+
+          {/* Desktop links */}
+          <div className="hidden sm:flex items-center gap-2">
             {STUDENT_NAV_ITEMS.map(item => (
               <Link
                 key={item.href}
@@ -46,8 +50,46 @@ export default function StudentNav() {
               </Link>
             ))}
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="sm:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? (
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Mobile dropdown */}
+      {mobileOpen && (
+        <div className="sm:hidden border-t border-gray-100 bg-white px-4 pb-3 pt-2 space-y-1">
+          {STUDENT_NAV_ITEMS.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                pathname === item.href
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {STUDENT_ICONS[item.icon]}
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </nav>
   )
 }

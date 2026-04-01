@@ -20,9 +20,9 @@ export default function RootLayout({
           <Nav />
           
           {/* Main Layout Container */}
-          <div className="md:ml-20 md:group-hover:ml-64 transition-all duration-300">
+          <div className="md:ml-20 transition-all duration-300">
             {/* Mobile spacer for fixed header - Hidden on desktop */}
-            <div className="md:hidden h-16" />
+            <div className="md:hidden h-14" />
             
             {/* Header */}
             <Header />

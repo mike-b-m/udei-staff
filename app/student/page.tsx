@@ -387,6 +387,24 @@ function ProgramSection({ program }: { program: any[] }) {
 
 // ============ Important Dates Section ============
 function ImportantDatesSection() {
+    const [dat,setDat] = useState<any[]>([])
+    //--fetch date
+    useEffect(() => {
+        const Load = async () => {
+                const { data,error } = await supabase
+                    .from('imp_date')
+                    .select('*')
+                    // .maybeSingle()
+                if (error) {
+                   console.log(error.message)
+                } else {
+                    setDat(data || [])
+                }
+            
+        }
+        Load()
+    }, [])
+    
     const dates = [
         { label: 'Début des cours', date: 'Octobre 2025', icon: '📚' },
         { label: 'Examens Intra', date: 'Décembre 2025', icon: '📝' },
@@ -402,11 +420,11 @@ function ImportantDatesSection() {
                 Dates Importantes
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {dates.map((d, i) => (
+                {dat.map((d, i) => (
                     <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 hover:bg-blue-50 transition">
-                        <span className="text-2xl">{d.icon}</span>
+                        <span className="text-2xl">{dates[i].icon}</span>
                         <div>
-                            <p className="font-medium text-gray-900 text-sm">{d.label}</p>
+                            <p className="font-medium text-gray-900 text-sm">{d.tittle}</p>
                             <p className="text-xs text-gray-500">{d.date}</p>
                         </div>
                     </div>
