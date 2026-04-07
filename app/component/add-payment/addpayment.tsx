@@ -12,6 +12,8 @@ interface PaymentProps {
   id: number
   history: PaymentRecord[]
   balance: number
+  discount: number 
+  price: number
 }
 
 interface PaymentRecord {
@@ -209,7 +211,7 @@ interface StudentIdProp {
 }
 
 // ============ CONSTANTS ============
-const CURRENCY = "HTG"
+const CURRENCY = "HT"
 const ROW_COLORS = ["bg-blue-50 hover:bg-blue-100", "bg-white hover:bg-gray-50"]
 
 // ============ TOAST NOTIFICATIONS ============
@@ -264,15 +266,18 @@ const Toast = ({ type, message, onClose }: { type: Toast['type']; message: strin
 }
 
 // ============ PAYMENT FORM ============
-export default function Pay({ id, history, balance }: PaymentProps) {
+export default function Pay({ id, history, balance, discount,price }: PaymentProps) {
   const [amount, setAmount] = useState<number>(0)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [toast, setToast] = useState<Toast | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [studentdiscount, setStudentdiscount] = useState<number>(0)
 
   const numBalance = toNumber(balance)
-  const remainingBalance = numBalance - amount
+  const numDiscount = toNumber(discount)
+  const numPrice = toNumber(price)
+  const remainingBalance = numBalance === numPrice ? numBalance - numDiscount - amount : numBalance - amount 
 
   const validatePayment = useCallback((): boolean => {
     const newErrors: { [key: string]: string } = {}
@@ -329,6 +334,31 @@ export default function Pay({ id, history, balance }: PaymentProps) {
         id: Date.now().toString(),
         type: 'error',
         message: err instanceof Error ? err.message : 'Erreur lors du paiement'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+   const handlediscount = async () => {
+
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('student_payment')
+        .update({
+          discount: studentdiscount,
+        })
+        .eq('id', id)
+
+      if (error) throw error
+        // Refresh parent data if needed
+      window.location.reload()
+    } catch (err) {
+      setToast({
+        id: Date.now().toString(),
+        type: 'success',
+        message: `Remise de ${studentdiscount} ${CURRENCY} appliquée avec succès!`
       })
     } finally {
       setLoading(false)
@@ -400,6 +430,26 @@ export default function Pay({ id, history, balance }: PaymentProps) {
             <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
           </div>
         </div>
+          {/* discount button  */}
+          {!discount ? (<div className="bg-white p-6 outline-none rounded-lg border-2 border-gray-200 shadow-sm">
+            <input
+              type="number"
+              value={studentdiscount}
+              onChange={(e) => setStudentdiscount(Number(e.target.value))}
+              className="w-full px-4 py-3 rounded-lg border-2 text-lg font-semibold focus:outline-none focus:ring-2 transition-all"
+              placeholder="0.00"
+            />
+            <button
+            onClick={handlediscount}
+            disabled={discount ? true : false}
+            className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Effectuer la remise
+          </button>
+          </div>): null}
 
         {/* Action Buttons */}
         {showConfirm ? (
@@ -653,7 +703,7 @@ export function Price() {
                     <p className="text-sm text-gray-600">Prix annuel</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-blue-600">{formatCurrency(fac.price)}</p>
+                    <p className="text-xl font-bold text-blue-600">$ {formatCurrency(fac.price)}</p>
                     <p className="text-sm text-gray-600">{CURRENCY}</p>
                   </div>
                   <div className="ml-6">
@@ -710,7 +760,7 @@ export function StudentBal({ id }: StudentIdProp) {
 
   return (
     <span className={`font-semibold ${balance && toNumber(balance) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-      {formatCurrency(balance)} {CURRENCY}
+      $ {formatCurrency(balance)} {CURRENCY}
     </span>
   )
 }
@@ -1010,7 +1060,7 @@ export function Payments() {
               </svg>
               Effectuer un paiement
             </h3>
-            <Pay id={currentPayment.id} balance={currentPayment.balance} history={currentPayment.payment_history || []} />
+            <Pay id={currentPayment.id} price={currentPayment.price} discount={currentPayment.discount} balance={currentPayment.balance} history={currentPayment.payment_history || []} />
           </div>
         )}
 

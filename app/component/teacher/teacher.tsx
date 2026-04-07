@@ -847,11 +847,11 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                                 />
                                             )} </td>): null}
                                        
-                                        <td className={`px-4 py-3 text-center`}>
+                                        {/* <td className={`px-4 py-3 text-center`}>
                                             <span className={`inline-block ${statusColor} ${statusText} font-bold px-3 py-1 rounded-full`}>
                                                 {moyenne}
                                             </span>
-                                        </td>
+                                        </td> */}
                                     </tr>
                                 );
                             })}
@@ -862,7 +862,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                 {(role ==='admin' || role === 'editor' || role === 'administration' || role === 'prof') && (
                                     <td className="px-4 py-3 text-center">-</td>
                                 )}
-                                <td className="px-4 py-3 text-center">Moyenne</td>
+                                {/* <td className="px-4 py-3 text-center">Moyenne</td> */}
                                 <td className="px-4 py-3 text-center">
                                     {((totalSession + totalFinal) / (note.length * 10)).toFixed(2)}
                                 </td>

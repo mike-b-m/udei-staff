@@ -103,7 +103,15 @@ export default function StudentInput() {
       }
       else console.error(error.message)
     }
-    getNextSequence()
+    getNextSequence();
+    const channel = supabase.channel("live-table").on("postgres_changes", { event: "*", schema: "public", table: "student" },
+       (payload) => {
+         console.log("Realtime update:", payload)
+         if (payload.eventType === "INSERT") {setSequenceNumber(prev => prev + 1)}
+       }).subscribe()
+       return () => {
+        supabase.removeChannel(channel)
+       };
   }, [])
 
   const handleInputChange = (field: string) => (
