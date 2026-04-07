@@ -108,7 +108,9 @@ export default function StudentInput() {
        (payload) => {
          console.log("Realtime update:", payload)
          if (payload.eventType === "INSERT") {setSequenceNumber(prev => prev + 1)}
-       }).subscribe()
+       }).subscribe((status) => {
+  console.log("STATUS:", status);
+})
        return () => {
         supabase.removeChannel(channel)
        };

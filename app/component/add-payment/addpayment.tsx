@@ -432,6 +432,7 @@ export default function Pay({ id, history, balance, discount,price }: PaymentPro
         </div>
           {/* discount button  */}
           {!discount ? (<div className="bg-white p-6 outline-none rounded-lg border-2 border-gray-200 shadow-sm">
+            <h3 className="text-lg font-bold text-gray-700 mb-4">Remise Étudiante</h3>
             <input
               type="number"
               value={studentdiscount}

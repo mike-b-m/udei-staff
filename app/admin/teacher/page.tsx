@@ -325,14 +325,14 @@ export default function Teacher() {
                                     <div className="space-y-6">
                                         {student.map((stud) => (
                                            <div key={stud.id}>
-                                            <ReadNote
+                                            {/* <ReadNote
                                                 faculty=""
                                                 session={search4}
                                                 year={search3}
                                                 id={stud.student_id}
                                                 name=""
                                                 matiere=''
-                                            />
+                                            /> */}
                                             <Readsession
                                                 faculty=""
                                                 session={search4}

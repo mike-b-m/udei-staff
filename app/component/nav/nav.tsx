@@ -22,7 +22,7 @@ const NAV_ITEMS = [
     href: '/admin/search',
     label: 'Recherche',
     icon: 'search',
-    roles: ['admin', 'editor']
+    roles: ['admin', 'administration', 'editor']
   },
   {
     href: '/admin/spend',
@@ -40,7 +40,7 @@ const NAV_ITEMS = [
     href: '/admin/program',
     label: 'Programme',
     icon: 'program',
-    roles: ['admin', 'editor']
+    roles: ['admin', 'editor', 'prof']
   },
   {
     href: '/admin/payment',

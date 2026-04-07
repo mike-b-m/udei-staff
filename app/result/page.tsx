@@ -25,21 +25,21 @@ function PaymentSection({ paymentRecord }: { paymentRecord: any }) {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                     <div className="bg-white/15 rounded-lg p-3 text-center">
                         <p className="text-green-100 text-xs font-medium">Frais Total</p>
-                        <p className="text-lg font-bold">{Number(totalPrice).toLocaleString()} HTG</p>
+                        <p className="text-lg font-bold">$ {Number(totalPrice).toLocaleString()} HT</p>
                     </div>
                     {discount > 0 && (
                         <div className="bg-white/15 rounded-lg p-3 text-center">
                             <p className="text-green-100 text-xs font-medium">Remise</p>
-                            <p className="text-lg font-bold">-{Number(discount).toLocaleString()} HTG</p>
+                            <p className="text-lg font-bold">$ -{Number(discount).toLocaleString()} HT</p>
                         </div>
                     )}
                     <div className="bg-white/15 rounded-lg p-3 text-center">
                         <p className="text-green-100 text-xs font-medium">Total Payé</p>
-                        <p className="text-lg font-bold">{Number(totalPaid).toLocaleString()} HTG</p>
+                        <p className="text-lg font-bold">$ {Number(totalPaid).toLocaleString()} HT</p>
                     </div>
                     <div className="bg-white/15 rounded-lg p-3 text-center">
                         <p className="text-green-100 text-xs font-medium">Solde Restant</p>
-                        <p className="text-lg font-bold">{Number(currentBalance).toLocaleString()} HTG</p>
+                        <p className="text-lg font-bold">$ {Number(currentBalance).toLocaleString()} HT</p>
                     </div>
                 </div>
             </div>
@@ -330,10 +330,10 @@ export default function ResultDashboard(){
 
                             <div className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-shadow">
                                 <div className="text-sm text-gray-500 font-semibold mb-2">Total Payé</div>
-                                <div className="text-2xl font-bold text-green-600">{totalPaid.toLocaleString()} HTG</div>
+                                <div className="text-2xl font-bold text-green-600">$ {totalPaid.toLocaleString()} HT</div>
                                 <div className="text-xs text-gray-400 mt-2">{paymentCount} paiement(s)</div>
                                 {paymentRecord?.balance > 0 && (
-                                    <div className="text-xs text-orange-500 mt-1">Solde: {Number(paymentRecord.balance).toLocaleString()} HTG</div>
+                                    <div className="text-xs text-orange-500 mt-1">Solde: $ {Number(paymentRecord.balance).toLocaleString()} HT</div>
                                 )}
                             </div>
 

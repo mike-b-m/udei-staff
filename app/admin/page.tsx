@@ -52,7 +52,7 @@ const colors=[
 
 function Home() {
   const { facultyNames } = useFaculties()
-  const [dat, setDat]= useState<student[]>([])
+  const [dat, setDat]= useState<student[]|any[]>([])
   const [filter, setFilter] = useState(false)
   const [faculty,setFaculty] = useState('')
   const [studyYear, setStudyYear] = useState('')
@@ -96,7 +96,17 @@ function Home() {
       }
     setLoad(false)
     }; 
-    getData()},[send])
+    getData();
+    const channel = supabase.channel("live-table").on("postgres_changes", { event: "*", schema: "public", table: "student" },
+       (payload) => {
+         console.log("Realtime update:", payload)
+         if (payload.eventType === "INSERT") {setDat(prev => [...prev, payload.new])}
+       }).subscribe((status) => {
+  console.log("STATUS:", status);
+})
+       return () => {
+        supabase.removeChannel(channel)
+       };},[send])
  
  
   return (
