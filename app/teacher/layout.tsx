@@ -3,7 +3,7 @@ import { Inter, Poppins } from "next/font/google";
 import "@/app/admin/globals.css";
 import Header from "@/app/component/header/header";
 import Footer from "@/app/component/footer/fouter";
-import Nav from "@/app/component/nav/nav";
+import Nav from "@/app/component/nav/teacher-nav";
 import { AuthProvider } from "../component/provider/AuthProvider";
 
 export const dynamic = 'force-dynamic';
@@ -28,9 +28,11 @@ export default function RootLayout({
             <Header />
             
             {/* Main Content */}
-              <main className="min-h-screen">
+            <AuthProvider>
+            <main className="min-h-screen">
               {children}
             </main>
+            </AuthProvider>
             
             
             {/* Footer */}

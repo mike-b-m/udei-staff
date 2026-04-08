@@ -45,14 +45,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getUser()
   }, [])
 
-  return (<div>{loading ? (<Loading2/>) : user ? (
+  return (<div>
     <AuthContext.Provider value={{ user, role, loading }}>
       {children} 
-    </AuthContext.Provider>) :
-     !user ? (<div className="text-center mt-10 text-[20px]">Vous n'êtes pas encore connecté. Veuillez vous 
-  connecter pour pouvoir accéder à la 
-  plateforme.<div><Link className="text-gray-700 hover:text-blue-800"
-   href='/login'>Log-in</Link></div> </div>): null}
+    </AuthContext.Provider>
     </div>
   )
 }
