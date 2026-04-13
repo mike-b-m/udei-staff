@@ -24,6 +24,29 @@ interface Course {
   semester: number
 }
 
+function Fullname({ id }: { id: number | undefined }) {
+  const [fullname, setFullname] = useState<any[]>([])
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    const [examRes,] = await Promise.all([
+      supabase.from('student').select(`
+        last_name, first_name
+      `).eq('id', id)
+    ])
+
+    if (examRes.data) setFullname(examRes.data as unknown as any[])
+  }
+
+  return(
+    <span>{fullname.map((name, index) => (
+      <span key={index}>{name.first_name} {name.last_name}</span>
+    ))}</span>
+  )
+}
+
 export default function Exam() {
   const { facultyNames } = useFaculties()
   const [exams, setExams] = useState<ExamRecord[]>([])
@@ -48,8 +71,7 @@ export default function Exam() {
     setLoading(true)
     const [examRes, courseRes] = await Promise.all([
       supabase.from('exam').select(`
-        *,
-        student:student_id(first_name, last_name, student_code, faculty)
+        *
       `).order('id', { ascending: false }),
       supabase.from('course_program').select('*').order('faculty')
     ])
@@ -76,6 +98,7 @@ export default function Exam() {
       reprise: editData.reprise ? parseFloat(editData.reprise) : null,
     }).eq('id', editId)
 
+    if (error) console.error('Erreur lors de la mise à jour de l\'examen :', error.message)
     if (!error) {
       setExams(prev => prev.map(e =>
         e.id === editId ? {
@@ -168,8 +191,8 @@ export default function Exam() {
             className="px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           >
             <option value="">Tous les cours</option>
-            {filteredCourses.map(c => (
-              <option key={c.id} value={c.course_name}>{c.course_name}</option>
+            {filteredCourses.map((c:any) => (
+              <option key={c.id} value={c.course_name}>{c.courses}</option>
             ))}
           </select>
           <select
@@ -216,7 +239,7 @@ export default function Exam() {
                   </td>
                 </tr>
               ) : (
-                filteredExams.map(exam => {
+                filteredExams.map((exam:any) => {
                   const finalScore = exam.reprise ?? exam.final ?? 0
                   const gradeInfo = getGradeInfo(finalScore as number)
                   const isEditing = editId === exam.id
@@ -227,9 +250,9 @@ export default function Exam() {
                         <div className="font-medium text-gray-900 text-sm">
                           {exam.student?.last_name} {exam.student?.first_name}
                         </div>
-                        <div className="text-xs text-gray-500">{exam.student?.student_code}</div>
+                        <div className="text-xs text-gray-500"><Fullname id={exam.student_id} /></div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 hidden md:table-cell">{exam.matière}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 hidden md:table-cell">{exam.matiere}</td>
                       <td className="px-4 py-3 text-center">
                         {isEditing ? (
                           <input type="number" value={editData.intra}

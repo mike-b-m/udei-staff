@@ -2,9 +2,11 @@
 import { supabase } from "@/app/component/db"
 import { useState, useEffect } from "react"
 import { useFaculties } from "@/app/component/student-infos/useFaculties"
+import { UUID } from "crypto"
 
 interface Professor {
     id: string
+    prof_id: string | UUID
     full_name: string
     role: string
     email: string
@@ -12,7 +14,7 @@ interface Professor {
 
 interface ProfAssignment {
     id: number
-    prof_id: string
+    prof_id: string | UUID
     faculty: string
     matiere: string
     year_study: number
@@ -63,7 +65,7 @@ export default function ManageProfPage() {
         setLoading(true)
         const [profRes, assignRes, lectRes] = await Promise.all([
             supabase.from('profiles').select('id, full_name, role, email').eq('role', 'prof'),
-            supabase.from('prof_assignment').select('*, professor:prof_id(full_name, email)'),
+            supabase.from('prof_assignment').select('*'),
             supabase.from('lecture_upload').select('*').order('created_at', { ascending: false })
         ])
         setProfessors((profRes.data as unknown as Professor[]) || [])
@@ -241,7 +243,7 @@ export default function ManageProfPage() {
                                             <tbody>
                                                 {assignments.map((a, i) => (
                                                     <tr key={a.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                                        <td className="py-3 px-4 font-medium">{a.professor?.full_name}</td>
+                                                        <td className="py-3 px-4 font-medium">{professors.filter(p => p.id === a.prof_id).map(p => p.full_name)}</td>
                                                         <td className="py-3 px-4">{a.faculty}</td>
                                                         <td className="py-3 px-4">{a.matiere}</td>
                                                         <td className="py-3 px-4">{a.year_study}</td>
