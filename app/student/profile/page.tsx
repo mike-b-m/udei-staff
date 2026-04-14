@@ -152,6 +152,15 @@ export default function ProfilePage() {
 
         setPasswordSaving(true)
         setError('')
+
+        // Refresh the session to ensure we have valid tokens
+        const { data: { session }, error: refreshError } = await supabase.auth.refreshSession()
+        if (!session) {
+            setError('Session expirée. Veuillez vous reconnecter.')
+            setPasswordSaving(false)
+            return
+        }
+
         const { error } = await supabase.auth.updateUser({ password: newPassword })
         if (error) {
             setError(error.message)
@@ -280,7 +289,7 @@ export default function ProfilePage() {
                                     <option value="F">Féminin</option>
                                 </select>
                             ) : (
-                                <p className="text-gray-900 font-medium py-2">{profile.sex === 'M' ? 'Masculin' : 'Féminin'}</p>
+                                <p className="text-gray-900 font-medium py-2">{profile.sex === 'M' || profile.sex === 'Masculin' ? 'Masculin' : 'Féminin'}</p>
                             )}
                         </div>
                         <div>

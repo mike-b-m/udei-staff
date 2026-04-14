@@ -23,6 +23,11 @@ RETURNS TEXT AS $$
   SELECT role FROM public.profiles WHERE id = auth.uid()
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
+CREATE OR REPLACE FUNCTION public.get_auth_email()
+RETURNS TEXT AS $$
+  SELECT email FROM auth.users WHERE id = auth.uid()
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- ============================================
 -- STEP 3: Profiles policies
 -- ============================================
@@ -56,7 +61,7 @@ CREATE POLICY "student_select_prof"
 CREATE POLICY "student_select_own"
   ON student FOR SELECT
   USING (
-    email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    email = public.get_auth_email()
   );
 
 -- ============================================
@@ -104,7 +109,7 @@ CREATE POLICY "exam_select_student"
   USING (
     student_id IN (
       SELECT id FROM student
-      WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE email = public.get_auth_email()
     )
   );
 
@@ -209,7 +214,7 @@ CREATE POLICY "enrollments_select_own"
   USING (
     student_id IN (
       SELECT id FROM student
-      WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE email = public.get_auth_email()
     )
   );
 
@@ -240,7 +245,7 @@ CREATE POLICY "invoices_select_own"
   USING (
     student_id IN (
       SELECT id FROM student
-      WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE email = public.get_auth_email()
     )
   );
 

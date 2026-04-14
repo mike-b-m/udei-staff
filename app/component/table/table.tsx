@@ -199,7 +199,8 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
   const [success, setSuccess] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
-
+  const [deleteConfirm, setDeleteConfirm] = useState<number | 'all' | null>(null)
+  const [deleting, setDeleting] = useState(false)
   // Filter and sort data
   const filteredData = useMemo(() => {
     let filtered = int.filter(
@@ -350,6 +351,41 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
     }
   }
 
+  const handleDeleteRow = async (id: number) => {
+    setDeleting(true)
+    try {
+      const { error } = await supabase.from('course_program').delete().eq('id', id)
+      if (error) throw error
+      setSuccessMessage('Cours supprimé avec succès!')
+      setSuccess(true)
+      if (onUpdateData) onUpdateData(int.filter(item => item.id !== id))
+      setTimeout(() => setSuccess(false), 5000)
+    } catch (error) {
+      setErrors({ submit: error instanceof Error ? error.message : 'Erreur lors de la suppression' })
+    } finally {
+      setDeleting(false)
+      setDeleteConfirm(null)
+    }
+  }
+
+  const handleDeleteAll = async () => {
+    setDeleting(true)
+    try {
+      const ids = filteredData.map(item => item.id)
+      const { error } = await supabase.from('course_program').delete().in('id', ids)
+      if (error) throw error
+      setSuccessMessage(`${ids.length} cours supprimé(s) avec succès!`)
+      setSuccess(true)
+      if (onUpdateData) onUpdateData(int.filter(item => !ids.includes(item.id)))
+      setTimeout(() => setSuccess(false), 5000)
+    } catch (error) {
+      setErrors({ submit: error instanceof Error ? error.message : 'Erreur lors de la suppression' })
+    } finally {
+      setDeleting(false)
+      setDeleteConfirm(null)
+    }
+  }
+
   const fileName = `Programme_${faculty}_Annee${year}_Sesion${session}_${new Date().getTime()}`
 
   if (filteredData.length === 0) {
@@ -413,6 +449,16 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
               Éditer Tout
+            </button>
+
+            <button
+              onClick={() => setDeleteConfirm('all')}
+              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-all shadow-md hover:shadow-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Supprimer Tout
             </button>
 
             <button

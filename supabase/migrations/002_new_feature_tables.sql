@@ -93,7 +93,7 @@ CREATE POLICY "homework_submission_select_own"
   USING (
     student_id IN (
       SELECT id FROM student
-      WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE email = public.get_auth_email()
     )
   );
 
@@ -102,7 +102,7 @@ CREATE POLICY "homework_submission_insert_own"
   WITH CHECK (
     student_id IN (
       SELECT id FROM student
-      WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE email = public.get_auth_email()
     )
   );
 
@@ -186,7 +186,7 @@ CREATE POLICY "exam_1_select_student"
   USING (
     student_id IN (
       SELECT id FROM student
-      WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE email = public.get_auth_email()
     )
   );
 

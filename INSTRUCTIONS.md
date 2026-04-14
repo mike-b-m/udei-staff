@@ -1136,6 +1136,71 @@ Follow the setup wizard to configure Sentry for Next.js.
 
 ### 7.4 Performance Optimization — TO DO
 
+---
+
+## 12. Online Exam System — 14-Day Roadmap Status
+
+> Updated: 2026-04-14
+
+### Completed Steps
+
+| Step | Goal | Status | Implementation |
+|------|------|--------|---------------|
+| 1 | Project Setup | ✅ DONE | Next.js 16 + Supabase connected, env vars configured |
+| 2 | Database Structure | ✅ DONE | Core tables + `online_exam`, `exam_question`, `exam_answer_option`, `exam_attempt`, `exam_attempt_answer`, `exam_event_log` (migration 003) |
+| 3 | Authentication | ✅ DONE | Supabase Auth, login/signup, profiles table, auth callback |
+| 4 | Roles & Access | ✅ DONE | 5 roles (admin/editor/administration/prof/student), middleware route protection, RLS policies |
+| 5 | Admin: Create Structure | ✅ DONE | 17 faculties in constants, year/session selectors, course_program CRUD |
+| 6 | Admin: Create Exams | ✅ DONE | `app/admin/exam/create/page.tsx` — Full exam creation form with faculty/matiere/duration/settings |
+| 7 | Admin: Add Questions | ✅ DONE | Integrated in create page — MCQ with 2-6 options, mark correct answer, point allocation |
+| 8 | Student Dashboard | ✅ DONE | `app/student/exam/page.tsx` — Exam list filtered by faculty/year_study, status badges |
+| 9 | Start Exam Flow | ✅ DONE | Create attempt record, store start_time, resume in-progress attempts |
+| 10 | Exam UI | ✅ DONE | `app/student/exam/[examId]/attempt/[attemptId]/page.tsx` — Question display, option selection, navigation |
+| 11 | Timer + Auto Save | ✅ DONE | Countdown timer from DB start_time, auto-submit on timeout, debounced answer save |
+| 12 | Anti-Cheat System | ✅ DONE | Tab switch detection, fullscreen exit tracking, copy/paste prevention, event logging |
+| 13 | Submission + Scoring | ✅ DONE | Client-side scoring, mark correct/incorrect answers, percentage calculation |
+| 14 | Results + Admin View | ✅ DONE | `app/admin/exam/results/page.tsx` — Attempt list, scores, suspicion scores, event log modal; `app/student/exam/[examId]/result/[attemptId]/page.tsx` — Score card + answer review |
+
+### Bonus Features Implemented
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| Limit tab switches | ✅ DONE | Configurable `max_tab_switches` per exam, auto-submit on limit |
+| Warning system | ✅ DONE | Modal warnings with escalating severity |
+| Cheating score | ✅ DONE | `suspicion_score` calculated from tab/fullscreen events, `flagged_for_review` |
+| Randomize questions | ✅ DONE | `randomize_questions` toggle per exam |
+| Shuffle answers | ✅ DONE | `shuffle_answers` toggle per exam |
+| Prevent back navigation | ✅ DONE | `allow_back_nav` toggle, `beforeunload` event handler |
+
+### New Files Created
+
+```
+supabase/migrations/003_exam_system.sql          — DB tables + RLS for exam system
+app/component/exam/types.ts                       — Shared TypeScript types
+app/admin/exam/create/page.tsx                    — Admin: create exam + questions
+app/admin/exam/results/page.tsx                   — Admin: view attempts + cheating logs
+app/student/exam/page.tsx                         — Student: exam list
+app/student/exam/[examId]/attempt/[attemptId]/page.tsx — Student: take exam
+app/student/exam/[examId]/result/[attemptId]/page.tsx  — Student: view results
+```
+
+### Modified Files
+
+```
+app/admin/exam/page.tsx          — Added tabs (Online Exams + Manual Grades), online exam management
+app/component/nav/student-nav.tsx — Added "Examens" nav link for students
+```
+
+### Database Migration Required
+
+Run `supabase/migrations/003_exam_system.sql` in Supabase SQL Editor to create:
+- `online_exam` — Exam definitions with settings
+- `exam_question` — Questions per exam
+- `exam_answer_option` — MCQ options per question
+- `exam_attempt` — Student exam sessions with anti-cheat counters
+- `exam_attempt_answer` — Individual answers per attempt
+- `exam_event_log` — Anti-cheat event tracking
+
 1. **Route-level loading states:** Add `loading.tsx` to each route folder:
    - `app/admin/loading.tsx`
    - `app/student/loading.tsx`
@@ -1276,6 +1341,8 @@ spent_in_company
 | `enrollments` | Student enrollment per semester | Phase 3 | See §5.2 |
 | `invoices` | Payment invoices per student | Phase 4 | See §6.1 |
 | `audit_logs` | Track all data modifications | Phase 2 | See §4.5 |
+| `lesson` | Lesson definitions (video/lecture/quiz/audio) | §13 | See §13 |
+| `lesson_progress` | Student progress per lesson | §13 | See §13 |
 | `notifications` | System alerts for users | Phase 5 | Design when needed |
 
 ---
@@ -1315,7 +1382,8 @@ app/
 │   ├── loading/loading.tsx               ← Loading skeletons
 │   ├── time/time.tsx                     ← Date formatter
 │   ├── lect_input/lecture.tsx            ← Key/value display
-│   └── add-buuton/add_button.tsx         ← Add/Delete buttons
+│   ├── add-buuton/add_button.tsx         ← Add/Delete buttons
+│   └── video-player/video-player.tsx     ← Custom YouTube player (no branding)
 ├── admin/
 │   ├── globals.css
 │   ├── layout.tsx                        ← Admin layout (AuthProvider+Nav+Header+Footer)
@@ -1327,10 +1395,13 @@ app/
 │   ├── exam/page.tsx                     ← Exam listing (basic)
 │   ├── search/page.tsx                   ← Student search
 │   ├── spend/page.tsx                    ← Expenses (wraps Spend)
-│   └── create/page.tsx                   ← Account creation (wraps SignUp)
+│   ├── create/page.tsx                   ← Account creation (wraps SignUp)
+│   └── lessons/page.tsx                  ← Lesson management CRUD
 ├── student/
 │   ├── layout.tsx                        ← Student layout
-│   └── page.tsx                          ← Student portal
+│   ├── page.tsx                          ← Student portal
+│   ├── lessons/page.tsx                  ← Student lesson list + progress
+│   └── lessons/[lessonId]/page.tsx       ← Individual lesson view + video
 └── login/
     ├── layout.tsx                        ← Login layout
     └── page.tsx                          ← Login page
@@ -1400,4 +1471,98 @@ Recommended sequence — each step builds on the previous:
 ---
 
 *Update this file as features are completed. Check off items and add notes about deviations from the plan.*
-*Last updated: 2026-03-29*
+
+---
+
+## 13. Lesson Management System — Completed
+
+> Added: 2026-04-XX
+
+### Overview
+
+Full lesson/course management system allowing admins to create lessons (video, lecture, quiz, audio) with YouTube integration and students to view and track their progress through course material.
+
+### Bug Fixes Applied
+
+| Fix | File | Description |
+|-----|------|-------------|
+| Password change "Auth session missing!" | `app/student/profile/page.tsx` | Added `supabase.auth.refreshSession()` before `updateUser()` to ensure valid session tokens |
+| Balance filter missing | `app/admin/page.tsx` | Added balance filter (Payé/Impayé) querying `student_payment` table with client-side filtering |
+| No delete functionality | `app/component/table/table.tsx` | Added per-row delete button, "Supprimer Tout" header button, confirmation modal with loading states |
+
+### Database Migration
+
+**File:** `supabase/migrations/005_lesson_system.sql`
+
+Creates two tables:
+
+**`lesson`** — Lesson definitions
+- `id`, `title`, `description`, `content` (rich text), `faculty`, `matiere`, `year`
+- `lesson_type` CHECK (`lesson`, `lecture`, `video`, `quiz`, `audio`)
+- `youtube_url`, `duration_minutes`, `material_url`, `thumbnail_url`
+- `sort_order`, `is_published`, `created_at`, `updated_at`, `created_by`
+
+**`lesson_progress`** — Student progress tracking
+- `id`, `student_id` (FK → student), `lesson_id` (FK → lesson)
+- `progress_percent` (0-100), `completed`, `last_position_seconds`
+- `started_at`, `completed_at`
+- UNIQUE constraint on (student_id, lesson_id)
+
+Includes: indexes, RLS policies (read published for auth, full CRUD for admin/editor/prof, own progress for students), and `updated_at` trigger.
+
+### New Files Created
+
+```
+supabase/migrations/005_lesson_system.sql              — DB tables + RLS for lesson system
+app/component/video-player/video-player.tsx            — Custom YouTube player (hides branding)
+app/admin/lessons/page.tsx                             — Admin: lesson CRUD + filters + video preview
+app/student/lessons/page.tsx                           — Student: lesson list grouped by matiere + progress
+app/student/lessons/[lessonId]/page.tsx                — Student: individual lesson view + video + progress
+```
+
+### Modified Files
+
+```
+app/student/profile/page.tsx     — Added refreshSession() before password update
+app/admin/page.tsx               — Added balance filter (Payé/Impayé) with student_payment query
+app/component/table/table.tsx    — Added delete row/all buttons with confirmation modal
+app/component/nav/nav.tsx        — Added "Cours/Leçons" nav item with book icon (admin)
+app/component/nav/student-nav.tsx — Added "Mes Cours" nav item with book icon (student)
+```
+
+### Custom YouTube Player Features
+
+- Extracts YouTube video ID from various URL formats
+- Loads YouTube IFrame API dynamically
+- Hides all YouTube branding via `controls:0, modestbranding:1, rel:0, showinfo:0`
+- Custom overlay controls: play/pause, seek bar, volume, mute, fullscreen, skip ±10s, CC toggle, quality selector
+- Progress bar with buffered indicator
+- Auto-hide controls after 3 seconds of inactivity
+- `onProgress` callback for tracking watch progress
+- `initialPosition` prop for resume playback
+- Keyboard-like controls without YouTube's native shortcuts
+
+### Admin Lesson Page Features
+
+- Full CRUD: create, edit, delete, publish/unpublish lessons
+- Form fields: title, type, faculty, matiere (loaded from course_program), year, description, content, YouTube URL, duration, sort order, material file upload
+- Filter bar: faculty, type, year, matiere
+- Grid display with YouTube thumbnails for video lessons
+- Type and status badges on cards
+- Video preview modal with custom player
+
+### Student Lesson Features
+
+- Auto-loads lessons filtered by student's faculty
+- Overall progress card (percentage + completed count)
+- Filter by matiere and type
+- Lessons grouped by matiere with clickable rows
+- Per-lesson progress bars and completion checkmarks
+- Individual lesson view with video player and progress tracking
+- Auto-save progress every 10 seconds during video playback
+- Auto-complete at 90% video progress
+- Mark complete/incomplete buttons
+- Previous/next lesson navigation
+- Material download link
+
+*Last updated: 2026-04-XX*

@@ -32,7 +32,7 @@ export default function Teacher() {
                 // Get students
                 const { data: stud, error: second } = await supabase.from('student_status')
                     .select('id,student_id,year_study')
-                    .eq('year_study', search3);
+                    .eq('year_study', search3).eq('faculty', search);
 
                 // Get exams
                 const { data: exa, error: third } = await supabase.from('exam')
