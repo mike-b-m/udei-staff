@@ -31,6 +31,8 @@ const LESSON_TYPES = [
   { value: 'audio', label: 'Audio', icon: '🎧', color: 'bg-orange-100 text-orange-700' },
 ]
 
+type LessonType = 'lesson' | 'video';
+
 const EMPTY_FORM = {
   title: '',
   description: '',
@@ -38,7 +40,7 @@ const EMPTY_FORM = {
   faculty: '',
   matiere: '',
   year: 1,
-  lesson_type: 'lesson' as const,
+  lesson_type: 'lesson' as LessonType,
   youtube_url: '',
   duration_minutes: 0,
   material_url: '',
@@ -165,7 +167,7 @@ export default function AdminLessonsPage() {
       faculty: lesson.faculty,
       matiere: lesson.matiere,
       year: lesson.year,
-      lesson_type: lesson.lesson_type,
+      lesson_type: lesson.lesson_type as LessonType,
       youtube_url: lesson.youtube_url || '',
       duration_minutes: lesson.duration_minutes || 0,
       material_url: lesson.material_url || '',
