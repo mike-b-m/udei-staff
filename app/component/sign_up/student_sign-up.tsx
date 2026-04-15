@@ -19,7 +19,7 @@ type ValidationError = {
 }
 
 // Constants
-const STAFF_ROLES = ['admin', 'editor', 'administration', 'prof'] as const
+const STAFF_ROLES = ['student'] as const
 const PASSWORD_MIN_LENGTH = 8
 const ROW_COLORS = [
   "bg-blue-50 hover:bg-blue-100",
@@ -381,7 +381,7 @@ export default function StudentSignUp() {
               </div>
 
               {/* Role */}
-              {/* <div>
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Rôle *
                 </label>
@@ -407,7 +407,7 @@ export default function StudentSignUp() {
                 {getFieldError('role') && (
                   <p className="text-red-600 text-sm mt-1">{getFieldError('role')}</p>
                 )}
-              </div> */}
+              </div>
 
               {/* Submit Button */}
               <button

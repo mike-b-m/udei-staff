@@ -137,6 +137,7 @@ export default function SignUp() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
+        .neq('role', 'student') // Exclude students
         .order('created_at', { ascending: false })
 
       if (error) throw error
