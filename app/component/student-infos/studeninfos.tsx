@@ -9,7 +9,20 @@ import { ADMIN_ROLES, EDITOR_ROLES } from './constants'
 import { StudentSearchProps, StudentData, StudentStatus } from './types'
 import { supabase } from '../db'
 import { exportToCSV, printHTML } from '../export/exportUtils'
+import { Readsession } from '../teacher/teacher'
 
+const yearexam = [
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6'
+]
+const sessionexam = [
+  '1',
+  '2',
+]
 
 /**
  * Unified StudentInfos Component
@@ -285,48 +298,183 @@ interface StudentDisplayContentProps {
 // ===== EXPORT HELPERS FOR STUDENT INFO =====
 function getStudentPersonalAndFamilyHTML(student: any) {
   return `
-    <h2>Fiche Étudiant</h2>
-    <div class="info">
-      <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
-    </div>
-    <div class="section-title">Informations Personnelles</div>
-    <table>
-      <tbody>
-        <tr><td><strong>Nom</strong></td><td>${student.last_name || '—'}</td></tr>
-        <tr><td><strong>Prénom</strong></td><td>${student.first_name || '—'}</td></tr>
-        <tr><td><strong>Code Étudiant</strong></td><td>${student.student_code || '—'}</td></tr>
-        <tr><td><strong>Année Académique</strong></td><td>${student.academy || '—'}</td></tr>
-        <tr><td><strong>Email</strong></td><td>${student.email || '—'}</td></tr>
-        <tr><td><strong>Téléphone</strong></td><td>${student.phone_number || '—'}</td></tr>
-        <tr><td><strong>Faculté</strong></td><td>${student.faculty || '—'}</td></tr>
-        <tr><td><strong>Sexe</strong></td><td>${student.sex || '—'}</td></tr>
-        <tr><td><strong>Statut Matrimonial</strong></td><td>${student.marital_status || '—'}</td></tr>
-        <tr><td><strong>Date de Naissance</strong></td><td>${student.date_birth || '—'}</td></tr>
-        <tr><td><strong>Lieu de Naissance</strong></td><td>${student.place_of_birth || '—'}</td></tr>
-        <tr><td><strong>NIF/CIN</strong></td><td>${student.nif_cin || '—'}</td></tr>
-        <tr><td><strong>Adresse</strong></td><td>${student.adress || '—'}</td></tr>
-      </tbody>
-    </table>
-    <div class="section-title">Informations Familiales — Mère</div>
-    <table>
-      <tbody>
-        <tr><td><strong>Nom</strong></td><td>${student.mother_name || '—'}</td></tr>
-        <tr><td><strong>Lieu de Naissance</strong></td><td>${student.mother_birth || '—'}</td></tr>
-        <tr><td><strong>Domicile</strong></td><td>${student.mother_residence || '—'}</td></tr>
-        <tr><td><strong>Téléphone</strong></td><td>${student.mother_phone || '—'}</td></tr>
-        <tr><td><strong>Profession</strong></td><td>${student.mother_profesion || '—'}</td></tr>
-      </tbody>
-    </table>
-    <div class="section-title">Informations Familiales — Père</div>
-    <table>
-      <tbody>
-        <tr><td><strong>Nom</strong></td><td>${student.father_name || '—'}</td></tr>
-        <tr><td><strong>Lieu de Naissance</strong></td><td>${student.father_birth || '—'}</td></tr>
-        <tr><td><strong>Domicile</strong></td><td>${student.father_residence || '—'}</td></tr>
-        <tr><td><strong>Téléphone</strong></td><td>${student.father_phone || '—'}</td></tr>
-        <tr><td><strong>Profession</strong></td><td>${student.father_profesion || '—'}</td></tr>
-      </tbody>
-    </table>
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Fiche Étudiant - ${student.last_name} ${student.first_name}</title>
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background: white;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+          border-bottom: 3px solid #d32f2f;
+          padding-bottom: 20px;
+        }
+        .logo-section {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 10px;
+        }
+        .logo {
+          width: 60px;
+          height: 60px;
+          margin-right: 20px;
+        }
+        .university-name {
+          text-align: center;
+        }
+        .university-name h1 {
+          margin: 0;
+          color: #1b5e20;
+          font-size: 16px;
+          font-weight: bold;
+        }
+        .university-name h2 {
+          margin: 5px 0 0 0;
+          color: #000;
+          font-size: 20px;
+          font-weight: bold;
+        }
+        .red-bar {
+          background-color: #d32f2f;
+          height: 8px;
+          margin: 10px 0;
+        }
+        .title {
+          font-size: 24px;
+          font-weight: bold;
+          color: #000;
+          margin: 20px 0;
+          text-align: center;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 15px 0;
+        }
+        th {
+          background-color: #f5f5f5;
+          border: 1px solid #ddd;
+          padding: 10px;
+          text-align: left;
+          font-weight: bold;
+        }
+        td {
+          border: 1px solid #ddd;
+          padding: 10px;
+        }
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        .section-title {
+          font-size: 14px;
+          font-weight: bold;
+          color: #1b5e20;
+          margin-top: 20px;
+          margin-bottom: 10px;
+          border-left: 4px solid #d32f2f;
+          padding-left: 10px;
+        }
+        .info {
+          margin: 10px 0;
+          color: #666;
+          font-size: 12px;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 15px;
+          border-top: 1px solid #ddd;
+          font-size: 11px;
+          color: #999;
+          text-align: center;
+        }
+        @media print {
+          body { margin: 0; padding: 0; }
+          .red-bar { page-break-after: avoid; }
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-section">
+          <img src="/image/icon.png" alt="UDEI Logo" class="logo">
+          <div class="university-name">
+            <h1>UNIVERSITÉ D'ÉTUDES INTERNATIONALES</h1>
+            <h2>UDEI</h2>
+          </div>
+        </div>
+        <div class="red-bar"></div>
+      </div>
+
+      <!-- Title -->
+      <div class="title">Fiche Étudiant</div>
+
+      <!-- Date and Info -->
+      <div class="info">
+        <p><strong>Date d'émission:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+        <p><strong>Généré par:</strong> Système de Gestion Académique UDEI</p>
+      </div>
+
+      <!-- Personal Information -->
+      <div class="section-title">📋 Informations Personnelles</div>
+      <table>
+        <tbody>
+          <tr><td width="30%"><strong>Nom</strong></td><td>${student.last_name || '—'}</td></tr>
+          <tr><td><strong>Prénom</strong></td><td>${student.first_name || '—'}</td></tr>
+          <tr><td><strong>Code Étudiant</strong></td><td>${student.student_code || '—'}</td></tr>
+          <tr><td><strong>Année Académique</strong></td><td>${student.academy || '—'}</td></tr>
+          <tr><td><strong>Faculté</strong></td><td>${student.faculty || '—'}</td></tr>
+          <tr><td><strong>Email</strong></td><td>${student.email || '—'}</td></tr>
+          <tr><td><strong>Téléphone</strong></td><td>${student.phone_number || '—'}</td></tr>
+          <tr><td><strong>Sexe</strong></td><td>${student.sex || '—'}</td></tr>
+          <tr><td><strong>Statut Matrimonial</strong></td><td>${student.marital_status || '—'}</td></tr>
+          <tr><td><strong>Date de Naissance</strong></td><td>${student.date_birth || '—'}</td></tr>
+          <tr><td><strong>Lieu de Naissance</strong></td><td>${student.place_of_birth || '—'}</td></tr>
+          <tr><td><strong>NIF/CIN</strong></td><td>${student.nif_cin || '—'}</td></tr>
+          <tr><td><strong>Adresse</strong></td><td>${student.adress || '—'}</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Family Information - Mother -->
+      <div class="section-title">👩 Informations Familiales — Mère</div>
+      <table>
+        <tbody>
+          <tr><td width="30%"><strong>Nom</strong></td><td>${student.mother_name || '—'}</td></tr>
+          <tr><td><strong>Lieu de Naissance</strong></td><td>${student.mother_birth || '—'}</td></tr>
+          <tr><td><strong>Domicile</strong></td><td>${student.mother_residence || '—'}</td></tr>
+          <tr><td><strong>Téléphone</strong></td><td>${student.mother_phone || '—'}</td></tr>
+          <tr><td><strong>Profession</strong></td><td>${student.mother_profesion || '—'}</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Family Information - Father -->
+      <div class="section-title">👨 Informations Familiales — Père</div>
+      <table>
+        <tbody>
+          <tr><td width="30%"><strong>Nom</strong></td><td>${student.father_name || '—'}</td></tr>
+          <tr><td><strong>Lieu de Naissance</strong></td><td>${student.father_birth || '—'}</td></tr>
+          <tr><td><strong>Domicile</strong></td><td>${student.father_residence || '—'}</td></tr>
+          <tr><td><strong>Téléphone</strong></td><td>${student.father_phone || '—'}</td></tr>
+          <tr><td><strong>Profession</strong></td><td>${student.father_profesion || '—'}</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p>© 2026 Université d'Études Internationales d'Haïti (UDEI) | Système de Gestion Académique</p>
+        <p>Tél: 48-809-772 | Email: udelformationuniversitaire@gmail.com</p>
+      </div>
+    </body>
+    </html>
   `
 }
 
@@ -449,6 +597,12 @@ function StudentDisplayContent({
 }: StudentDisplayContentProps) {
   const [editInfoOpen, setEditInfoOpen] = useState(false)
   const [editStatusOpen, setEditStatusOpen] = useState(false)
+  const [open, setOpen] = useState('')
+  const [photoChangeOpen, setPhotoChangeOpen] = useState(false)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoLoading, setPhotoLoading] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
 
   const handleExportPrint = () => {
     printHTML(`Fiche ${student.last_name} ${student.first_name}`, getStudentPersonalAndFamilyHTML(student))
@@ -469,6 +623,60 @@ function StudentDisplayContent({
     const { error } = await supabase.from('student_status').update(payload).eq('student_id', student.id)
     if (error) throw error
     window.location.reload()
+  }
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setPhotoError('La photo doit être inférieure à 5MB')
+        return
+      }
+      setPhotoFile(file)
+      setPhotoPreview(URL.createObjectURL(file))
+      setPhotoError(null)
+    }
+  }
+
+  const handlePhotoSave = async () => {
+    if (!photoFile) return
+
+    setPhotoLoading(true)
+    setPhotoError(null)
+
+    try {
+      // Upload new photo
+      const fileExt = photoFile.name.split('.').pop()
+      const fileName = `student_${student.id}_${Date.now()}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('student_photo')
+        .upload(fileName, photoFile, { contentType: photoFile.type })
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('student_photo')
+        .getPublicUrl(fileName)
+
+      // Update student record
+      const { error: updateError } = await supabase
+        .from('student')
+        .update({ photo_url: urlData.publicUrl })
+        .eq('id', student.id)
+
+      if (updateError) throw updateError
+
+      setPhotoChangeOpen(false)
+      setPhotoFile(null)
+      setPhotoPreview(null)
+      window.location.reload()
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : 'Erreur lors de la mise à jour de la photo')
+    } finally {
+      setPhotoLoading(false)
+    }
   }
   return (
     <div className="space-y-8">
@@ -522,10 +730,10 @@ function StudentDisplayContent({
             </button>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Photo */}
           <div className="md:col-span-1">
-            <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-300 flex items-center justify-center shrink-0 shadow-md">
+            <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-300 flex items-center justify-center shrink-0 shadow-md relative group">
               {student.photo_url ? (
                 <Image
                   src={student.photo_url}
@@ -549,7 +757,26 @@ function StudentDisplayContent({
                   />
                 </svg>
               )}
+              {canEdit && (
+                <button
+                  onClick={() => setPhotoChangeOpen(true)}
+                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
+                >
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+              )}
             </div>
+            {canEdit && (
+              <button
+                onClick={() => setPhotoChangeOpen(true)}
+                className="mt-3 w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+              >
+                Changer la photo
+              </button>
+            )}
           </div>
 
           {/* Info Grid */}
@@ -563,6 +790,88 @@ function StudentDisplayContent({
             <Lecture int="Faculté" out={student.faculty} />
           </div>
         </div>
+
+        {/* Photo Change Modal */}
+        {photoChangeOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full animate-in fade-in zoom-in">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Changer la photo</h3>
+                <button
+                  onClick={() => {
+                    setPhotoChangeOpen(false)
+                    setPhotoFile(null)
+                    setPhotoPreview(null)
+                    setPhotoError(null)
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Preview */}
+                {photoPreview && (
+                  <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                    <Image
+                      src={photoPreview}
+                      alt="Aperçu"
+                      width={200}
+                      height={200}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
+                {/* File Input */}
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    Sélectionner une photo
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoSelect}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Error Message */}
+                {photoError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                    {photoError}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setPhotoChangeOpen(false)
+                      setPhotoFile(null)
+                      setPhotoPreview(null)
+                      setPhotoError(null)
+                    }}
+                    disabled={photoLoading}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handlePhotoSave}
+                    disabled={!photoFile || photoLoading}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {photoLoading ? 'Enregistrement...' : 'Confirmer'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
           <Lecture int="Sexe" out={student.sex} />
@@ -652,7 +961,64 @@ function StudentDisplayContent({
             Voir les Paiements
           </Link>
         )}
+
+        {/* Years and Sessions */}
+        <div className='flex flex-wrap gap-2'>
+          {yearexam.map(j => sessionexam.map(s =>
+            <button
+              key={`${j}-${s}`}
+              onClick={() => setOpen(open === `${j}-${s}` ? '' : `${j}-${s}`)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+            >
+              Année {j} - Session {s}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Notes Pop-up Modal */}
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full my-8 animate-in fade-in zoom-in">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-linear-to-r from-blue-600 to-blue-500 text-white rounded-t-xl">
+              <h3 className="text-xl font-bold">
+                Notes - Année {open.split('-')[0]} - Session {open.split('-')[1]}
+              </h3>
+              <button
+                onClick={() => setOpen('')}
+                className="text-white hover:text-gray-200 transition"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <Readsession
+                faculty=""
+                session={open.split('-')[1]}
+                year={open.split('-')[0]}
+                id={student.id}
+                name=""
+                matiere=''
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => setOpen('')}
+                className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition font-medium"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

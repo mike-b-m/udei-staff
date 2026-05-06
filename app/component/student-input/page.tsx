@@ -180,6 +180,28 @@ export default function StudentInput() {
     setLoading(true)
 
     try {
+      // Check for duplicate student (same last_name, first_name, and faculty)
+      const { data: existingStudent, error: checkError } = await supabase
+        .from('student')
+        .select('id')
+        .eq('last_name', formData.last_name)
+        .eq('first_name', formData.first_name)
+        .eq('faculty', formData.faculty)
+        .maybeSingle()
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 means no rows returned, which is expected
+        throw checkError
+      }
+
+      if (existingStudent) {
+        setErrors({
+          submit: `Un étudiant avec le nom "${formData.last_name} ${formData.first_name}" existe déjà dans la faculté "${formData.faculty}". Veuillez vérifier les informations.`
+        })
+        setLoading(false)
+        return
+      }
+
       let photo_url = ''
 
       if (photo) {

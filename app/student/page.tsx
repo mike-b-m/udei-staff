@@ -563,10 +563,11 @@ export default function Student_dashboard(){
                                 value={code}
                                 onChange={(e)=>setCode(e.target.value)}
                                 placeholder="Entrez votre code (ex: STU001)"
+                                disabled={true} // Disable manual input to enforce auth-based loading
                                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition text-base"
                             />
                         </div>
-                        <button 
+                        {/* <button 
                             onClick={()=>setsenCode(!sendCode)} 
                             className="bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 px-8 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2"
                         >
@@ -574,7 +575,7 @@ export default function Student_dashboard(){
                                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.5 5.5a7.5 7.5 0 0 0 10.5 10.5Z" />
                             </svg>
                             Rechercher
-                        </button>
+                        </button> */}
                     </div>
                 </div>
 

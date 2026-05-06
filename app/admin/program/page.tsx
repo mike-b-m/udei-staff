@@ -16,6 +16,7 @@ interface Program {
   hour_session: number
   total_hour: number
   faculty: string
+  pass_grade: number
   year: number
   session: number
 }
@@ -26,6 +27,7 @@ interface FormRow {
   session_subjet: string
   hour_session: string
   total_hour: string
+  pass_grade: string
 }
 
 
@@ -208,7 +210,7 @@ function Program() {
   const [successMessage, setSuccessMessage] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [formRows, setFormRows] = useState<FormRow[]>([
-    { courses: '', credit: '', session_subjet: '', hour_session: '', total_hour: '' }
+    { courses: '', credit: '', session_subjet: '', hour_session: '', total_hour: '', pass_grade: '' }
   ])
   const [faculty, setFaculty] = useState('')
   const [year, setYear] = useState('')
@@ -248,6 +250,7 @@ function Program() {
       if (!row.session_subjet || parseFloat(row.session_subjet) <= 0) newErrors[`session_subjet-${index}`] = 'Requis'
       if (!row.hour_session || parseFloat(row.hour_session) <= 0) newErrors[`hour_session-${index}`] = 'Requis'
       if (!row.total_hour || parseFloat(row.total_hour) <= 0) newErrors[`total_hour-${index}`] = 'Requis'
+      if (!row.pass_grade || parseFloat(row.pass_grade) < 0) newErrors[`pass_grade-${index}`] = 'La note de passage doit être >= 0'
     })
 
     if (!faculty) newErrors.faculty = 'Sélectionnez une faculté'
@@ -271,7 +274,7 @@ function Program() {
   }
 
   const addRow = () => {
-    setFormRows([...formRows, { courses: '', credit: '', session_subjet: '', hour_session: '', total_hour: '' }])
+    setFormRows([...formRows, { courses: '', credit: '', session_subjet: '', hour_session: '', total_hour: '', pass_grade: '' }])
   }
 
   const removeRow = (index: number) => {
@@ -297,7 +300,8 @@ function Program() {
         total_hour: parseFloat(row.total_hour),
         faculty,
         year: parseInt(year),
-        session: parseInt(session)
+        session: parseInt(session),
+        pass_grade: parseInt(row.pass_grade)
       }))
 
       const { error } = await supabase
@@ -309,7 +313,7 @@ function Program() {
 
       setSuccessMessage(`${formRows.length} programme(s) ajouté(s) avec succès!`)
       setSuccess(true)
-      setFormRows([{ courses: '', credit: '', session_subjet: '', hour_session: '', total_hour: '' }])
+      setFormRows([{ courses: '', credit: '', session_subjet: '', hour_session: '', total_hour: '', pass_grade: '' }])
       setFaculty('')
       setYear('')
       setSession('')
@@ -585,6 +589,20 @@ function Program() {
                           />
                           {errors[`total_hour-${index}`] && <p className="text-red-600 text-xs mt-1">{errors[`total_hour-${index}`]}</p>}
                         </div>
+
+                        <div>
+                          <label className="text-xs font-semibold text-gray-700">Note de Passage</label>
+                          <input
+                            type="number"
+                            value={row.pass_grade}
+                            onChange={(e) => handleRowChange(index, 'pass_grade', e.target.value)}
+                            className={`w-full px-3 py-2 rounded-lg border-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
+                              errors[`pass_grade-${index}`] ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500'
+                            }`}
+                            placeholder="0"
+                          />
+                          {errors[`pass_grade-${index}`] && <p className="text-red-600 text-xs mt-1">{errors[`pass_grade-${index}`]}</p>}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -650,6 +668,72 @@ function Program() {
               Programmes : {search}
             </h2>
             <p className="text-gray-500">Année et Session</p>
+          </div>
+
+          {/* Passing Notes Management Section */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-4">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Gestion des Notes de Passage
+            </h3>
+            <p className="text-gray-600 mb-4">Définir ou modifier les notes de passage pour les cours existants</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {YEARS.map(year =>
+                SESSIONS.map(session => {
+                  const yearSessionPrograms = programs.filter(p => p.year === year && p.session === session)
+                  if (yearSessionPrograms.length === 0) return null
+
+                  return (
+                    <div key={`${year}-${session}`} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold text-gray-900 mb-3">
+                        Année {year} - Session {session}
+                      </h4>
+                      <div className="space-y-2">
+                        {yearSessionPrograms.map(program => (
+                          <div key={program.id} className="flex items-center justify-between bg-white rounded p-2">
+                            <span className="text-sm font-medium text-gray-700 truncate flex-1 mr-2">
+                              {program.courses}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">Note:</span>
+                              <input
+                                type="number"
+                                defaultValue={program.pass_grade || 0}
+                                onBlur={async (e) => {
+                                  const newValue = parseFloat(e.target.value) || 0
+                                  if (newValue !== program.pass_grade) {
+                                    try {
+                                      const { error } = await supabase
+                                        .from('course_program')
+                                        .update({ pass_grade: newValue })
+                                        .eq('id', program.id)
+                                      if (error) throw error
+                                      // Update local state
+                                      setPrograms(prev => prev.map(p =>
+                                        p.id === program.id ? { ...p, pass_grade: newValue } : p
+                                      ))
+                                    } catch (error) {
+                                      console.error('Error updating pass grade:', error)
+                                    }
+                                  }
+                                }}
+                                className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:border-green-500"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
           </div>
 
           {YEARS.map(y =>

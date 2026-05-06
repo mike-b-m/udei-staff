@@ -10,6 +10,7 @@ interface CourseProgram {
   hour_session: number
   total_hour: number
   year: number
+  pass_grade: number
   session: number
   created_at?: string
 }
@@ -29,6 +30,7 @@ interface EditFormRow {
   session_subjet: string
   hour_session: string
   total_hour: string
+  pass_grade: string
 }
 
 interface FormErrors {
@@ -40,7 +42,8 @@ const TABLE_COLUMNS = [
   { key: 'credit', label: 'Crédit', width: 'w-1/6' },
   { key: 'session_subjet', label: 'Séances/Mois', width: 'w-1/6' },
   { key: 'hour_session', label: 'H/Séance', width: 'w-1/6' },
-  { key: 'total_hour', label: 'Total Heures', width: 'w-1/6' }
+  { key: 'total_hour', label: 'Total Heures', width: 'w-1/6' },
+  { key: 'pass_grade', label: 'Note de Passage', width: 'w-1/6' }
 ]
 
 // Export functions
@@ -256,7 +259,8 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
           credit: rowToEdit.credit.toString(),
           session_subjet: rowToEdit.session_subjet.toString(),
           hour_session: rowToEdit.hour_session.toString(),
-          total_hour: rowToEdit.total_hour.toString()
+          total_hour: rowToEdit.total_hour.toString(),
+          pass_grade: rowToEdit.pass_grade?.toString() ?? "",
         }])
         setEditMode('single')
       }
@@ -268,7 +272,8 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
         credit: item.credit.toString(),
         session_subjet: item.session_subjet.toString(),
         hour_session: item.hour_session.toString(),
-        total_hour: item.total_hour.toString()
+        total_hour: item.total_hour.toString(),
+        pass_grade: item.pass_grade?.toString() ?? "",
       })))
       setEditMode('bulk')
     }
@@ -295,6 +300,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
       if (!row.session_subjet || parseFloat(row.session_subjet) <= 0) newErrors[`session_subjet-${index}`] = 'Requis'
       if (!row.hour_session || parseFloat(row.hour_session) <= 0) newErrors[`hour_session-${index}`] = 'Requis'
       if (!row.total_hour || parseFloat(row.total_hour) <= 0) newErrors[`total_hour-${index}`] = 'Requis'
+      if (row.pass_grade === '' || row.pass_grade === undefined || parseFloat(row.pass_grade) < 0) newErrors[`pass_grade-${index}`] = 'La note de passage doit être >= 0'
     })
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -315,7 +321,8 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
             credit: parseFloat(row.credit),
             session_subjet: parseFloat(row.session_subjet),
             hour_session: parseFloat(row.hour_session),
-            total_hour: parseFloat(row.total_hour)
+            total_hour: parseFloat(row.total_hour),
+            pass_grade: parseFloat(row.pass_grade)
           })
           .eq('id', row.id)
 
@@ -648,6 +655,22 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
                       />
                       {errors[`total_hour-${index}`] && <p className="text-red-600 text-xs mt-0.5">{errors[`total_hour-${index}`]}</p>}
                     </div>
+
+                    
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Note de Passage</label>
+                      <input
+                        type="number"
+                        value={row.pass_grade}
+                        onChange={(e) => handleEditRowChange(index, 'pass_grade', e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all ${
+                          errors[`pass_grade-${index}`] ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400 focus:border-amber-500'
+                        }`}
+                        placeholder="0"
+                        step="0.1"
+                      />
+                      {errors[`pass_grade-${index}`] && <p className="text-red-600 text-xs mt-0.5">{errors[`pass_grade-${index}`]}</p>}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -747,6 +770,8 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
                 <td className="px-6 py-4 text-center text-gray-700 font-semibold">{course.session_subjet}</td>
                 <td className="px-6 py-4 text-center text-gray-700 font-semibold">{course.hour_session}h</td>
                 <td className="px-6 py-4 text-center text-gray-700 font-semibold">{course.total_hour}h</td>
+                <td className="px-6 py-4 text-center text-gray-700 font-semibold">{course.pass_grade}</td>
+
               </tr>
             ))}
           </tbody>

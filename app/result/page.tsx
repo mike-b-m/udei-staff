@@ -448,16 +448,18 @@ export default function ResultDashboard(){
 
                         {/* Session 1 Results */}
                         {session && (
-                            <div className="bg-white rounded-2xl shadow-lg p-6">
-                                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 overflow-hidden">
+                                <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                                     <span className="w-1 h-6 bg-blue-600 rounded"></span>
                                     Résultats - Semestre 1
                                 </h3>
-                                <div className="space-y-4">
+                                <div className="space-y-4 overflow-x-auto">
                                     {status.length > 0 ? (
                                         status.map((stat: any) => (
-                                            <div key={stat.id} className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-100">
-                                                <Readsession year={stat.year_study} session={1} id={stat.student_id} matiere={''} faculty={userX[0]?.faculty} name=""/>
+                                            <div key={stat.id} className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-3 md:p-4 border-2 border-blue-100 overflow-x-auto">
+                                                <div className="min-w-full">
+                                                    <Readsession year={stat.year_study} session={1} id={stat.student_id} matiere={''} faculty={userX[0]?.faculty} name=""/>
+                                                </div>
                                             </div>
                                         ))
                                     ) : (
@@ -471,16 +473,18 @@ export default function ResultDashboard(){
 
                         {/* Session 2 Results */}
                         {session2 && (
-                            <div className="bg-white rounded-2xl shadow-lg p-6">
-                                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 overflow-hidden">
+                                <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                                     <span className="w-1 h-6 bg-blue-600 rounded"></span>
                                     Résultats - Semestre 2
                                 </h3>
-                                <div className="space-y-4">
+                                <div className="space-y-4 overflow-x-auto">
                                     {status.length > 0 ? (
                                         status.map((stat: any) => (
-                                            <div key={stat.id} className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-100">
-                                                <Readsession year={stat.year_study} session={2} id={stat.student_id} matiere={''} faculty={userX[0]?.faculty} name=""/>
+                                            <div key={stat.id} className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-3 md:p-4 border-2 border-blue-100 overflow-x-auto">
+                                                <div className="min-w-full">
+                                                    <Readsession year={stat.year_study} session={2} id={stat.student_id} matiere={''} faculty={userX[0]?.faculty} name=""/>
+                                                </div>
                                             </div>
                                         ))
                                     ) : (

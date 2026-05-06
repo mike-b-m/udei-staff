@@ -4,10 +4,19 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import TheacherInput, { ReadNote, Readsession, TeacherSession, TheacherInput2 } from "@/app/component/teacher/teacher";
 
+interface FormRow {
+  courses: string
+  credit: string
+  session_subjet: string
+  hour_session: string
+  total_hour: string
+  pass_grade: number
+}
+
 export default function Teacher() {
     const [exam, setExam] = useState<any[]>([])
     const [note, setNote] = useState<any[]>([])
-    const [program, setProgram] = useState<any[]>([])
+    const [program, setProgram] = useState<FormRow[]>([])
     const [faculty, setFaculty] = useState('')
     const [intra, setIntra] = useState(true)
     const [read, setRead] = useState(false)
@@ -29,10 +38,11 @@ export default function Teacher() {
                     .from('course_program')
                     .select('*').eq('faculty', search).eq('session', search4).eq('year', search3);
 
-                // Get students
+                // Get students with last_name for sorting
                 const { data: stud, error: second } = await supabase.from('student_status')
-                    .select('id,student_id,year_study')
-                    .eq('year_study', search3).eq('faculty', search);
+                    .select('id,student_id,year_study,academic_year,student(id,last_name,first_name)')
+                    .eq('year_study', search3).eq('faculty', search)
+                    .order('student(last_name)', { ascending: true });
 
                 // Get exams
                 const { data: exa, error: third } = await supabase.from('exam')
@@ -380,7 +390,7 @@ export default function Teacher() {
                                                         faculty={search}
                                                         session={search4}
                                                         year={search3}
-                                                        name={''}
+                                                        name={[exa.academic_year, program.filter((p) => p.courses === faculty).map((p) => p.pass_grade)]}
                                                         matiere={faculty}
                                                         id={exa.student_id}
                                                     />

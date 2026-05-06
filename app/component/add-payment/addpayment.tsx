@@ -769,18 +769,41 @@ export function StudentBal({ id }: StudentIdProp) {
 // ============ STUDENTS LIST ============
 export function Student_pay() {
   const [students, setStudents] = useState<User[]>([])
+  const [filteredStudents, setFilteredStudents] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [faculties, setFaculties] = useState<string[]>([])
+  const [selectedFaculty, setSelectedFaculty] = useState<string>('')
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'positive' | 'zero'>('all')
+  const [paymentData, setPaymentData] = useState<{ [key: number]: StudentPayment }>({})
 
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchStudentsAndData = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch students
+        const { data: studentData, error: studentError } = await supabase
           .from('student')
-          .select('last_name, first_name, id, faculty,student_code')
+          .select('last_name, first_name, id, faculty, student_code')
           .order('last_name', { ascending: true })
 
-        if (error) throw error
-        setStudents(data || [])
+        if (studentError) throw studentError
+        setStudents(studentData || [])
+
+        // Extract unique faculties
+        const uniqueFaculties = [...new Set((studentData || []).map(s => s.faculty).filter(Boolean))]
+        setFaculties(uniqueFaculties as string[])
+
+        // Fetch payment data for all students
+        const { data: paymentDataRes, error: paymentError } = await supabase
+          .from('student_payment')
+          .select('id, student_id, balance')
+
+        if (!paymentError && paymentDataRes) {
+          const paymentMap: { [key: number]: StudentPayment } = {}
+          paymentDataRes.forEach(payment => {
+            paymentMap[payment.student_id] = payment as StudentPayment
+          })
+          setPaymentData(paymentMap)
+        }
       } catch (err) {
         console.error('Error fetching students:', err)
       } finally {
@@ -788,8 +811,31 @@ export function Student_pay() {
       }
     }
 
-    fetchStudents()
+    fetchStudentsAndData()
   }, [])
+
+  useEffect(() => {
+    // Apply filters
+    let filtered = students
+    
+    if (selectedFaculty) {
+      filtered = filtered.filter(s => s.faculty === selectedFaculty)
+    }
+
+    if (balanceFilter === 'positive') {
+      filtered = filtered.filter(s => {
+        const balance = paymentData[s.id]?.balance || 0
+        return toNumber(balance) > 0
+      })
+    } else if (balanceFilter === 'zero') {
+      filtered = filtered.filter(s => {
+        const balance = paymentData[s.id]?.balance || 0
+        return toNumber(balance) === 0
+      })
+    }
+
+    setFilteredStudents(filtered)
+  }, [students, selectedFaculty, balanceFilter, paymentData])
 
   if (loading) {
     return (
@@ -821,48 +867,119 @@ export function Student_pay() {
         </svg>
         <h2 className="text-2xl font-bold text-gray-900">Liste des étudiants</h2>
         <span className="ml-auto bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-          {students.length} étudiant{students.length > 1 ? 's' : ''}
+          {filteredStudents.length} étudiant{filteredStudents.length > 1 ? 's' : ''}
         </span>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-        <div className="grid grid-cols-4 gap-4 bg-gray-50 p-4 font-semibold text-gray-700 border-b border-gray-200">
-          <div>Nom et Prénom</div>
-          <div className="text-center">Balance</div>
-          <div>Faculté</div>
-          <div className="text-center">Niveau</div>
-        </div>
-
-        <div className="divide-y divide-gray-200">
-          {students.map((student, index) => (
-            <Link
-              href={`/admin/payment?id=${student.id}`}
-              key={student.id}
-              className={`grid grid-cols-4 gap-4 p-4 items-center transition-all hover:shadow-md ${
-                ROW_COLORS[index % ROW_COLORS.length]
-              }`}
+      {/* Filter Controls */}
+      <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200 space-y-4">
+        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          Filtres
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Faculty Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Faculté</label>
+            <select
+              value={selectedFaculty}
+              onChange={(e) => setSelectedFaculty(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <div>
-                <p className="font-semibold text-gray-900">
-                  {student.last_name} {student.first_name}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">ID: {student.id}</p>
-              </div>
-              <div className="text-center">
-                <StudentBal id={student.id} />
-              </div>
-              <div>
-                <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                  {student.faculty}
-                </span>
-              </div>
-              <div className="text-center">
-                <Filter2 id={student.id} bool />
-              </div>
-            </Link>
-          ))}
+              <option value="">Toutes les facultés</option>
+              {faculties.map(faculty => (
+                <option key={faculty} value={faculty}>{faculty}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Balance Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Solde</label>
+            <select
+              value={balanceFilter}
+              onChange={(e) => setBalanceFilter(e.target.value as 'all' | 'positive' | 'zero')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Tous</option>
+              <option value="positive">Solde Positif</option>
+              <option value="zero">Solde Zéro</option>
+            </select>
+          </div>
+
+          {/* Clear Filters */}
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setSelectedFaculty('')
+                setBalanceFilter('all')
+              }}
+              className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-all"
+            >
+              Réinitialiser les filtres
+            </button>
+          </div>
         </div>
       </div>
+
+      {filteredStudents.length === 0 ? (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+          <svg className="w-12 h-12 text-yellow-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10a4 4 0 018 0" />
+          </svg>
+          <p className="text-yellow-800 font-medium">Aucun étudiant ne correspond aux filtres</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+          <div className="grid grid-cols-4 gap-4 bg-gray-50 p-4 font-semibold text-gray-700 border-b border-gray-200">
+            <div>Nom et Prénom</div>
+            <div className="text-center">Balance</div>
+            <div>Faculté</div>
+            <div className="text-center">Actions</div>
+          </div>
+
+          <div className="divide-y divide-gray-200">
+            {filteredStudents.map((student, index) => (
+              <Link
+                href={`/admin/payment?id=${student.id}`}
+                key={student.id}
+                className={`grid grid-cols-4 gap-4 p-4 items-center transition-all hover:shadow-md ${
+                  ROW_COLORS[index % ROW_COLORS.length]
+                }`}
+              >
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    {student.last_name} {student.first_name}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">ID: {student.id}</p>
+                </div>
+                <div className="text-center">
+                  {paymentData[student.id] ? (
+                    <span className={`font-semibold ${toNumber(paymentData[student.id].balance) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      $ {formatCurrency(paymentData[student.id].balance)} {CURRENCY}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">-</span>
+                  )}
+                </div>
+                <div>
+                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                    {student.faculty}
+                  </span>
+                </div>
+                <div className="text-center">
+                  <svg className="w-5 h-5 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

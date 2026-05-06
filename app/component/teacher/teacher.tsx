@@ -1,11 +1,11 @@
 'use client'
 import { supabase } from "../db";
 import { useState, useEffect } from "react";
-import { exportToCSV, printHTML } from "../export/exportUtils";
+import { exportToCSV, printHTML, generateBulletinHTML } from "../export/exportUtils";
 
 interface TeacherInputProps {
     session: number | string | null 
-    name: string | number
+    name: string | number | any
     matiere: string | null
     year: number | string | null
     id: number
@@ -157,7 +157,7 @@ function RepriseModal({ isOpen, onClose, studentName, matiere, currentScore, rep
 // Reprise Button Component
 interface RepriseButtonProps {
     score: number | null
-    repriseScore: number | null
+    repriseScore: number 
     studentName: string
     matiere: string
     repriseType: 'intra' | 'final' | 'session'
@@ -185,7 +185,7 @@ function RepriseButton({
     const [isModalOpen, setIsModalOpen] = useState(false)
 
     // Show button only if original score is between 50-64 and reprise doesn't exist
-    const shouldShow = score && score >= 50 && score <= 64 && !repriseScore;
+    const shouldShow = score && score >= 50 && score < repriseScore;
 
     const handleSaveReprise = async (value: number) => {
         const field = repriseType === 'intra' || repriseType === 'final' ? 'repri_intra' : repriseType === 'session' ? `note` : 'repri_final5';
@@ -341,7 +341,7 @@ export function TeacherSession({session, name, matiere, id, year, faculty}: Teac
     useEffect(() => {
         const getData = async () => {
             const { data: stud, error: second } = await supabase.from('student')
-                .select('id,last_name,first_name').eq('id', id);
+                .select('id,last_name,first_name,student_code').eq('id', id);
             if (second) console.error(second.message)
             else setFullname(stud)
         }
@@ -351,7 +351,7 @@ export function TeacherSession({session, name, matiere, id, year, faculty}: Teac
     useEffect(() => {
         const getData = async () => {
             const { data: stud, error: second } = await supabase.from('student')
-                .select('id,last_name,first_name').eq('id', id);
+                .select('id,last_name,first_name,student_code').eq('id', id);
             if (second) console.error(second.message)
             else setFullname(stud)
 
@@ -377,14 +377,14 @@ export function TeacherSession({session, name, matiere, id, year, faculty}: Teac
 
         setIsLoading(true);
         try {
-            const { data, error } = await supabase.from('exam')
+            const { data, error } = await supabase.from('exam_1')
                 .select('*')
                 .eq('student_id', id).eq('matiere', matiere).single();
             
             if (data?.matiere !== null) {
                 if (matiere && note<='100' ||matiere && note>='0') {
                     const { error: status_error } = await supabase.from('exam_1')
-                        .insert([{ note, matiere, session, year, faculty, student_id: id }])
+                        .insert([{ note, matiere, session, year, faculty,academic_year:name[0], student_id: id, pass_grade: Number(name.map((p:any)=> p)[1]) }])
                         .select('*')
                         .eq('student_id', id);
                     
@@ -661,7 +661,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
     useEffect(() => {
         const getData = async () => {
             const { data: stud, error: second } = await supabase.from('student')
-                .select('id,last_name,first_name').eq('id', id);
+                .select('id,last_name,first_name,student_code,faculty').eq('id', id);
             if (second) console.error(second.message)
             else setFullname(stud)
         }
@@ -702,7 +702,9 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                 <div className="text-sm mt-2 space-y-1">
                     <p>Année: <span className="font-semibold">{year}</span></p>
                     <p>Session: <span className="font-semibold">{session}</span></p>
-                    <p>Faculté: <span className="font-semibold">{note[0]?.faculty || 'N/A'}</span></p>
+                    <p>Faculté: <span className="font-semibold">{fullname[0]?.faculty || 'N/A'}</span></p>
+                    <p>Code Étudiant: <span className="font-semibold">{fullname[0]?.student_code || 'N/A'}</span></p>
+                    <p>Periode Académique: <span className="font-semibold">{note[0]?.academic_year || 'N/A'}</span></p>
                 </div>
             </div>
 
@@ -712,25 +714,21 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                     <button
                         onClick={() => {
                             const studentName = `${fullname[0]?.last_name || ''} ${fullname[0]?.first_name || ''}`
-                            const title = `Notes - ${studentName} - Session ${session} - Année ${year}`
-                            const html = `
-                                <h2>${title}</h2>
-                                <div class="info">
-                                    <p><strong>Faculté:</strong> ${note[0]?.faculty || 'N/A'}</p>
-                                    <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
-                                </div>
+                            const tableHTML = `
                                 <table>
-                                    <thead><tr><th>Matière</th><th>Note Session</th><th>Reprise</th><th>Moyenne</th></tr></thead>
+                                    <thead><tr><th><strong>Matière</strong></th><th><strong>Note Session</strong></th></tr></thead>
                                     <tbody>
                                         ${note.map((n: any) => {
+                                            const not= n.note < n.pass_grade ? `<strong>${n.note}</strong>` : n.note
+                                             const matiere= n.note < n.pass_grade ? `<strong>${n.matiere}</strong>` : n.matiere
                                             const avg = ((n.note || 0) / 10).toFixed(2)
-                                            return `<tr><td>${n.matiere}</td><td>${n.note || '-'}</td><td>${n.repri_note || '-'}</td><td>${avg}</td></tr>`
+                                            return `<tr><td>${matiere}</td><td>${not || '-'}</td></tr>`
                                         }).join('')}
-                                        <tr class="total-row"><td>Total</td><td>${totalSession}</td><td>-</td><td>${((totalSession) / (note.length * 10)).toFixed(2)}</td></tr>
                                     </tbody>
                                 </table>
                             `
-                            printHTML(title, html)
+                            const html = generateBulletinHTML(studentName, fullname[0]?.faculty || 'N/A', fullname[0]?.student_code || '', note[0]?.academic_year || '', tableHTML, `BULLETIN - Session ${session}`,note[0]?.year || '')
+                            printHTML(`Bulletin - ${studentName}`, html)
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium"
                     >
@@ -769,8 +767,9 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                     <thead><tr><th>Matière</th><th>Session ${session}</th><th>Moyenne</th></tr></thead>
                                     <tbody>
                                         ${note.map((n: any) => {
+                                            const not= n.note < n.pass_grade ? `<strong>${n.note}</strong>` : n.note
                                             const avg =  ((n.note) / (10)).toFixed(2)
-                                            return `<tr><td>${n.matiere}</td><td>${n.note || '-'}</td><td>${avg}</td></tr>`
+                                            return `<tr><td>${n.matiere}</td><td>${not}</td><td>${avg}</td></tr>`
                                         }).join('')}
                                         <tr class="total-row"><td>Total</td><td>${totalSession}</td><td>Total Moyenne</td><td>${((totalSession + totalFinal) / (note.length * 10)).toFixed(2)}</td></tr>
                                     </tbody>
@@ -797,7 +796,6 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                 {role ==='admin' || role === 'editor' || role === 'administration' || role === 'prof' ? (
                                     <th className="px-4 py-3 text-center">Reprise Session I</th>
                                 ) : null}
-                                <th className="px-4 py-3 text-center">Moyenne</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -827,14 +825,14 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                         </td>
                                             {role ==='admin' || role === 'editor' || role === 'administration' || role === 'prof' ? (
                                                 <td className="px-4 py-3 text-center">
-                                               {not.repri_note ? (
+                                               {not.note > not.pass_grade ? (
                                                     <span className="inline-block bg-orange-100 text-orange-900 font-semibold px-3 py-1 rounded-full">
                                                         {not.repri_note}
                                                     </span>
                                                 ) : (
-                                                    <RepriseButton
+                                                     <RepriseButton
                                                     score={not.note}
-                                                    repriseScore={not.repri_note}
+                                                    repriseScore={not.pass_grade}
                                                     studentName={`${fullname[0]?.last_name} ${fullname[0]?.first_name}`}
                                                     matiere={not.matiere}
                                                     repriseType="session"
@@ -844,7 +842,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                                     year={not.year}
                                                     tabl="exam_1"
                                                     onSuccess={handleRepriseSuccess}
-                                                />
+                                                />   
                                             )} </td>): null}
                                        
                                         {/* <td className={`px-4 py-3 text-center`}>
@@ -862,10 +860,6 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                 {(role ==='admin' || role === 'editor' || role === 'administration' || role === 'prof') && (
                                     <td className="px-4 py-3 text-center">-</td>
                                 )}
-                                {/* <td className="px-4 py-3 text-center">Moyenne</td> */}
-                                <td className="px-4 py-3 text-center">
-                                    {((totalSession + totalFinal) / (note.length * 10)).toFixed(2)}
-                                </td>
                             </tr>
                         </tbody>
                     </table>

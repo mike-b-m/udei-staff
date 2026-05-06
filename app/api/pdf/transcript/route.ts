@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getGradeInfo, calculateGPA, type GradeEntry } from '@/app/lib/gpa'
+import { createServerClient } from '@supabase/ssr'
+import {cookies} from "next/headers"
 
 export async function GET(request: NextRequest) {
   const studentId = request.nextUrl.searchParams.get('student_id')
@@ -8,14 +10,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'student_id required' }, { status: 400 })
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!!
   if (!supabaseUrl || !supabaseServiceKey) {
-    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    return NextResponse.json({ error: 'Server configuration error' ,supabaseServiceKey }, { status: 500 })
   }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
+  const cookieStore = await cookies()
+  const supabase = createServerClient(supabaseUrl,supabaseServiceKey,{
+    cookies: {
+       getAll() { return cookieStore.getAll() },
+          setAll(cookiesToSet) { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) },
+    //   get:(name)=>
+    //     cookies().get(name)?.value,
+    },
+  })
+  //  const supabase = createClient(supabaseUrl, supabaseServiceKey)
   const [studentRes, gradesRes, statusRes, programRes] = await Promise.all([
     supabase.from('student').select('*').eq('id', studentId).single(),
     supabase.from('exam').select('*').eq('student_id', studentId),

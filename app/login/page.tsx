@@ -2,6 +2,7 @@
 import { supabase } from "@/app//component/db";
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image";
 
 export default function LogIn() {
   const router = useRouter()
@@ -121,13 +122,14 @@ export default function LogIn() {
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-r from-blue-600 to-blue-500 rounded-2xl mb-4 shadow-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="white" className="w-8 h-8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17s4.5 10.747 10 10.747c5.5 0 10-4.998 10-10.747S17.5 6.253 12 6.253Z" />
-            </svg>
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src="/image/icon.png" alt="UDEI Logo" width={120} height={120} className="h-24 w-24 object-contain" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">UDEI Admin</h1>
-          <p className="text-gray-600">Système de Gestion Académique</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Université d'Études Internationales
+          </h1>
+          <p className="text-lg font-semibold text-gray-700 mb-1">UDEI</p>
+          <p className="text-gray-600">Connexion au portail académique</p>
         </div>
 
         {/* Login Card */}
