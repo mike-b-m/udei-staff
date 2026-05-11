@@ -663,9 +663,13 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
         const getData = async () => {
             const { data: stud, error: second } = await supabase.from('student')
                 .select('id,last_name,first_name,student_code,faculty').eq('id', id);
+                if (!stud || stud.length === 0) {
+  console.error("Student not found");
+  return; // or handle appropriately
+}
                 const { data: st, error: se } = await supabase.from('faculty_price')
                 .select('*').eq('faculty', stud[0]?.faculty);
-            if (second) console.error(second.message)
+            if (second) console.error(second)
             else setFullname(stud)
         if (se) console.error(se.message)
             else setF(st)
