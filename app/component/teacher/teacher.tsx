@@ -188,7 +188,7 @@ function RepriseButton({
     const shouldShow = score && score >= 50 && score < repriseScore;
 
     const handleSaveReprise = async (value: number) => {
-        const field = repriseType === 'intra' || repriseType === 'final' ? 'repri_intra' : repriseType === 'session' ? `note` : 'repri_final5';
+        const field = repriseType === 'intra' || repriseType === 'final' ? 'repri_intra' : repriseType === 'session' ? `repri_note` : 'repri_final5';
         
         const { error } = await supabase
             .from(`${tabl}`)
@@ -644,6 +644,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
     const [selectedMatiere, setSelectedMatiere] = useState<string | null>(null)
     const [refreshTrigger, setRefreshTrigger] = useState(0)
     const [role, setRole] = useState<string | null>(null)
+    const [f,setF] =useState<any[]>([])
 
      useEffect(() => {
         const getData = async () => {
@@ -662,8 +663,12 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
         const getData = async () => {
             const { data: stud, error: second } = await supabase.from('student')
                 .select('id,last_name,first_name,student_code,faculty').eq('id', id);
+                const { data: st, error: se } = await supabase.from('faculty_price')
+                .select('*').eq('faculty', stud[0]?.faculty);
             if (second) console.error(second.message)
             else setFullname(stud)
+        if (se) console.error(se.message)
+            else setF(st)
         }
         getData()
     }, [id])
@@ -716,18 +721,19 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                             const studentName = `${fullname[0]?.last_name || ''} ${fullname[0]?.first_name || ''}`
                             const tableHTML = `
                                 <table>
-                                    <thead><tr><th><strong>Matière</strong></th><th><strong>Note Session</strong></th></tr></thead>
+                                    <thead><tr><th><strong>Matière</strong></th><th><strong>Session ordinaire</strong></th><th><strong>Session extraordinaire</strong></th></tr></thead>
                                     <tbody>
                                         ${note.map((n: any) => {
                                             const not= n.note < n.pass_grade ? `<strong>${n.note}</strong>` : n.note
                                              const matiere= n.note < n.pass_grade ? `<strong>${n.matiere}</strong>` : n.matiere
+                                             const reprise= n.repri_note < n.pass_grade ? `<strong>${n.repri_note}</strong>` : n.repri_note
                                             const avg = ((n.note || 0) / 10).toFixed(2)
-                                            return `<tr><td>${matiere}</td><td>${not || '-'}</td></tr>`
+                                            return `<tr><td>${matiere}</td><td>${not || '-'}</td><td>${reprise || '-'}</td></tr>`
                                         }).join('')}
                                     </tbody>
                                 </table>
                             `
-                            const html = generateBulletinHTML(studentName, fullname[0]?.faculty || 'N/A', fullname[0]?.student_code || '', note[0]?.academic_year || '', tableHTML, `BULLETIN - Session ${session}`,note[0]?.year || '')
+                            const html = generateBulletinHTML(studentName, fullname[0]?.faculty || 'N/A', fullname[0]?.student_code || '', note[0]?.academic_year || '', tableHTML, `BULLETIN - Session ${session}`,note[0]?.year || '',f[0]?.categorie,f[0]?.symbol)
                             printHTML(`Bulletin - ${studentName}`, html)
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium"
@@ -793,20 +799,26 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                             <tr className={TABLE_HEADER_CLASS}>
                                 <th className="px-4 py-3 text-left">Matière</th>
                                 <th className="px-4 py-3 text-center">Session {session}</th>
+                                <th className="px-4 py-3 text-center">Reprise {session}</th>
                                 {role ==='admin' || role === 'editor' || role === 'administration' || role === 'prof' ? (
-                                    <th className="px-4 py-3 text-center">Reprise Session I</th>
+                                    <th className="px-4 py-3 text-center"></th>
                                 ) : null}
                             </tr>
                         </thead>
                         <tbody>
                             {note.map((not, index) => {
-                                const moyenne = ((not.note) / (10)).toFixed(2);
+                                const moyenne = not.pass_note
                                 const moyenneNum = parseFloat(moyenne);
                                 let statusColor = 'bg-red-50';
                                 let statusText = 'text-red-700';
-                                if (moyenneNum >= 7) {
+                                let statusColo = 'bg-red-50';
+                                let statusTex = 'text-red-700';
+                                if (not.pass_note >= not.pass_grade) {
                                     statusColor = 'bg-green-50';
-                                    statusText = 'text-green-700';
+                                    statusText = 'text-green-700';}
+                                if (not.repri_note >= not.pass_grade) {
+                                    statusColo = 'bg-green-50';
+                                    statusTex = 'text-green-700';
                                 } else if (moyenneNum >= 5) {
                                     statusColor = 'bg-amber-50';
                                     statusText = 'text-amber-700';
@@ -817,10 +829,15 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                         key={not.id}
                                         className={`${rowColors[index % rowColors.length]} border-t border-gray-200 transition hover:shadow-md`}
                                     >
-                                        <td className="px-4 py-3 font-medium text-gray-800">{not.matiere}</td>
+                                        <td className={`px-4 py-3 font-medium text-gray-800`}>{not.matiere}</td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full">
+                                            <span className={` ${statusText} ${statusColor} inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full`}>
                                                 {not.note || '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={` ${statusTex} ${statusColo} inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full`}>
+                                                {not.repri_note || '-'}
                                             </span>
                                         </td>
                                             {role ==='admin' || role === 'editor' || role === 'administration' || role === 'prof' ? (
@@ -854,13 +871,13 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                 );
                             })}
                             {/* Totals Row */}
-                            <tr className="bg-blue-600 text-white font-bold">
+                            {/* <tr className="bg-blue-600 text-white font-bold">
                                 <td className="px-4 py-3">Total</td>
                                 <td className="px-4 py-3 text-center">{totalSession}</td>
                                 {(role ==='admin' || role === 'editor' || role === 'administration' || role === 'prof') && (
                                     <td className="px-4 py-3 text-center">-</td>
                                 )}
-                            </tr>
+                            </tr> */}
                         </tbody>
                     </table>
                 </div>
