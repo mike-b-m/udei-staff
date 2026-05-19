@@ -348,6 +348,7 @@ export default function Pay({ id, history, balance, discount,price }: PaymentPro
         .from('student_payment')
         .update({
           discount: studentdiscount,
+          balance: numBalance - studentdiscount
         })
         .eq('id', id)
 
@@ -1172,7 +1173,7 @@ export function Payments() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg border-2 border-green-200 shadow-md p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Prix/An</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">{formatCurrency(currentPayment.price)}</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">{formatCurrency(currentPayment.price-currentPayment.discount)}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
@@ -1184,7 +1185,7 @@ export function Payments() {
 
             <div className="bg-white rounded-lg border-2 border-blue-200 shadow-md p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Solde actuel</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{formatCurrency(currentPayment.balance)}</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{currentPayment.price===currentPayment.balance ? formatCurrency(currentPayment.balance-currentPayment.discount) : formatCurrency(currentPayment.balance)}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
