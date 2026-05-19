@@ -261,21 +261,21 @@ function PaymentSection({ paymentRecord }: { paymentRecord: any }) {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                     <div className="bg-white/15 rounded-lg p-3 text-center">
                         <p className="text-green-100 text-xs font-medium">Frais Total</p>
-                        <p className="text-lg font-bold">{Number(totalPrice).toLocaleString()} HTG</p>
+                        <p className="text-lg font-bold">$ {Number(totalPrice-discount).toLocaleString()} HT</p>
                     </div>
                     {discount > 0 && (
                         <div className="bg-white/15 rounded-lg p-3 text-center">
                             <p className="text-green-100 text-xs font-medium">Remise</p>
-                            <p className="text-lg font-bold">-{Number(discount).toLocaleString()} HTG</p>
+                            <p className="text-lg font-bold">$ -{Number(discount).toLocaleString()} HT</p>
                         </div>
                     )}
                     <div className="bg-white/15 rounded-lg p-3 text-center">
                         <p className="text-green-100 text-xs font-medium">Total Payé</p>
-                        <p className="text-lg font-bold">{Number(totalPaid).toLocaleString()} HTG</p>
+                        <p className="text-lg font-bold">$ {Number(totalPaid).toLocaleString()} HT</p>
                     </div>
                     <div className="bg-white/15 rounded-lg p-3 text-center">
                         <p className="text-green-100 text-xs font-medium">Solde Restant</p>
-                        <p className="text-lg font-bold">{Number(currentBalance).toLocaleString()} HTG</p>
+                        <p className="text-lg font-bold">$ {Number(currentBalance).toLocaleString()} HT</p>
                     </div>
                 </div>
             </div>
@@ -314,11 +314,11 @@ function PaymentSection({ paymentRecord }: { paymentRecord: any }) {
                                         </td>
                                         <td className="py-3 px-4 text-right">
                                             <span className="inline-flex items-center gap-1 text-green-700 font-semibold bg-green-50 px-2 py-0.5 rounded-full">
-                                                + {Number(entry.amount || 0).toLocaleString()} HTG
+                                                + {Number(entry.amount || 0).toLocaleString()} $HT
                                             </span>
                                         </td>
                                         <td className="py-3 px-4 text-right font-medium text-gray-700">
-                                            {Number(entry.balance || 0).toLocaleString()} HTG
+                                           $ {Number(entry.balance || 0).toLocaleString()} HT
                                         </td>
                                     </tr>
                                 ))}
@@ -628,7 +628,7 @@ export default function Student_dashboard(){
                                 <div className="text-2xl font-bold text-green-600">{totalPaid.toLocaleString()} HTG</div>
                                 <div className="text-xs text-gray-400 mt-2">{paymentCount} paiement(s)</div>
                                 {paymentRecord?.balance > 0 && (
-                                    <div className="text-xs text-orange-500 mt-1">Solde: {Number(paymentRecord.balance).toLocaleString()} HTG</div>
+                                    <div className="text-xs text-orange-500 mt-1">Solde: $ {Number(paymentRecord.balance).toLocaleString()} HT</div>
                                 )}
                             </div>
 
