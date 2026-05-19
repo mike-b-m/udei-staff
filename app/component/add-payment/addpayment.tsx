@@ -517,6 +517,8 @@ export function Price() {
   const [showForm, setShowForm] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [toast, setToast] = useState<Toast | null>(null)
+  const [cate,setCate] = useState('')
+  const [symbol,setSymbol] = useState('')
 
   useEffect(() => {
     fetchFaculties()
@@ -550,7 +552,7 @@ export function Price() {
 
     setLoading(true)
     try {
-      const { error } = await supabase.from('faculty_price').insert([{ faculty, price }])
+      const { error } = await supabase.from('faculty_price').insert([{ faculty, price ,categorie:cate}])
       if (error) throw error
 
       setToast({
@@ -561,6 +563,7 @@ export function Price() {
 
       setFaculty('')
       setPrice(0)
+      setCate('')
       setShowForm(false)
       setErrors({})
       fetchFaculties()
@@ -639,6 +642,29 @@ export function Price() {
                   placeholder="0.00"
                 />
                 {errors.price && <p className="text-red-600 text-sm mt-1">{errors.price}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Categorie (Sciences apliquées, Sciences de la santé, etc.)
+                </label>
+                <input
+                  type="text"
+                  value={cate}
+                  onChange={(e) => {
+                    setCate(e.target.value)
+                    if (errors.cate) setErrors({ ...errors, cate: '' })
+                  }}
+                  step="0.01"
+                  min="0"
+                  className={`w-full px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all ${
+                    errors.cate
+                      ? 'border-red-500 bg-red-50 focus:ring-red-500/50'
+                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500/50'
+                  }`}
+                  placeholder="Sciences apliquées, Sciences de la santé, etc."
+                />
+                {errors.cate && <p className="text-red-600 text-sm mt-1">{errors.cate}</p>}
               </div>
 
               <div className="flex gap-3">

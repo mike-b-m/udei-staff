@@ -16,6 +16,7 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
+          // Re-instantiate the response with the modified request headers
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -25,19 +26,19 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Do not remove this — it refreshes the auth token
+  // IMPORTANT: This refreshes the auth token and triggers setAll if needed
   const { data: { user } } = await supabase.auth.getUser()
-
   const pathname = request.nextUrl.pathname
 
-  // Not logged in: redirect to login (except login page itself)
-  if (!user && !pathname.startsWith('/login')  && !pathname.startsWith('/result')) {
+  // 1. NOT LOGGED IN: Redirect to login
+  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/result')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
+    // FIX: Merge cookies from supabaseResponse into the redirect response
+    return NextResponse.redirect(url, { headers: supabaseResponse.headers })
   }
 
-  // Logged in on login page: redirect to dashboard
+  // 2. LOGGED IN ON LOGIN PAGE: Redirect to dashboard based on role
   if (user && pathname.startsWith('/login')) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -47,10 +48,11 @@ export async function middleware(request: NextRequest) {
 
     const url = request.nextUrl.clone()
     url.pathname = profile?.role === 'student' ? '/student' : '/admin'
-    return NextResponse.redirect(url)
+    // FIX: Merge cookies from supabaseResponse into the redirect response
+    return NextResponse.redirect(url, { headers: supabaseResponse.headers })
   }
 
-  // Role-based route protection for /admin
+  // 3. ROLE PROTECTION FOR /ADMIN
   if (user && pathname.startsWith('/admin') && !pathname.startsWith('/result')) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -62,7 +64,8 @@ export async function middleware(request: NextRequest) {
     if (!profile || !staffRoles.includes(profile.role)) {
       const url = request.nextUrl.clone()
       url.pathname = '/student'
-      return NextResponse.redirect(url)
+      // FIX: Merge cookies from supabaseResponse into the redirect response
+      return NextResponse.redirect(url, { headers: supabaseResponse.headers })
     }
   }
 
@@ -71,7 +74,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all routes except static assets
     '/((?!_next/static|_next/image|favicon.ico|public|image).*)',
   ],
 }

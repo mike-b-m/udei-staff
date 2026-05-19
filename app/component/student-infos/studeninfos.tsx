@@ -296,7 +296,7 @@ interface StudentDisplayContentProps {
 }
 
 // ===== EXPORT HELPERS FOR STUDENT INFO =====
-function getStudentPersonalAndFamilyHTML(student: any) {
+function getStudentPersonalAndFamilyHTML(student: any, photoUrl?: string) {
   return `
     <!DOCTYPE html>
     <html lang="fr">
@@ -305,173 +305,439 @@ function getStudentPersonalAndFamilyHTML(student: any) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Fiche Étudiant - ${student.last_name} ${student.first_name}</title>
       <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
           margin: 0;
-          padding: 20px;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        
+        body {
+          font-family: 'Arial', 'Helvetica', sans-serif;
           background: white;
+          color: #333;
+          line-height: 1.4;
         }
+        
+        .container {
+          max-width: 850px;
+          margin: 0 auto;
+          padding: 15px;
+        }
+        
+        /* ===== HEADER SECTION ===== */
         .header {
+          border-bottom: 4px solid #d32f2f;
+          padding-bottom: 12px;
+          margin-bottom: 8px;
           text-align: center;
-          margin-bottom: 30px;
-          border-bottom: 3px solid #d32f2f;
-          padding-bottom: 20px;
         }
+        
         .logo-section {
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 10px;
+          gap: 10px;
+          margin-bottom: 8px;
         }
+        
         .logo {
-          width: 60px;
-          height: 60px;
-          margin-right: 20px;
-        }
-        .university-name {
+            width: 40%;
+            height: auto;
+            margin-right: 15px;
+          }
+        
+        .university-text {
           text-align: center;
         }
-        .university-name h1 {
-          margin: 0;
-          color: #1b5e20;
-          font-size: 16px;
-          font-weight: bold;
-        }
-        .university-name h2 {
-          margin: 5px 0 0 0;
-          color: #000;
-          font-size: 20px;
-          font-weight: bold;
-        }
-        .red-bar {
-          background-color: #d32f2f;
-          height: 8px;
-          margin: 10px 0;
-        }
-        .title {
-          font-size: 24px;
-          font-weight: bold;
-          color: #000;
-          margin: 20px 0;
-          text-align: center;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 15px 0;
-        }
-        th {
-          background-color: #f5f5f5;
-          border: 1px solid #ddd;
-          padding: 10px;
-          text-align: left;
-          font-weight: bold;
-        }
-        td {
-          border: 1px solid #ddd;
-          padding: 10px;
-        }
-        tr:nth-child(even) {
-          background-color: #f9f9f9;
-        }
-        .section-title {
+        
+        .university-text h1 {
           font-size: 14px;
           font-weight: bold;
           color: #1b5e20;
-          margin-top: 20px;
-          margin-bottom: 10px;
-          border-left: 4px solid #d32f2f;
-          padding-left: 10px;
+          letter-spacing: 1px;
+          margin: 0;
         }
-        .info {
-          margin: 10px 0;
+        
+        .university-text h2 {
+          font-size: 18px;
+          font-weight: bold;
+          color: #000;
+          margin: 2px 0 0 0;
+        }
+        
+        .red-bar {
+          background-color: #d32f2f;
+          height: 6px;
+          width: 100%;
+          margin-top: 8px;
+        }
+        
+        /* ===== TITLE ===== */
+        .page-title {
+          font-size: 22px;
+          font-weight: bold;
+          text-align: center;
+          color: #000;
+          margin: 16px 0 12px 0;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        /* ===== EMISSION DATE ===== */
+        .emission-date {
+          text-align: right;
+          font-size: 11px;
           color: #666;
+          margin-bottom: 16px;
+          padding-right: 10px;
+        }
+        
+        /* ===== CONTENT SECTION ===== */
+        .content {
+          margin-bottom: 20px;
+        }
+        
+        /* Two-column layout: Photo + Info */
+        .section-personal {
+          display: flex;
+          gap: 20px;
+          margin-bottom: 20px;
+          align-items: flex-start;
+        }
+        
+        .photo-box {
+          flex: 0 0 140px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #ccc;
+          background-color: #f5f5f5;
+          aspect-ratio: 1;
+          overflow: hidden;
+        }
+        
+        .photo-box img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .photo-placeholder {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #e8e8e8;
+          font-size: 10px;
+          color: #999;
+        }
+        
+        .info-box {
+          flex: 1;
+        }
+        
+        .section-title {
+          font-size: 13px;
+          font-weight: bold;
+          color: #1b5e20;
+          margin: 0 0 10px 0;
+          border-bottom: 2px solid #d32f2f;
+          padding-bottom: 6px;
+        }
+        
+        .info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px 12px;
           font-size: 12px;
         }
-        .footer {
-          margin-top: 30px;
-          padding-top: 15px;
-          border-top: 1px solid #ddd;
+        
+        .info-row {
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .info-label {
+          font-weight: bold;
+          color: #1b5e20;
           font-size: 11px;
-          color: #999;
+          margin-bottom: 2px;
+        }
+        
+        .info-value {
+          color: #333;
+          font-size: 12px;
+          min-height: 16px;
+        }
+        
+        /* ===== FAMILY SECTIONS ===== */
+        .section-family {
+          margin-bottom: 1px;
+        }
+        
+        .section-header {
+          font-size: 13px;
+          font-weight: bold;
+          color: #1b5e20;
+          margin: 16px 0 8px 0;
+          border-bottom: 2px solid #d32f2f;
+          padding-bottom: 6px;
+        }
+        
+        .info-columns {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 1fr;
+          gap: 8px 12px;
+        }
+        
+        .info-field {
+          font-size: 11px;
+        }
+        
+        .field-label {
+          font-weight: bold;
+          color: #1b5e20;
+          margin-bottom: 2px;
+        }
+        
+        .field-value {
+          color: #333;
+          padding-left: 8px;
+        }
+        
+        /* ===== SIGNATURE SECTION ===== */
+        .signature-section {
+          margin-top: 0px;
+          margin-bottom: 20px;
+        }
+        
+        .signature-line {
+          display: flex;
+          align-items: flex-end;
+          justify-content: flex-end;
+          gap: 6px;
+        }
+        
+        .signature-box {
+          text-align: center;
+          width: 160px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .signature-space {
+          border-top: 1px solid #000;
+          width: 160px;
+          height: 6px;
+        }
+        
+        .signature-label {
+          font-size: 12px;
+          font-weight: bold;
+          color: #000;
           text-align: center;
         }
+        
+        /* ===== FOOTER ===== */
+        .footer {
+          border-top: 1px solid #ccc;
+          padding-top: 12px;
+          margin-top: 20px;
+          text-align: center;
+          font-size: 10px;
+          color: #666;
+        }
+        
+        .footer p {
+          margin: 3px 0;
+        }
+        
+        /* ===== PRINT STYLES ===== */
         @media print {
-          body { margin: 0; padding: 0; }
-          .red-bar { page-break-after: avoid; }
+          body {
+            margin: 0;
+            padding: 0;
+          }
+          .container {
+            max-width: 100%;
+            padding: 8px;
+          }
+          .signature-section {
+            page-break-inside: avoid;
+          }
         }
       </style>
     </head>
     <body>
-      <!-- Header -->
-      <div class="header">
-        <div class="logo-section">
-          <img src="/image/icon.png" alt="UDEI Logo" class="logo">
-          <div class="university-name">
-            <h1>UNIVERSITÉ D'ÉTUDES INTERNATIONALES</h1>
-            <h2>UDEI</h2>
+      <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+          <div class="logo-section">
+            <img src="/image/h.png" alt="UDEI Logo" class="logo">
+            <div class="university-text">
+            </div>
+          </div>
+          <div class="red-bar"></div>
+        </div>
+        
+        <!-- PAGE TITLE -->
+        <div class="page-title">Fiche Étudiant</div>
+        
+        <!-- EMISSION DATE -->
+        <div class="emission-date">
+          <strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}
+        </div>
+        
+        <!-- CONTENT -->
+        <div class="content">
+          <!-- PERSONAL INFORMATION WITH PHOTO -->
+          <div class="section-personal">
+            <!-- PHOTO -->
+            <div class="photo-box">
+              ${photoUrl 
+                ? `<img src="${photoUrl}" alt="Photo étudiant">`
+                : '<div class="photo-placeholder">Pas de photo</div>'
+              }
+            </div>
+            
+            <!-- PERSONAL INFO -->
+            <div class="info-box">
+              <div class="section-title">Informations Personnelles</div>
+              <div class="info-grid">
+                <div class="info-row">
+                  <span class="info-label">Nom:</span>
+                  <span class="info-value">${student.last_name || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Prénom:</span>
+                  <span class="info-value">${student.first_name || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Code Étudiant:</span>
+                  <span class="info-value">${student.student_code || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Faculté:</span>
+                  <span class="info-value">${student.faculty || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Année Académique:</span>
+                  <span class="info-value">${student.academy || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Email:</span>
+                  <span class="info-value">${student.email || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Téléphone:</span>
+                  <span class="info-value">${student.phone_number || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Sexe:</span>
+                  <span class="info-value">${student.sex || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Statut Matrimonial:</span>
+                  <span class="info-value">${student.marital_status || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Date de Naissance:</span>
+                  <span class="info-value">${student.date_birth || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Lieu de Naissance:</span>
+                  <span class="info-value">${student.place_of_birth || '—'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">NIF/CIN:</span>
+                  <span class="info-value">${student.nif_cin || '—'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- ADRESSE (full width) -->
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 11px; font-weight: bold; color: #1b5e20; margin-bottom: 4px;">Adresse:</div>
+            <div style="font-size: 12px; color: #333; padding-left: 8px;">${student.adress || '—'}</div>
+          </div>
+          
+          <!-- FAMILY INFORMATION - MOTHER -->
+          <div class="section-family">
+            <div class="section-header">Informations Familiales — Mère</div>
+            <div class="info-columns">
+              <div class="info-field">
+                <div class="field-label">Nom:</div>
+                <div class="field-value">${student.mother_name || '—'}</div>
+              </div>
+              <div class="info-field">
+                <div class="field-label">Lieu de Naissance:</div>
+                <div class="field-value">${student.mother_birth || '—'}</div>
+              </div>
+              <div class="info-field">
+                <div class="field-label">Domicile:</div>
+                <div class="field-value">${student.mother_residence || '—'}</div>
+              </div>
+              <div class="info-field">
+                <div class="field-label">Téléphone:</div>
+                <div class="field-value">${student.mother_phone || '—'}</div>
+              </div>
+              <div class="info-field">
+                <div class="field-label">Profession:</div>
+                <div class="field-value">${student.mother_profesion || '—'}</div>
+              </div>
+              <div class="info-field">
+              </div>
+            </div>
+          </div>
+          
+          <!-- FAMILY INFORMATION - FATHER -->
+          <div class="section-family">
+            <div class="section-header">Informations Familiales — Père</div>
+            <div class="info-columns">
+              <div class="info-field">
+                <div class="field-label">Nom:</div>
+                <div class="field-value">${student.father_name || '—'}</div>
+              </div>
+              <div class="info-field">
+                <div class="field-label">Lieu de Naissance:</div>
+                <div class="field-value">${student.father_birth || '—'}</div>
+              </div>
+              <div class="info-field">
+                <div class="field-label">Domicile:</div>
+                <div class="field-value">${student.father_residence || '—'}</div>
+              </div>
+              <div class="info-field">
+                <div class="field-label">Téléphone:</div>
+                <div class="field-value">${student.father_phone || '—'}</div>
+              </div>
+              <div class="info-field">
+                <div class="field-label">Profession:</div>
+                <div class="field-value">${student.father_profesion || '—'}</div>
+              </div>
+              <div class="info-field">
+              </div>
+            </div>
           </div>
         </div>
-        <div class="red-bar"></div>
-      </div>
-
-      <!-- Title -->
-      <div class="title">Fiche Étudiant</div>
-
-      <!-- Date and Info -->
-      <div class="info">
-        <p><strong>Date d'émission:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
-        <p><strong>Généré par:</strong> Système de Gestion Académique UDEI</p>
-      </div>
-
-      <!-- Personal Information -->
-      <div class="section-title">📋 Informations Personnelles</div>
-      <table>
-        <tbody>
-          <tr><td width="30%"><strong>Nom</strong></td><td>${student.last_name || '—'}</td></tr>
-          <tr><td><strong>Prénom</strong></td><td>${student.first_name || '—'}</td></tr>
-          <tr><td><strong>Code Étudiant</strong></td><td>${student.student_code || '—'}</td></tr>
-          <tr><td><strong>Année Académique</strong></td><td>${student.academy || '—'}</td></tr>
-          <tr><td><strong>Faculté</strong></td><td>${student.faculty || '—'}</td></tr>
-          <tr><td><strong>Email</strong></td><td>${student.email || '—'}</td></tr>
-          <tr><td><strong>Téléphone</strong></td><td>${student.phone_number || '—'}</td></tr>
-          <tr><td><strong>Sexe</strong></td><td>${student.sex || '—'}</td></tr>
-          <tr><td><strong>Statut Matrimonial</strong></td><td>${student.marital_status || '—'}</td></tr>
-          <tr><td><strong>Date de Naissance</strong></td><td>${student.date_birth || '—'}</td></tr>
-          <tr><td><strong>Lieu de Naissance</strong></td><td>${student.place_of_birth || '—'}</td></tr>
-          <tr><td><strong>NIF/CIN</strong></td><td>${student.nif_cin || '—'}</td></tr>
-          <tr><td><strong>Adresse</strong></td><td>${student.adress || '—'}</td></tr>
-        </tbody>
-      </table>
-
-      <!-- Family Information - Mother -->
-      <div class="section-title">👩 Informations Familiales — Mère</div>
-      <table>
-        <tbody>
-          <tr><td width="30%"><strong>Nom</strong></td><td>${student.mother_name || '—'}</td></tr>
-          <tr><td><strong>Lieu de Naissance</strong></td><td>${student.mother_birth || '—'}</td></tr>
-          <tr><td><strong>Domicile</strong></td><td>${student.mother_residence || '—'}</td></tr>
-          <tr><td><strong>Téléphone</strong></td><td>${student.mother_phone || '—'}</td></tr>
-          <tr><td><strong>Profession</strong></td><td>${student.mother_profesion || '—'}</td></tr>
-        </tbody>
-      </table>
-
-      <!-- Family Information - Father -->
-      <div class="section-title">👨 Informations Familiales — Père</div>
-      <table>
-        <tbody>
-          <tr><td width="30%"><strong>Nom</strong></td><td>${student.father_name || '—'}</td></tr>
-          <tr><td><strong>Lieu de Naissance</strong></td><td>${student.father_birth || '—'}</td></tr>
-          <tr><td><strong>Domicile</strong></td><td>${student.father_residence || '—'}</td></tr>
-          <tr><td><strong>Téléphone</strong></td><td>${student.father_phone || '—'}</td></tr>
-          <tr><td><strong>Profession</strong></td><td>${student.father_profesion || '—'}</td></tr>
-        </tbody>
-      </table>
-
-      <!-- Footer -->
-      <div class="footer">
-        <p>© 2026 Université d'Études Internationales d'Haïti (UDEI) | Système de Gestion Académique</p>
-        <p>Tél: 48-809-772 | Email: udelformationuniversitaire@gmail.com</p>
+        
+        <!-- SIGNATURE SECTION -->
+        <div class="signature-section">
+          <div class="signature-line">
+            <div class="signature-box">
+              <div class="signature-label">Signature du postulant</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- FOOTER -->
+        <div class="footer">
+          <p>© 2026 Université d'Études Internationales d'Haïti (UDEI) | Système de Gestion Académique</p>
+          <p>Tél: 48-809-772 | Email: udelformationuniversitaire@gmail.com</p>
+        </div>
       </div>
     </body>
     </html>
@@ -605,7 +871,7 @@ function StudentDisplayContent({
   const [photoError, setPhotoError] = useState<string | null>(null)
 
   const handleExportPrint = () => {
-    printHTML(`Fiche ${student.last_name} ${student.first_name}`, getStudentPersonalAndFamilyHTML(student))
+    printHTML(`Fiche ${student.last_name} ${student.first_name}`, getStudentPersonalAndFamilyHTML(student,student.photo_url))
   }
   const handleExportPDF = handleExportPrint // PDF via print dialog (Save as PDF)
   const handleExportExcel = () => exportStudentCSV(student)
