@@ -817,7 +817,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                 let statusText = 'text-red-700';
                                 let statusColo = 'bg-red-50';
                                 let statusTex = 'text-red-700';
-                                if (not.pass_note >= not.pass_grade) {
+                                if (not.note >= not.pass_grade) {
                                     statusColor = 'bg-green-50';
                                     statusText = 'text-green-700';}
                                 if (not.repri_note >= not.pass_grade) {
@@ -835,7 +835,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                     >
                                         <td className={`px-4 py-3 font-medium text-gray-800`}>{not.matiere}</td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className={` ${statusText} ${statusColor} inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full`}>
+                                            <span className={` ${not.note >= not.pass_grade ? 'bg-green-50 text-green-700':'bg-red-50 text-red-700'} inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full`}>
                                                 {not.note || '-'}
                                             </span>
                                         </td>
