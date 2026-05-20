@@ -730,7 +730,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                         ${note.map((n: any) => {
                                             const not= n.note < n.pass_grade ? `<strong>${n.note}</strong>` : n.note
                                              const matiere= n.note < n.pass_grade ? `<strong>${n.matiere}</strong>` : n.matiere
-                                             const reprise= n.repri_note < n.pass_grade ? `<strong>${n.repri_note}</strong>` : n.repri_note
+                                             const reprise= n.repri_note < n.pass_grade ? `<strong>${n.repri_note || '-'}</strong>` : n.repri_note || '-'
                                             const avg = ((n.note || 0) / 10).toFixed(2)
                                             return `<tr><td>${matiere}</td><td>${not || '-'}</td><td>${reprise || '-'}</td></tr>`
                                         }).join('')}
@@ -841,7 +841,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={` ${statusTex} ${statusColo} inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full`}>
-                                                {not.repri_note || '-'}
+                                                {not.repri_note  || '-'}
                                             </span>
                                         </td>
                                             {role ==='admin' || role === 'editor' || role === 'administration' || role === 'prof' ? (
