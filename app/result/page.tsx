@@ -218,6 +218,7 @@ export default function ResultDashboard(){
     const [grades,setGrades] = useState<any[]>([])
     const [gpa,setGpa] = useState(0)
     const [accessGrand, setAccessGrand] = useState(false)
+    const [accessGrand2,setAccessGrand2] = useState(false)
 
     // Trigger search on manual search
     useEffect(() => {
@@ -243,10 +244,15 @@ export default function ResultDashboard(){
                 supabase.from('exam').select('*').eq('student_id', studentId),
             ])
 
-            if (paymentRes.data?.v_1 && paymentRes.data?.v_2) setAccessGrand(true)
+            
             if (programRes.data) setProgram(programRes.data)
             if (statusRes.data) setStatus(statusRes.data)
-            if (paymentRes.data) setPaymentRecord(paymentRes.data)
+            if (paymentRes.data) {
+                if (paymentRes.data?.v_1 && paymentRes.data?.v_2) setAccessGrand(true)
+                    else setAccessGrand(false)
+                if (paymentRes.data?.v_3 && paymentRes.data?.v_1 && paymentRes.data?.v_2) setAccessGrand2(true)
+                    else setAccessGrand2(false)
+                setPaymentRecord(paymentRes.data)}
             if (gradeRes.data) {
                 setGrades(gradeRes.data)
                 const entries: GradeEntry[] = gradeRes.data.map((g: any) => {
@@ -490,7 +496,7 @@ export default function ResultDashboard(){
                                         </div>
                                     )} 
                                 </div>: <div className="text-center py-8 text-gray-500">
-                                            <p>Aucune donnée disponible</p>
+                                            <p>Aucune donnée disponible, ou vous ne remplissez pas les conditions requises pour les consulter</p>
                                         </div>}
                             </div>
                         )}
@@ -502,6 +508,7 @@ export default function ResultDashboard(){
                                     <span className="w-1 h-6 bg-blue-600 rounded"></span>
                                     Résultats - Semestre 2
                                 </h3>
+                                { accessGrand2  ? 
                                 <div className="space-y-4 overflow-x-auto">
                                     {status.length > 0 ? (
                                         status.map((stat: any) => (
@@ -516,7 +523,9 @@ export default function ResultDashboard(){
                                             <p>Aucune donnée disponible</p>
                                         </div>
                                     )}
-                                </div>
+                                </div>: <div className="text-center py-8 text-gray-500">
+                                            <p>Aucune donnée disponible, ou vous ne remplissez pas les conditions requises pour les consulter</p>
+                                        </div>}
                             </div>
                         )}
 

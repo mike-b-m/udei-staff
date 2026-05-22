@@ -806,13 +806,21 @@ export function StudentBal({ id }: StudentIdProp) {
 
 // ============ STUDENTS LIST ============
 export function Student_pay() {
+  // Student list state
   const [students, setStudents] = useState<User[]>([])
   const [filteredStudents, setFilteredStudents] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Filter state
   const [faculties, setFaculties] = useState<string[]>([])
   const [selectedFaculty, setSelectedFaculty] = useState<string>('')
+  const [yearOptions, setYearOptions] = useState<number[]>([])
+  const [selectedYear, setSelectedYear] = useState<string>('')
   const [balanceFilter, setBalanceFilter] = useState<'all' | 'positive' | 'zero'>('all')
+
+  // Auxiliary data maps for quick lookup
   const [paymentData, setPaymentData] = useState<{ [key: number]: StudentPayment }>({})
+  const [studentYearMap, setStudentYearMap] = useState<{ [key: number]: number }>({})
 
   useEffect(() => {
     const fetchStudentsAndData = async () => {
@@ -826,9 +834,29 @@ export function Student_pay() {
         if (studentError) throw studentError
         setStudents(studentData || [])
 
-        // Extract unique faculties
+        // Extract unique faculties from the student list for the faculty filter
         const uniqueFaculties = [...new Set((studentData || []).map(s => s.faculty).filter(Boolean))]
         setFaculties(uniqueFaculties as string[])
+
+        // Fetch student year (niveau) data for filters
+        const { data: statusData, error: statusError } = await supabase
+          .from('student_status')
+          .select('student_id, year_study')
+
+        if (!statusError && statusData) {
+          const yearMap: { [key: number]: number } = {}
+          statusData.forEach((status: any) => {
+            if (status.student_id != null) {
+              yearMap[status.student_id] = status.year_study || 0
+            }
+          })
+          setStudentYearMap(yearMap)
+
+          const uniqueYears = [...new Set(statusData.map((status: any) => status.year_study || 0))]
+            .filter((year) => year !== 0)
+            .sort((a, b) => a - b)
+          setYearOptions(uniqueYears)
+        }
 
         // Fetch payment data for all students
         const { data: paymentDataRes, error: paymentError } = await supabase
@@ -853,11 +881,15 @@ export function Student_pay() {
   }, [])
 
   useEffect(() => {
-    // Apply filters
+    // Apply filters to the student list whenever filter values or source data change
     let filtered = students
-    
+
     if (selectedFaculty) {
       filtered = filtered.filter(s => s.faculty === selectedFaculty)
+    }
+
+    if (selectedYear) {
+      filtered = filtered.filter(s => studentYearMap[s.id] === Number(selectedYear))
     }
 
     if (balanceFilter === 'positive') {
@@ -873,8 +905,9 @@ export function Student_pay() {
     }
 
     setFilteredStudents(filtered)
-  }, [students, selectedFaculty, balanceFilter, paymentData])
+  }, [students, selectedFaculty, selectedYear, balanceFilter, paymentData, studentYearMap])
 
+  // Loading state while student and filter data are being fetched
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -886,6 +919,7 @@ export function Student_pay() {
     )
   }
 
+  // Empty state if no students exist in the database
   if (students.length === 0) {
     return (
       <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
@@ -918,7 +952,7 @@ export function Student_pay() {
           Filtres
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Faculty Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Faculté</label>
@@ -930,6 +964,21 @@ export function Student_pay() {
               <option value="">Toutes les facultés</option>
               {faculties.map(faculty => (
                 <option key={faculty} value={faculty}>{faculty}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Year/Niveau Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Année / Niveau</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Tous les niveaux</option>
+              {yearOptions.map((year) => (
+                <option key={year} value={String(year)}>{`Année ${year}`}</option>
               ))}
             </select>
           </div>
@@ -953,6 +1002,7 @@ export function Student_pay() {
             <button
               onClick={() => {
                 setSelectedFaculty('')
+                setSelectedYear('')
                 setBalanceFilter('all')
               }}
               className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-all"
@@ -972,6 +1022,7 @@ export function Student_pay() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+          {/* Student table header */}
           <div className="grid grid-cols-5 gap-5 bg-gray-50 p-4 font-semibold text-gray-700 border-b border-gray-200">
             <div>Nom et Prénom</div>
             <div className="text-center">Balance</div>
@@ -1011,7 +1062,8 @@ export function Student_pay() {
                 </div>
                 <div>
                   <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                  <Filter2 id={student.id} bool/>
+                    {/* Display student year/niveau via Filter2 from student_status */}
+                    <Filter2 id={student.id} bool/>
                   </span>
                 </div>
                 <div className="text-center">
