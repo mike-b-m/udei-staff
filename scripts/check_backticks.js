@@ -1,0 +1,10 @@
+const fs = require('fs');
+const path = 'app/component/add-payment/addpayment.tsx';
+const s = fs.readFileSync(path, 'utf8');
+const b = (s.match(/`/g) || []).length;
+const d = (s.match(/\${/g) || []).length;
+console.log('backticks:', b, ' ${ count:', d);
+const idx = s.lastIndexOf('`');
+console.log('last backtick index:', idx);
+console.log('=== tail around last backtick ===');
+console.log(s.slice(Math.max(0, idx-120), idx+120));

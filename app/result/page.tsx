@@ -182,7 +182,24 @@ function ImportantDatesSection() {
         </div>
     )
 }
-
+interface StudentPayment {
+  id: number
+  student_id: number
+  payment_history: PaymentRecord[]
+  amount: number
+  balance: number | any
+  discount: number
+  faculty: string
+  price: number
+  v_1: boolean
+  v_2: boolean
+  v_3: boolean  
+}
+interface PaymentRecord {
+  date: Date | string
+  amount: number | string
+  balance: number | string
+}
 export default function ResultDashboard(){
     const [userX,setUser] = useState<any[]>([])
     const [status,setStatus] = useState<any[]>([])
@@ -197,9 +214,10 @@ export default function ResultDashboard(){
     const [load,setLoad] = useState(false)
     const [result,setResult] = useState(false)
     const [program,setProgram] = useState<any[]>([])
-    const [paymentRecord,setPaymentRecord] = useState<any>(null)
+    const [paymentRecord,setPaymentRecord] = useState<StudentPayment | null>(null)
     const [grades,setGrades] = useState<any[]>([])
     const [gpa,setGpa] = useState(0)
+    const [accessGrand, setAccessGrand] = useState(false)
 
     // Trigger search on manual search
     useEffect(() => {
@@ -210,7 +228,9 @@ export default function ResultDashboard(){
                 .from('student')
                 .select('id,last_name,first_name,student_code,faculty,email')
                 .eq('student_code', code)
-            if (error || !theData?.length) { setLoad(false); return }
+            if (error || !theData?.length) { setLoad(false) ;
+               
+                return <div className="text-center py-16 text-gray-500">Aucun étudiant trouvé avec ce code</div>}
             setUser(theData)
 
             const studentId = theData[0]?.id
@@ -223,6 +243,7 @@ export default function ResultDashboard(){
                 supabase.from('exam').select('*').eq('student_id', studentId),
             ])
 
+            if (paymentRes.data?.v_1 && paymentRes.data?.v_2) setAccessGrand(true)
             if (programRes.data) setProgram(programRes.data)
             if (statusRes.data) setStatus(statusRes.data)
             if (paymentRes.data) setPaymentRecord(paymentRes.data)
@@ -333,7 +354,7 @@ export default function ResultDashboard(){
                                 <div className="text-2xl font-bold text-green-600">$ {totalPaid.toLocaleString()} HT</div>
                                 <div className="text-xs text-gray-400 mt-2">{paymentCount} paiement(s)</div>
                                 {paymentRecord?.balance > 0 && (
-                                    <div className="text-xs text-orange-500 mt-1">Solde: $ {Number(paymentRecord.balance).toLocaleString()} HT</div>
+                                    <div className="text-xs text-orange-500 mt-1">Solde: $ {Number(paymentRecord?.balance).toLocaleString()} HT</div>
                                 )}
                             </div>
 
@@ -453,8 +474,9 @@ export default function ResultDashboard(){
                                     <span className="w-1 h-6 bg-blue-600 rounded"></span>
                                     Résultats - Semestre 1
                                 </h3>
+                                { accessGrand  ?  
                                 <div className="space-y-4 overflow-x-auto">
-                                    {status.length > 0 ? (
+                                    { status.length > 0 ? (
                                         status.map((stat: any) => (
                                             <div key={stat.id} className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-3 md:p-4 border-2 border-blue-100 overflow-x-auto">
                                                 <div className="min-w-full">
@@ -466,8 +488,10 @@ export default function ResultDashboard(){
                                         <div className="text-center py-8 text-gray-500">
                                             <p>Aucune donnée disponible</p>
                                         </div>
-                                    )}
-                                </div>
+                                    )} 
+                                </div>: <div className="text-center py-8 text-gray-500">
+                                            <p>Aucune donnée disponible</p>
+                                        </div>}
                             </div>
                         )}
 

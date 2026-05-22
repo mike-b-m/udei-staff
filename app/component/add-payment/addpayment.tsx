@@ -14,6 +14,7 @@ interface PaymentProps {
   balance: number
   discount: number 
   price: number
+  onSuccess?: () => void
 }
 
 interface PaymentRecord {
@@ -154,7 +155,7 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
               <tr>
                 <td> ${formatCurrency(payment.amount)} ${CURRENCY}</td>
                   <td> ${formatCurrency(payment.balance)}  ${CURRENCY}L</td>
-                  <td>  <Time open=${typeof payment.date === 'string' ? payment.date : payment.date instanceof Date ? payment.date.toISOString() : new Date(payment.date).toISOString()} /></td>
+                  <td>  ${new Date(payment.date).toLocaleDateString('fr-FR')}</td>
               </tr>
    `).join('')}
           </tbody>
@@ -200,6 +201,9 @@ interface StudentPayment {
   discount: number
   faculty: string
   price: number
+  v_1: boolean
+  v_2: boolean
+  v_3: boolean  
 }
 
 interface StudentBalance {
@@ -208,6 +212,10 @@ interface StudentBalance {
 
 interface StudentIdProp {
   id: number
+  v_1: boolean
+  v_2: boolean
+  v_3: boolean
+  onSuccess?: () => void
 }
 
 // ============ CONSTANTS ============
@@ -266,7 +274,7 @@ const Toast = ({ type, message, onClose }: { type: Toast['type']; message: strin
 }
 
 // ============ PAYMENT FORM ============
-export default function Pay({ id, history, balance, discount,price }: PaymentProps) {
+export default function Pay({ id, history, balance, discount, price, onSuccess }: PaymentProps) {
   const [amount, setAmount] = useState<number>(0)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -326,9 +334,7 @@ export default function Pay({ id, history, balance, discount,price }: PaymentPro
       setAmount(0)
       setShowConfirm(false)
       setErrors({})
-
-      // Refresh parent data if needed
-      window.location.reload()
+      onSuccess?.()
     } catch (err) {
       setToast({
         id: Date.now().toString(),
@@ -353,13 +359,18 @@ export default function Pay({ id, history, balance, discount,price }: PaymentPro
         .eq('id', id)
 
       if (error) throw error
-        // Refresh parent data if needed
-      window.location.reload()
-    } catch (err) {
       setToast({
         id: Date.now().toString(),
         type: 'success',
         message: `Remise de ${studentdiscount} ${CURRENCY} appliquée avec succès!`
+      })
+      setStudentdiscount(0)
+      onSuccess?.()
+    } catch (err) {
+      setToast({
+        id: Date.now().toString(),
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Erreur lors de l\'application de la remise'
       })
     } finally {
       setLoading(false)
@@ -961,10 +972,11 @@ export function Student_pay() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-          <div className="grid grid-cols-4 gap-4 bg-gray-50 p-4 font-semibold text-gray-700 border-b border-gray-200">
+          <div className="grid grid-cols-5 gap-5 bg-gray-50 p-4 font-semibold text-gray-700 border-b border-gray-200">
             <div>Nom et Prénom</div>
             <div className="text-center">Balance</div>
             <div>Faculté</div>
+            <div>Niveau</div>
             <div className="text-center">Actions</div>
           </div>
 
@@ -973,7 +985,7 @@ export function Student_pay() {
               <Link
                 href={`/admin/payment?id=${student.id}`}
                 key={student.id}
-                className={`grid grid-cols-4 gap-4 p-4 items-center transition-all hover:shadow-md ${
+                className={`grid grid-cols-5 gap-4 p-4 items-center transition-all hover:shadow-md ${
                   ROW_COLORS[index % ROW_COLORS.length]
                 }`}
               >
@@ -997,6 +1009,11 @@ export function Student_pay() {
                     {student.faculty}
                   </span>
                 </div>
+                <div>
+                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                  <Filter2 id={student.id} bool/>
+                  </span>
+                </div>
                 <div className="text-center">
                   <svg className="w-5 h-5 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1011,20 +1028,124 @@ export function Student_pay() {
   )
 }
 
+// ============ confirmationt versement===========
+export function Confirm({ id, v_1, v_2, v_3, onSuccess }: StudentIdProp) {
+  const [verst_1, setVerst_1] = useState<boolean>(v_1 || false)
+  const [verst_2, setVerst_2] = useState<boolean>(v_2 || false)
+  const [verst_3, setVerst_3] = useState<boolean>(v_3 || false)
+  const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState<Toast | null>(null)
+
+  const handleToggle = async (key: 'v_1' | 'v_2' | 'v_3', nextValue: boolean) => {
+    setLoading(true)
+    const prevState = { v_1: verst_1, v_2: verst_2, v_3: verst_3 }
+    const nextState = {
+      v_1: key === 'v_1' ? nextValue : verst_1,
+      v_2: key === 'v_2' ? nextValue : verst_2,
+      v_3: key === 'v_3' ? nextValue : verst_3,
+    }
+
+    setVerst_1(nextState.v_1)
+    setVerst_2(nextState.v_2)
+    setVerst_3(nextState.v_3)
+
+    try {
+      const { error } = await supabase
+        .from('student_payment')
+        .update(nextState)
+        .eq('id', id)
+
+      if (error) throw error
+
+      setToast({
+        id: Date.now().toString(),
+        type: 'success',
+        message: `Versement ${key.slice(-1)} mis à jour avec succès.`
+      })
+      onSuccess?.()
+    } catch (err) {
+      setVerst_1(prevState.v_1)
+      setVerst_2(prevState.v_2)
+      setVerst_3(prevState.v_3)
+      setToast({
+        id: Date.now().toString(),
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Erreur lors de la mise à jour du versement'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleItems = [
+    { key: 'v_1' as const, label: 'Versement 1', value: verst_1 },
+    { key: 'v_2' as const, label: 'Versement 2', value: verst_2 },
+    { key: 'v_3' as const, label: 'Versement 3', value: verst_3 }
+  ]
+
+  return (
+    <>
+      {toast && (
+        <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />
+      )}
+      <div className="grid gap-4 sm:grid-cols-3">
+        {toggleItems.map((item) => (
+          <div key={item.key} className="bg-white rounded-3xl border border-gray-200 shadow-sm p-5 transition hover:shadow-md">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{item.label}</p>
+                <p className="text-xs text-gray-500 mt-1">Cliquez pour basculer</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggle(item.key, !item.value)}
+                disabled={loading}
+                className={`relative inline-flex h-9 w-16 flex-shrink-0 items-center rounded-full p-1 transition ${item.value ? 'bg-emerald-500' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-7 w-7 rounded-full bg-white shadow transform transition ${item.value ? 'translate-x-7' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <span className={`text-sm font-semibold ${item.value ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {item.value ? 'Complet' : 'Incomplet'}
+              </span>
+              {loading && (
+                <span className="inline-flex items-center gap-2 text-xs text-gray-500">
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" strokeWidth="3" strokeOpacity="0.25" />
+                    <path d="M22 12a10 10 0 00-10-10" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                  Sauvegarde...
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
 // ============ PAYMENTS HISTORY ============
 export function Payments() {
   const [payments, setPayments] = useState<StudentPayment[]>([])
   const [student, setStudent] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<Toast | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   const searchParams = useSearchParams()
   const studentId = searchParams.get('id')
+
+  const refreshPayments = useCallback(() => {
+    setReloadKey((prev) => prev + 1)
+  }, [])
 
   useEffect(() => {
     if (!studentId) return
 
     const fetchPayment = async () => {
+      setLoading(true)
       try {
         const { data: paymentData, error: paymentError } = await supabase
           .from('student_payment')
@@ -1055,7 +1176,7 @@ export function Payments() {
     }
 
     fetchPayment()
-  }, [studentId])
+  }, [studentId, reloadKey])
 
   if (loading) {
     return (
@@ -1196,6 +1317,16 @@ export function Payments() {
           </div>
         )}
 
+        <div className="h-25" >
+        <Confirm
+          id={currentPayment?.id || 0}
+          v_1={currentPayment?.v_1 || false}
+          v_2={currentPayment?.v_2 || false}
+          v_3={currentPayment?.v_3 || false}
+          onSuccess={refreshPayments}
+        />
+        </div>
+
         {/* Payment Form */}
         {currentPayment && (
           <div className="bg-white rounded-lg border-2 border-green-200 shadow-lg p-6">
@@ -1205,7 +1336,14 @@ export function Payments() {
               </svg>
               Effectuer un paiement
             </h3>
-            <Pay id={currentPayment.id} price={currentPayment.price} discount={currentPayment.discount} balance={currentPayment.balance} history={currentPayment.payment_history || []} />
+            <Pay
+              id={currentPayment.id}
+              price={currentPayment.price}
+              discount={currentPayment.discount}
+              balance={currentPayment.balance}
+              history={currentPayment.payment_history || []}
+              onSuccess={refreshPayments}
+            />
           </div>
         )}
 
