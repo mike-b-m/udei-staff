@@ -248,11 +248,11 @@ export default function ResultDashboard(){
             if (programRes.data) setProgram(programRes.data)
             if (statusRes.data) setStatus(statusRes.data)
             if (paymentRes.data) {
+                setPaymentRecord(paymentRes.data)}
                 if (paymentRes.data?.v_1 && paymentRes.data?.v_2) setAccessGrand(true)
                     else setAccessGrand(false)
                 if (paymentRes.data?.v_3 && paymentRes.data?.v_1 && paymentRes.data?.v_2) setAccessGrand2(true)
                     else setAccessGrand2(false)
-                setPaymentRecord(paymentRes.data)}
             if (gradeRes.data) {
                 setGrades(gradeRes.data)
                 const entries: GradeEntry[] = gradeRes.data.map((g: any) => {
