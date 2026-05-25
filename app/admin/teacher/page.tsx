@@ -24,6 +24,11 @@ export default function Teacher() {
     const [loading, setLoading] = useState(false)
 
     const [student, setStudent] = useState<any[]>([])
+    const [fullname, setFullname] = useState<any[]>([])
+    const [selectedStudent, setSelectedStudent] = useState<any>(null)
+    const [modalOpen, setModalOpen] = useState(false)
+    const [modalLoading, setModalLoading] = useState(false)
+    
     const searchpara = useSearchParams()
     const search = searchpara.get('faculty') || ''
     const search3 = searchpara.get('year') || ''
@@ -33,32 +38,87 @@ export default function Teacher() {
         const getData = async () => {
             setLoading(true);
             try {
+                // Validate required filters
+                if (!search || !search3 || !search4) {
+                    setStudent([]);
+                    setFullname([]);
+                    setProgram([]);
+                    setLoading(false);
+                    return;
+                }
+
                 // Get courses
                 const { data: pro, error: theError } = await supabase
                     .from('course_program')
-                    .select('*').eq('faculty', search).eq('session', search4).eq('year', search3);
+                    .select('*')
+                    .eq('faculty', search)
+                    .eq('session', search4)
+                    .eq('year', search3);
 
-                // Get students with last_name for sorting
+                if (theError) {
+                    console.error('Error fetching courses:', theError.message);
+                }
+
+                // Get students with student info joined
                 const { data: stud, error: second } = await supabase.from('student_status')
-                    .select('id,student_id,year_study,academic_year,student(id,last_name,first_name)')
-                    .eq('year_study', search3).eq('faculty', search)
+                    .select('id,student_id,year_study,academic_year,student(id,last_name,first_name,student_code,faculty)')
+                    .eq('year_study', search3)
+                    .eq('faculty', search)
                     .order('student(last_name)', { ascending: true });
+
+                if (second) {
+                    console.error('Error fetching students:', second.message);
+                } else if (stud && stud.length > 0) {
+                    // Extract student data from joined relationship
+                    const studentList = stud.reduce((acc, s) => {
+                        try {
+                            if (s && s.student) {
+                                const student = s.student as Record<string, any>;
+                                if (student.id) {
+                                    acc.push({
+                                        id: student.id,
+                                        last_name: student.last_name || '',
+                                        first_name: student.first_name || '',
+                                        student_code: student.student_code || '',
+                                        faculty: student.faculty || ''
+                                    });
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error processing student:', e);
+                        }
+                        return acc;
+                    }, [] as Array<{ id: string; last_name: string; first_name: string; student_code: string; faculty: string }>);
+                    
+                    setFullname(studentList);
+                    setStudent(stud);
+                } else {
+                    console.warn('No students found for the selected criteria');
+                    setFullname([]);
+                    setStudent([]);
+                }
 
                 // Get exams
                 const { data: exa, error: third } = await supabase.from('exam')
                     .select('*');
 
-                if (third) console.error(third.message)
-                else {
-                    setExam(exa)
-                    setNote(exa[1]?.intra)
+                if (third) {
+                    console.error('Error fetching exams:', third.message);
+                } else if (exa && exa.length > 0) {
+                    setExam(exa);
+                    setNote(exa[1]?.intra || []);
+                } else {
+                    setExam([]);
+                    setNote([]);
                 }
 
-                if (second) console.error(second.message)
-                else setStudent(stud)
-
-                if (theError) console.error(theError.message)
-                else setProgram(pro)
+                if (pro && pro.length > 0) {
+                    setProgram(pro);
+                } else {
+                    setProgram([]);
+                }
+            } catch (error: any) {
+                console.error('Unexpected error:', error);
             } finally {
                 setLoading(false);
             }
@@ -292,7 +352,7 @@ export default function Teacher() {
                                         <div className="text-center py-8">
                                             <p className="text-gray-500">Chargement...</p>
                                         </div>
-                                    ) : student.length > 0 ? (
+                                    ) : fullname && fullname.length > 0 ? (
                                         <div className="space-y-2">
                                             {/* Header */}
                                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg font-semibold text-gray-700">
@@ -302,18 +362,21 @@ export default function Teacher() {
                                                 <div className="text-center">Action</div>
                                             </div>
                                             {/* Student Rows */}
-                                            {student.map((exa: any, index) => (
-                                                <div key={exa.id} className={`p-4 rounded-lg ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'} border border-gray-100`}>
-                                                    <TheacherInput2
-                                                        faculty=""
-                                                        session={search4}
-                                                        year={search3}
-                                                        name={`${exa.last_name} ${exa.first_name}`}
-                                                        matiere={faculty}
-                                                        id={exa.student_id}
-                                                    />
-                                                </div>
-                                            ))}
+                                            {fullname.map((studentInfo: any, index) => {
+                                                const studentStatus = student.find(s => s.student_id === studentInfo.id);
+                                                return (
+                                                    <div key={studentInfo.id} className={`p-4 rounded-lg ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'} border border-gray-100`}>
+                                                        <TheacherInput2
+                                                            faculty={search}
+                                                            session={search4}
+                                                            year={search3}
+                                                            name={`${studentInfo.last_name} ${studentInfo.first_name}`}
+                                                            matiere={faculty}
+                                                            id={studentInfo.id}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     ) : (
                                         <div className="text-center py-8 text-gray-500">
@@ -326,40 +389,131 @@ export default function Teacher() {
 
                         {/* Read/Consultation Section */}
                         {read && (
-                            <div>
-                                {loading ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        <p>Chargement...</p>
-                                    </div>
-                                ) : student.length > 0 ? (
-                                    <div className="space-y-6">
-                                        {student.map((stud) => (
-                                           <div key={stud.id}>
-                                            {/* <ReadNote
-                                                faculty=""
-                                                session={search4}
-                                                year={search3}
-                                                id={stud.student_id}
-                                                name=""
-                                                matiere=''
-                                            /> */}
-                                            <Readsession
-                                                faculty=""
-                                                session={search4}
-                                                year={search3}
-                                                id={stud.student_id}
-                                                name=""
-                                                matiere=''
-                                            />
-                                           </div>
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="bg-linear-to-r from-emerald-600 to-emerald-500 text-white p-4">
+                                    <h3 className="text-lg font-semibold">Consultation des Notes</h3>
+                                </div>
+                                <div className="p-6">
+                                    {loading ? (
+                                        <div className="text-center py-8">
+                                            <p className="text-gray-500">Chargement...</p>
+                                        </div>
+                                    ) : fullname && fullname.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            {/* Table Header */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg font-semibold text-gray-700 mb-2 sticky top-0 z-10">
+                                                <div className="text-left">Nom et Prénom</div>
+                                                <div className="text-right">Action</div>
+                                            </div>
 
-                                        ))}
+                                            {/* Table Rows */}
+                                            <div className="space-y-2">
+                                                {fullname.map((studentInfo, index) => {
+                                                    const studentStatus = student.find(s => s.student_id === studentInfo.id);
+                                                    return (
+                                                        <div
+                                                            key={studentInfo.id}
+                                                            className={`grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg items-center transition-all duration-300 ${
+                                                                index % 2 === 0 ? 'bg-emerald-50' : 'bg-white'
+                                                            } border border-gray-100 hover:border-emerald-300 hover:shadow-md`}
+                                                        >
+                                                            <div className="text-gray-800 font-medium">
+                                                                {studentInfo.last_name} {studentInfo.first_name}
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2 md:justify-end">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedStudent({
+                                                                            student_id: studentInfo.id,
+                                                                            full_name: `${studentInfo.last_name} ${studentInfo.first_name}`,
+                                                                            ...studentStatus
+                                                                        });
+                                                                        setModalOpen(true);
+                                                                    }}
+                                                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-medium text-sm whitespace-nowrap"
+                                                                >
+                                                                    Voir note année {search3} -session{search4}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-12 text-gray-500">
+                                            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                            </svg>
+                                            <p className="text-lg">Aucun étudiant trouvé avec les critères sélectionnés</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Modal - Notes Popup */}
+                        {modalOpen && selectedStudent && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300">
+                                    {/* Modal Header */}
+                                    <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-linear-to-r from-emerald-600 to-emerald-500 text-white">
+                                        <div>
+                                            <h3 className="text-xl font-bold">
+                                                {selectedStudent.full_name || 'Étudiant'}
+                                            </h3>
+                                            <p className="text-emerald-100 text-sm mt-1">Année {search3} - Session {search4}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setModalOpen(false);
+                                                setSelectedStudent(null);
+                                            }}
+                                            className="p-2 hover:bg-emerald-700 rounded-lg transition"
+                                        >
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
                                     </div>
-                                ) : (
-                                    <div className="bg-white rounded-2xl p-8 text-center text-gray-500">
-                                        Aucun étudiant trouvé avec les critères sélectionnés
+
+                                    {/* Modal Content */}
+                                    <div className="flex-1 overflow-y-auto p-6">
+                                        {modalLoading ? (
+                                            <div className="space-y-4 animate-pulse">
+                                                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                                                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                                                <div className="h-32 bg-gray-200 rounded"></div>
+                                            </div>
+                                        ) : selectedStudent.student_id ? (
+                                            <Readsession
+                                                faculty={search}
+                                                session={search4}
+                                                year={search3}
+                                                id={selectedStudent.student_id}
+                                                name={selectedStudent.full_name}
+                                                matiere={faculty}
+                                            />
+                                        ) : (
+                                            <div className="text-center py-8 text-gray-500">
+                                                <p>Erreur: Impossible de charger les notes</p>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+
+                                    {/* Modal Footer */}
+                                    <div className="p-6 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+                                        <button
+                                            onClick={() => {
+                                                setModalOpen(false);
+                                                setSelectedStudent(null);
+                                            }}
+                                            className="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-medium"
+                                        >
+                                            Fermer
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         )}
 

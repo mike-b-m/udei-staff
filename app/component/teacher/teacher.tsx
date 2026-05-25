@@ -8,7 +8,7 @@ interface TeacherInputProps {
     name: string | number | any
     matiere: string | null
     year: number | string | null
-    id: number
+    id: number 
     faculty: string | null
 }
 
@@ -662,7 +662,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
     useEffect(() => {
         const getData = async () => {
             const { data: stud, error: second } = await supabase.from('student')
-                .select('id,last_name,first_name,student_code,faculty').eq('id', id);
+                .select('id,last_name,first_name,student_code,faculty');
                 if (!stud || stud.length === 0) {
   console.error("Student not found");
   return; // or handle appropriately
