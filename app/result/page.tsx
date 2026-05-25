@@ -419,7 +419,7 @@ export default function ResultDashboard(){
                                     Matières
                                 </button>
 
-                                <button 
+                                <button disabled
                                     onClick={() => setShowProgram(!showProgram)}
                                     className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm ${
                                         showProgram 
@@ -461,7 +461,7 @@ export default function ResultDashboard(){
                                     Dates
                                 </button>
 
-                                <button 
+                                <button disabled
                                     onClick={handleDownloadTranscript}
                                     className="py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-sm bg-linear-to-r from-green-600 to-green-500 text-white shadow-lg hover:from-green-700 hover:to-green-600"
                                 >
