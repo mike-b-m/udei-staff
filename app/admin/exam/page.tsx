@@ -9,12 +9,16 @@ import type { OnlineExam, ExamAttempt } from "@/app/component/exam/types";
 interface ExamRecord {
   id: number
   student_id: number
-  matière: string
-  intra: number | null
-  final: number | null
-  reprise: number | null
+  matiere: string
+  note: number | null
+  repri_note: number | null
   session: number
   year: number
+  faculty: string
+  academic_year: string
+  student_code: string
+  credit: number
+  pass_grade: number
   student?: { first_name: string; last_name: string; student_code: string; faculty: string }
 }
 
@@ -201,7 +205,7 @@ export default function Exam() {
 
   // Edit mode
   const [editId, setEditId] = useState<number | null>(null)
-  const [editData, setEditData] = useState({ intra: '', final: '', reprise: '' })
+  const [editData, setEditData] = useState({ note: '', repri_note: '' })
 
   useEffect(() => {
     fetchData()
@@ -209,43 +213,85 @@ export default function Exam() {
 
   const fetchData = async () => {
     setLoading(true)
-    const [examRes, courseRes] = await Promise.all([
-      supabase.from('exam').select(`
-        *
-      `).order('id', { ascending: false }),
-      supabase.from('course_program').select('*').order('faculty')
-    ])
+    try {
+      // Fetch from exam_1 table with proper ordering
+      const { data: examData, error: examError } = await supabase
+        .from('exam_1')
+        .select(`
+          id,
+          created_at,
+          session,
+          year,
+          matiere,
+          note,
+          repri_note,
+          faculty,
+          student_id,
+          academic_year,
+          student_code,
+          credit,
+          pass_grade
+        `)
+        .order('year', { ascending: false })
+        .order('session', { ascending: false })
 
-    if (examRes.data) setExams(examRes.data as unknown as ExamRecord[])
-    if (courseRes.data) setCourses(courseRes.data as unknown as Course[])
-    setLoading(false)
+      // Fetch student data to get first_name and last_name for sorting
+      const { data: studentData } = await supabase
+        .from('student')
+        .select('id, first_name, last_name, student_code, faculty')
+
+      if (examData) {
+        // Merge exam data with student info and sort by last_name
+        const mergedExams = examData.map(exam => ({
+          ...exam,
+          student: studentData?.find(s => s.id === exam.student_id)
+        })) as ExamRecord[]
+
+        mergedExams.sort((a, b) => {
+          const lastNameA = a.student?.last_name || ''
+          const lastNameB = b.student?.last_name || ''
+          return lastNameA.localeCompare(lastNameB)
+        })
+
+        setExams(mergedExams)
+      }
+
+      if (examError) console.error('Error fetching exams:', examError)
+
+      // Fetch courses
+      const { data: courseData } = await supabase
+        .from('course_program')
+        .select('*')
+        .order('faculty')
+
+      if (courseData) setCourses(courseData as unknown as Course[])
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleEdit = (exam: ExamRecord) => {
     setEditId(exam.id)
     setEditData({
-      intra: exam.intra?.toString() || '',
-      final: exam.final?.toString() || '',
-      reprise: exam.reprise?.toString() || ''
+      note: exam.note?.toString() || '',
+      repri_note: exam.repri_note?.toString() || ''
     })
   }
 
   const handleSave = async () => {
     if (!editId) return
-    const { error } = await supabase.from('exam').update({
-      intra: editData.intra ? parseFloat(editData.intra) : null,
-      final: editData.final ? parseFloat(editData.final) : null,
-      reprise: editData.reprise ? parseFloat(editData.reprise) : null,
+    const { error } = await supabase.from('exam_1').update({
+      note: editData.note ? parseFloat(editData.note) : null,
+      repri_note: editData.repri_note ? parseFloat(editData.repri_note) : null,
     }).eq('id', editId)
 
-    if (error) console.error('Erreur lors de la mise à jour de l\'examen :', error.message)
+    if (error) console.error('Error updating exam:', error.message)
     if (!error) {
       setExams(prev => prev.map(e =>
         e.id === editId ? {
           ...e,
-          intra: editData.intra ? parseFloat(editData.intra) : null,
-          final: editData.final ? parseFloat(editData.final) : null,
-          reprise: editData.reprise ? parseFloat(editData.reprise) : null,
+          note: editData.note ? parseFloat(editData.note) : null,
+          repri_note: editData.repri_note ? parseFloat(editData.repri_note) : null,
         } : e
       ))
       setEditId(null)
@@ -253,18 +299,19 @@ export default function Exam() {
   }
 
   const filteredExams = exams.filter(e => {
-    if (filterFaculty && e.student?.faculty !== filterFaculty) return false
-    if (filterCourse && e.matière !== filterCourse) return false
+    if (filterFaculty && e.faculty !== filterFaculty) return false
+    if (filterCourse && e.matiere !== filterCourse) return false
     if (filterSession && e.session !== parseInt(filterSession)) return false
     if (filterYear && e.year !== parseInt(filterYear)) return false
     return true
   })
 
-  // Stats
+  // Stats - using pass_grade from table
   const totalExams = filteredExams.length
   const passCount = filteredExams.filter(e => {
-    const score = e.reprise ?? e.final ?? 0
-    return (score as number) >= 50
+    const score = e.repri_note ?? e.note ?? 0
+    const passGrade = e.pass_grade || 50
+    return (score as number) >= passGrade
   }).length
   const failCount = totalExams - passCount
   const passRate = totalExams > 0 ? Math.round((passCount / totalExams) * 100) : 0
@@ -334,140 +381,189 @@ export default function Exam() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-md p-4 md:p-6 mb-6">
         <h3 className="font-semibold text-gray-900 mb-4">Filtres</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <select
-            value={filterFaculty}
-            onChange={e => { setFilterFaculty(e.target.value); setFilterCourse('') }}
-            className="px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          >
-            <option value="">Toutes les facultés</option>
-            {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-          <select
-            value={filterCourse}
-            onChange={e => setFilterCourse(e.target.value)}
-            className="px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          >
-            <option value="">Tous les cours</option>
-            {filteredCourses.map((c:any) => (
-              <option key={c.id} value={c.course_name}>{c.courses}</option>
-            ))}
-          </select>
-          <select
-            value={filterSession}
-            onChange={e => setFilterSession(e.target.value)}
-            className="px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          >
-            <option value="">Toutes les sessions</option>
-            <option value="1">Session 1</option>
-            <option value="2">Session 2</option>
-          </select>
-          <select
-            value={filterYear}
-            onChange={e => setFilterYear(e.target.value)}
-            className="px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          >
-            <option value="">Toutes les années</option>
-            {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Faculté</label>
+            <select
+              value={filterFaculty}
+              onChange={e => { setFilterFaculty(e.target.value); setFilterCourse('') }}
+              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+            >
+              <option value="">Toutes les facultés</option>
+              {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Matière</label>
+            <select
+              value={filterCourse}
+              onChange={e => setFilterCourse(e.target.value)}
+              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+            >
+              <option value="">Toutes les matières</option>
+              {[...new Set(exams.map(e => e.matiere).filter(Boolean))].map((course: any) => (
+                <option key={course} value={course}>{course}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Session</label>
+            <select
+              value={filterSession}
+              onChange={e => setFilterSession(e.target.value)}
+              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+            >
+              <option value="">Toutes les sessions</option>
+              <option value="1">Session 1</option>
+              <option value="2">Session 2</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Année</label>
+            <select
+              value={filterYear}
+              onChange={e => setFilterYear(e.target.value)}
+              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+            >
+              <option value="">Toutes les années</option>
+              {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Exams Table */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+          <table className="w-full text-sm md:text-base">
+            <thead className="bg-linear-to-r from-blue-600 to-blue-500 text-white sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-4 text-left text-xs font-bold text-gray-600 uppercase">Étudiant</th>
-                <th className="px-4 py-4 text-left text-xs font-bold text-gray-600 uppercase hidden md:table-cell">Matière</th>
-                <th className="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase">Intra</th>
-                <th className="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase">Final</th>
-                <th className="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase hidden sm:table-cell">Reprise</th>
-                <th className="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase">Note</th>
-                <th className="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase hidden lg:table-cell">Session</th>
-                <th className="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase">Actions</th>
+                <th className="px-3 md:px-6 py-4 text-left font-semibold">Étudiant</th>
+                <th className="px-3 md:px-6 py-4 text-left font-semibold hidden sm:table-cell">Matière</th>
+                <th className="px-3 md:px-6 py-4 text-center font-semibold">Note</th>
+                <th className="px-3 md:px-6 py-4 text-center font-semibold">Reprise</th>
+                <th className="px-3 md:px-6 py-4 text-center font-semibold hidden md:table-cell">Résultat</th>
+                <th className="px-3 md:px-6 py-4 text-center font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredExams.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    Aucun examen trouvé
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center gap-2">
+                      <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Aucun examen trouvé
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filteredExams.map((exam:any) => {
-                  const finalScore = exam.reprise ?? exam.final ?? 0
-                  const gradeInfo = getGradeInfo(finalScore as number)
+                filteredExams.map((exam: any) => {
+                  const finalScore = exam.repri_note ?? exam.note ?? 0
+                  const passGrade = exam.pass_grade || 50
+                  const isPassed = (finalScore as number) >= passGrade
                   const isEditing = editId === exam.id
 
                   return (
-                    <tr key={exam.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900 text-sm">
+                    <tr key={exam.id} className={`transition-colors ${isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                      {/* Student Name */}
+                      <td className="px-3 md:px-6 py-4">
+                        <div className="font-medium text-gray-900 text-xs md:text-sm">
                           {exam.student?.last_name} {exam.student?.first_name}
                         </div>
-                        <div className="text-xs text-gray-500"><Fullname id={exam.student_id} /></div>
+                        <div className="text-xs text-gray-500">
+                          {exam.student_code}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 hidden md:table-cell">{exam.matiere}</td>
-                      <td className="px-4 py-3 text-center">
+
+                      {/* Matière */}
+                      <td className="px-3 md:px-6 py-4 text-gray-700 text-xs md:text-sm hidden sm:table-cell">
+                        {exam.matiere}
+                      </td>
+
+                      {/* Note */}
+                      <td className="px-3 md:px-6 py-4 text-center">
                         {isEditing ? (
-                          <input type="number" value={editData.intra}
-                            onChange={e => setEditData(p => ({ ...p, intra: e.target.value }))}
-                            className="w-16 px-2 py-1 border rounded text-center text-sm"
-                            min="0" max="100" />
+                          <input
+                            type="number"
+                            value={editData.note}
+                            onChange={e => setEditData(p => ({ ...p, note: e.target.value }))}
+                            className="w-16 md:w-20 px-2 py-1 border-2 border-blue-500 rounded text-center text-xs md:text-sm font-medium"
+                            min="0"
+                            max="100"
+                            placeholder="0"
+                          />
                         ) : (
-                          <span className="text-sm">{exam.intra ?? '—'}</span>
+                          <span className={`inline-flex items-center justify-center w-12 h-12 rounded-lg font-bold text-white ${
+                            exam.note === null ? 'bg-gray-200 text-gray-600' : 'bg-blue-500'
+                          }`}>
+                            {exam.note ?? '—'}
+                          </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-center">
+
+                      {/* Reprise */}
+                      <td className="px-3 md:px-6 py-4 text-center">
                         {isEditing ? (
-                          <input type="number" value={editData.final}
-                            onChange={e => setEditData(p => ({ ...p, final: e.target.value }))}
-                            className="w-16 px-2 py-1 border rounded text-center text-sm"
-                            min="0" max="100" />
+                          <input
+                            type="number"
+                            value={editData.repri_note}
+                            onChange={e => setEditData(p => ({ ...p, repri_note: e.target.value }))}
+                            className="w-16 md:w-20 px-2 py-1 border-2 border-blue-500 rounded text-center text-xs md:text-sm font-medium"
+                            min="0"
+                            max="100"
+                            placeholder="0"
+                          />
                         ) : (
-                          <span className="text-sm">{exam.final ?? '—'}</span>
+                          <span className={`inline-flex items-center justify-center w-12 h-12 rounded-lg font-bold text-white ${
+                            exam.repri_note === null ? 'bg-gray-200 text-gray-600' : 'bg-orange-500'
+                          }`}>
+                            {exam.repri_note ?? '—'}
+                          </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-center hidden sm:table-cell">
-                        {isEditing ? (
-                          <input type="number" value={editData.reprise}
-                            onChange={e => setEditData(p => ({ ...p, reprise: e.target.value }))}
-                            className="w-16 px-2 py-1 border rounded text-center text-sm"
-                            min="0" max="100" />
-                        ) : (
-                          <span className="text-sm">{exam.reprise ?? '—'}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                          gradeInfo.status === 'Réussite' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+
+                      {/* Result/Status */}
+                      <td className="px-3 md:px-6 py-4 text-center hidden md:table-cell">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                          isPassed 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-red-100 text-red-700'
                         }`}>
-                          {gradeInfo.letter}
+                          {isPassed ? '✓ Réussi' : '✗ Échoué'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-600 hidden lg:table-cell">
-                        S{exam.session}
-                      </td>
-                      <td className="px-4 py-3 text-center">
+
+                      {/* Actions */}
+                      <td className="px-3 md:px-6 py-4 text-center">
                         {isEditing ? (
-                          <div className="flex gap-1 justify-center">
-                            <button onClick={handleSave}
-                              className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
+                          <div className="flex gap-1 md:gap-2 justify-center flex-wrap">
+                            <button
+                              onClick={handleSave}
+                              className="px-2 md:px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition font-semibold"
+                              title="Enregistrer"
+                            >
                               ✓
                             </button>
-                            <button onClick={() => setEditId(null)}
-                              className="px-2 py-1 bg-gray-400 text-white text-xs rounded hover:bg-gray-500">
+                            <button
+                              onClick={() => setEditId(null)}
+                              className="px-2 md:px-3 py-1 bg-gray-400 text-white text-xs rounded-lg hover:bg-gray-500 transition font-semibold"
+                              title="Annuler"
+                            >
                               ✕
                             </button>
                           </div>
                         ) : (
-                          <button onClick={() => handleEdit(exam)}
-                            className="px-3 py-1 text-blue-600 hover:bg-blue-50 text-xs font-semibold rounded transition">
+                          <button
+                            onClick={() => handleEdit(exam)}
+                            className="px-3 md:px-4 py-1.5 text-xs md:text-sm text-blue-600 hover:bg-blue-50 font-semibold rounded-lg transition"
+                          >
                             Modifier
                           </button>
                         )}
