@@ -1,4 +1,4 @@
-# 🎯 Attendance System - Quick Start Guide
+<!-- # 🎯 Attendance System - Quick Start Guide
 
 ## Installation & Setup
 
@@ -236,4 +236,4 @@ supabase db push < attendance_backup.sql
 
 ---
 
-**Need Help?** See the full documentation in [README.md](./README.md)
+**Need Help?** See the full documentation in [README.md](./README.md) -->
