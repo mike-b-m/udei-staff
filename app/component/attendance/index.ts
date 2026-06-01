@@ -4,10 +4,11 @@
  */
 
 // Components
-export { AttendanceFilter } from './AttendanceFilter'
-export { AttendanceSummary } from './AttendanceSummary'
+export { AttendanceFilter } from './attendanceFilter'
+export { AttendanceSummary } from './attendanceSummary'
 export { AttendanceTable } from './AttendanceTable'
-export { AttendanceActions } from './AttendanceActions'
+export { AttendanceActions } from './attendanceActions'
+export { CreateSeanceModal } from './CreateSeanceModal'
 
 // Hooks
 export { useAttendance } from './useAttendance'
@@ -16,14 +17,14 @@ export { useAttendance } from './useAttendance'
 export type {
   AttendanceStatus,
   SessionType,
+  ViewMode,
   AttendanceSeance,
   AttendanceDay,
   AttendanceRecord,
   AttendanceFilters,
-  StudentAttendanceView,
   AttendanceTableRow,
+  DayStats,
   AttendanceStats,
-  AttendanceExportData,
 } from './types'
 
 // Utilities
@@ -45,10 +46,9 @@ export {
 // Export utilities
 export {
   generateAttendanceHTML,
-  printAttendanceReport,
+  generateAttendanceTableHTML,
   downloadAttendanceAsCSV,
   downloadAttendanceAsPDF,
-  generateAttendanceTableHTML,
 } from './exportAttendance'
 export type {
   AttendanceExportFilters,

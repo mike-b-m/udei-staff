@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { AttendanceFilter } from '@/app/component/attendance/AttendanceFilter'
-import { AttendanceSummary } from '@/app/component/attendance/AttendanceSummary'
-import { AttendanceTable } from '@/app/component/attendance/AttendanceTable'
-import { AttendanceActions } from '@/app/component/attendance/AttendanceActions'
-import { CreateSeanceModal } from '@/app/component/attendance/CreateSeanceModal'
-import { useAttendance } from '@/app/component/attendance/useAttendance'
-import type { AttendanceFilters, AttendanceStatus } from '@/app/component/attendance/types'
+import { 
+  AttendanceFilter,
+  AttendanceSummary,
+  AttendanceTable,
+  AttendanceActions,
+  CreateSeanceModal,
+  useAttendance,
+  type AttendanceFilters,
+  type AttendanceStatus,
+} from '@/app/component/attendance'
 
 const DEFAULT_FILTERS: AttendanceFilters = {
   faculty: '',
