@@ -38,7 +38,7 @@ export const useStudentData = (studentCode: string | null) => {
           .select('*')
           .eq('student_code', studentCode)
           .single()
-
+        if (studentError) console.log(studentError.message)
         if (studentError) throw new Error('Étudiant non trouvé')
         if (!studentData) throw new Error('Pas de données disponibles')
 

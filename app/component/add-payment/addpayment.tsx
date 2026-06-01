@@ -15,6 +15,10 @@ interface PaymentProps {
   discount: number 
   price: number
   onSuccess?: () => void
+  v_1: number
+  v_2: number
+  v_3: number
+  remise: number
 }
 
 interface PaymentRecord {
@@ -188,22 +192,23 @@ interface User {
   id: number
   first_name: string
   last_name: string
-  faculty: string
+  faculty: string 
   student_code: string
 }
 
 interface StudentPayment {
   id: number
   student_id: number
-  payment_history: PaymentRecord[]
-  amount: number
+  payment_history?: PaymentRecord[]
+  amount?: number
   balance: number
-  discount: number
-  faculty: string
+  discount?: number
+  faculty?: string
   price: number
-  v_1: boolean
-  v_2: boolean
-  v_3: boolean  
+  remise?: number
+  v_1?: boolean
+  v_2?: boolean
+  v_3?: boolean  
 }
 
 interface StudentBalance {
@@ -274,13 +279,14 @@ const Toast = ({ type, message, onClose }: { type: Toast['type']; message: strin
 }
 
 // ============ PAYMENT FORM ============
-export default function Pay({ id, history, balance, discount, price, onSuccess }: PaymentProps) {
+export default function Pay({ id, history, balance, discount,remise, price,v_1, v_2, v_3, onSuccess }: PaymentProps) {
   const [amount, setAmount] = useState<number>(0)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [toast, setToast] = useState<Toast | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [studentdiscount, setStudentdiscount] = useState<number>(0)
+  const [versement, setVersement] = useState<number>(0)
 
   const numBalance = toNumber(balance)
   const numDiscount = toNumber(discount)
@@ -319,11 +325,15 @@ export default function Pay({ id, history, balance, discount, price, onSuccess }
         .from('student_payment')
         .update({
           balance: remainingBalance,
-          payment_history: updatedHistory
+          payment_history: updatedHistory,
+          v_1: v_1 <= ((price-remise)-remainingBalance) ? true : false,
+            v_2: v_2 <= ((price-remise)-remainingBalance) && v_1 <= ((price-remise)-remainingBalance) ? true : false,
+            v_3: remainingBalance === 0 ? true : false,
         })
         .eq('id', id)
 
       if (error) throw error
+      
 
       setToast({
         id: Date.now().toString(),
@@ -455,7 +465,7 @@ export default function Pay({ id, history, balance, discount, price, onSuccess }
             <button
             onClick={handlediscount}
             disabled={discount ? true : false}
-            className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full px-4 py-3 bg-linear-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -507,7 +517,7 @@ export default function Pay({ id, history, balance, discount, price, onSuccess }
           <button
             onClick={() => setShowConfirm(true)}
             disabled={!amount || amount <= 0}
-            className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full px-4 py-3 bg-linear-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -521,26 +531,57 @@ export default function Pay({ id, history, balance, discount, price, onSuccess }
 }
 
 // ============ FACULTY PRICE MANAGEMENT ============
+
+interface FacultyPriceExtended extends Faculty {
+  categorie?: string
+  symbol?: string
+  v_1?: number
+  v_2?: number
+  v_3?: number
+}
+
 export function Price() {
-  const [faculties, setFaculties] = useState<Faculty[]>([])
+  const [faculties, setFaculties] = useState<FacultyPriceExtended[]>([])
   const [faculty, setFaculty] = useState('')
   const [price, setPrice] = useState<number>(0)
+  const [v_1, setV_1] = useState<number>(0)
+  const [v_2, setV_2] = useState<number>(0)
+  const [v_3, setV_3] = useState<number>(0)
+  const [categorie, setCategorie] = useState('')
+  const [symbol, setSymbol] = useState('HT')
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [toast, setToast] = useState<Toast | null>(null)
-  const [cate,setCate] = useState('')
-  const [symbol,setSymbol] = useState('')
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [stats, setStats] = useState({ total: 0, with0Balance: 0, withPositiveBalance: 0 })
 
   useEffect(() => {
-    fetchFaculties()
+    fetchFacultiesAndStats()
   }, [])
 
-  const fetchFaculties = async () => {
+  const fetchFacultiesAndStats = async () => {
     try {
-      const { data, error } = await supabase.from('faculty_price').select('*')
-      if (error) throw error
-      setFaculties(data || [])
+      // Fetch faculty prices
+      const { data: facultyData, error: facultyError } = await supabase
+        .from('faculty_price')
+        .select('*')
+        .order('faculty', { ascending: true })
+      
+      if (facultyError) throw facultyError
+      setFaculties(facultyData || [])
+
+      // Fetch payment statistics
+      const { data: paymentData, error: paymentError } = await supabase
+        .from('student_payment')
+        .select('balance')
+
+      if (!paymentError && paymentData) {
+        const total = paymentData.length
+        const with0Balance = paymentData.filter((p: any) => parseFloat(p.balance) === 0).length
+        const withPositiveBalance = paymentData.filter((p: any) => parseFloat(p.balance) > 0).length
+        setStats({ total, with0Balance, withPositiveBalance })
+      }
     } catch (err) {
       setToast({
         id: Date.now().toString(),
@@ -554,6 +595,9 @@ export function Price() {
     const newErrors: { [key: string]: string } = {}
     if (!faculty.trim()) newErrors.faculty = 'Le nom de la faculté est requis'
     if (!price || price <= 0) newErrors.price = 'Le prix doit être supérieur à 0'
+    if (!v_1 || v_1 < 0) newErrors.v_1 = 'Versement 1 requis'
+    if (!v_2 || v_2 < 0) newErrors.v_2 = 'Versement 2 requis'
+    if (!v_3 || v_3 < 0) newErrors.v_3 = 'Versement 3 requis'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -564,29 +608,91 @@ export function Price() {
 
     setLoading(true)
     try {
-      const { error } = await supabase.from('faculty_price').insert([{ faculty, price ,categorie:cate}])
+      const payload = {
+        faculty,
+        price,
+        v_1,
+        v_2,
+        v_3,
+        categorie,
+        symbol
+      }
+
+      if (editingId) {
+        const { error } = await supabase
+          .from('faculty_price')
+          .update(payload)
+          .eq('id', editingId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('faculty_price').insert([payload])
+        if (error) throw error
+      }
+
+      setToast({
+        id: Date.now().toString(),
+        type: 'success',
+        message: `${faculty} ${editingId ? 'modifiée' : 'ajoutée'} avec succès!`
+      })
+
+      resetForm()
+      fetchFacultiesAndStats()
+    } catch (err) {
+      setToast({
+        id: Date.now().toString(),
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Erreur lors de l\'opération'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resetForm = () => {
+    setFaculty('')
+    setPrice(0)
+    setV_1(0)
+    setV_2(0)
+    setV_3(0)
+    setCategorie('')
+    setSymbol('HT')
+    setShowForm(false)
+    setEditingId(null)
+    setErrors({})
+  }
+
+  const handleEdit = (fac: FacultyPriceExtended) => {
+    setFaculty(fac.faculty)
+    setPrice(fac.price)
+    setV_1(fac.v_1 || 0)
+    setV_2(fac.v_2 || 0)
+    setV_3(fac.v_3 || 0)
+    setCategorie(fac.categorie || '')
+    setSymbol(fac.symbol || 'HT')
+    setEditingId(fac.id)
+    setShowForm(true)
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette faculté?')) return
+
+    try {
+      const { error } = await supabase.from('faculty_price').delete().eq('id', id)
       if (error) throw error
 
       setToast({
         id: Date.now().toString(),
         type: 'success',
-        message: `${faculty} ajoutée avec succès!`
+        message: 'Faculté supprimée avec succès!'
       })
 
-      setFaculty('')
-      setPrice(0)
-      setCate('')
-      setShowForm(false)
-      setErrors({})
-      fetchFaculties()
+      fetchFacultiesAndStats()
     } catch (err) {
       setToast({
         id: Date.now().toString(),
         type: 'error',
-        message: err instanceof Error ? err.message : 'Erreur lors de l\'ajout'
+        message: 'Erreur lors de la suppression'
       })
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -656,38 +762,103 @@ export function Price() {
                 {errors.price && <p className="text-red-600 text-sm mt-1">{errors.price}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Categorie (Sciences apliquées, Sciences de la santé, etc.)
-                </label>
-                <input
-                  type="text"
-                  value={cate}
-                  onChange={(e) => {
-                    setCate(e.target.value)
-                    if (errors.cate) setErrors({ ...errors, cate: '' })
-                  }}
-                  step="0.01"
-                  min="0"
-                  className={`w-full px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all ${
-                    errors.cate
-                      ? 'border-red-500 bg-red-50 focus:ring-red-500/50'
-                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500/50'
-                  }`}
-                  placeholder="Sciences apliquées, Sciences de la santé, etc."
-                />
-                {errors.cate && <p className="text-red-600 text-sm mt-1">{errors.cate}</p>}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Catégorie</label>
+                  <input
+                    type="text"
+                    value={categorie}
+                    onChange={(e) => setCategorie(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:border-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                    placeholder="Sciences appliquées"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Symbole</label>
+                  <input
+                    type="text"
+                    value={symbol}
+                    onChange={(e) => setSymbol(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:border-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                    placeholder="HT"
+                    maxLength={3}
+                  />
+                </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="border-t-2 border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Montants des Versements</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Versement 1 ({CURRENCY})</label>
+                    <input
+                      type="number"
+                      value={v_1}
+                      onChange={(e) => {
+                        setV_1(parseFloat(e.target.value) || 0)
+                        if (errors.v_1) setErrors({ ...errors, v_1: '' })
+                      }}
+                      step="0.01"
+                      min="0"
+                      className={`w-full px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all ${
+                        errors.v_1
+                          ? 'border-red-500 bg-red-50 focus:ring-red-500/50'
+                          : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500/50'
+                      }`}
+                      placeholder="0.00"
+                    />
+                    {errors.v_1 && <p className="text-red-600 text-sm mt-1">{errors.v_1}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Versement 2 ({CURRENCY})</label>
+                    <input
+                      type="number"
+                      value={v_2}
+                      onChange={(e) => {
+                        setV_2(parseFloat(e.target.value) || 0)
+                        if (errors.v_2) setErrors({ ...errors, v_2: '' })
+                      }}
+                      step="0.01"
+                      min="0"
+                      className={`w-full px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all ${
+                        errors.v_2
+                          ? 'border-red-500 bg-red-50 focus:ring-red-500/50'
+                          : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500/50'
+                      }`}
+                      placeholder="0.00"
+                    />
+                    {errors.v_2 && <p className="text-red-600 text-sm mt-1">{errors.v_2}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Versement 3 ({CURRENCY})</label>
+                    <input
+                      type="number"
+                      value={v_3}
+                      onChange={(e) => {
+                        setV_3(parseFloat(e.target.value) || 0)
+                        if (errors.v_3) setErrors({ ...errors, v_3: '' })
+                      }}
+                      step="0.01"
+                      min="0"
+                      className={`w-full px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all ${
+                        errors.v_3
+                          ? 'border-red-500 bg-red-50 focus:ring-red-500/50'
+                          : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500/50'
+                      }`}
+                      placeholder="0.00"
+                    />
+                    {errors.v_3 && <p className="text-red-600 text-sm mt-1">{errors.v_3}</p>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowForm(false)
-                    setFaculty('')
-                    setPrice(0)
-                    setErrors({})
-                  }}
+                  onClick={resetForm}
                   className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all"
                 >
                   Annuler
@@ -705,7 +876,7 @@ export function Price() {
                       Enregistrement...
                     </>
                   ) : (
-                    'Enregistrer'
+                    editingId ? 'Modifier' : 'Ajouter'
                   )}
                 </button>
               </div>
@@ -714,7 +885,7 @@ export function Price() {
         ) : (
           <button
             onClick={() => setShowForm(true)}
-            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+            className="w-full px-6 py-3 bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -734,22 +905,60 @@ export function Price() {
                 Facultés enregistrées
               </h3>
             </div>
-            <div className="divide-y divide-gray-200">
-              {faculties.map((fac, index) => (
-                <div key={fac.id} className={`px-6 py-4 flex justify-between items-center ${ROW_COLORS[index % ROW_COLORS.length]} transition-colors`}>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{fac.faculty}</p>
-                    <p className="text-sm text-gray-600">Prix annuel</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-blue-600">$ {formatCurrency(fac.price)}</p>
-                    <p className="text-sm text-gray-600">{CURRENCY}</p>
-                  </div>
-                  <div className="ml-6">
-                    <Update value={fac.faculty} id={fac.id} />
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Faculté</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Prix</th>
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Versement 1</th>
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Versement 2</th>
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Versement 3</th>
+                    <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {faculties.map((fac, index) => (
+                    <tr key={fac.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-6 py-4">
+                        <p className="font-semibold text-gray-900">{fac.faculty}</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {fac.categorie || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <p className="text-lg font-bold text-blue-600">{formatCurrency(fac.price)} {fac.symbol || CURRENCY}</p>
+                      </td>
+                      <td className="px-6 py-4 text-right text-sm font-medium text-gray-700">
+                        {formatCurrency(fac.v_1 || 0)}
+                      </td>
+                      <td className="px-6 py-4 text-right text-sm font-medium text-gray-700">
+                        {formatCurrency(fac.v_2 || 0)}
+                      </td>
+                      <td className="px-6 py-4 text-right text-sm font-medium text-gray-700">
+                        {formatCurrency(fac.v_3 || 0)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            onClick={() => handleEdit(fac)}
+                            className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-lg transition-all text-sm"
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            onClick={() => handleDelete(fac.id)}
+                            className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 font-medium rounded-lg transition-all text-sm"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         ) : (
@@ -821,6 +1030,8 @@ export function Student_pay() {
   // Auxiliary data maps for quick lookup
   const [paymentData, setPaymentData] = useState<{ [key: number]: StudentPayment }>({})
   const [studentYearMap, setStudentYearMap] = useState<{ [key: number]: number }>({})
+  const [facultyPriceMap, setFacultyPriceMap] = useState<{ [key: string]: any }>({})
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     const fetchStudentsAndData = async () => {
@@ -861,14 +1072,27 @@ export function Student_pay() {
         // Fetch payment data for all students
         const { data: paymentDataRes, error: paymentError } = await supabase
           .from('student_payment')
-          .select('id, student_id, balance')
+          .select('id, student_id, balance, discount, price')
 
         if (!paymentError && paymentDataRes) {
-          const paymentMap: { [key: number]: StudentPayment } = {}
-          paymentDataRes.forEach(payment => {
-            paymentMap[payment.student_id] = payment as StudentPayment
+          const paymentMap: { [key: number]: any } = {}
+          paymentDataRes.forEach((payment: any) => {
+            paymentMap[payment.student_id] = payment
           })
           setPaymentData(paymentMap)
+        }
+
+        // Fetch faculty price data with versement amounts
+        const { data: facultyData, error: facultyError } = await supabase
+          .from('faculty_price')
+          .select('faculty, price, v_1, v_2, v_3, symbol')
+
+        if (!facultyError && facultyData) {
+          const facultyMap: { [key: string]: any } = {}
+          facultyData.forEach((fac: any) => {
+            facultyMap[fac.faculty] = fac
+          })
+          setFacultyPriceMap(facultyMap)
         }
       } catch (err) {
         console.error('Error fetching students:', err)
@@ -907,6 +1131,255 @@ export function Student_pay() {
     setFilteredStudents(filtered)
   }, [students, selectedFaculty, selectedYear, balanceFilter, paymentData, studentYearMap])
 
+  // Calculate versement amounts for a student
+  const calculateVersements = (student: User) => {
+    const facultyPrice = facultyPriceMap[student.faculty]
+    if (!facultyPrice) {
+      return { 
+        v1Remaining: 0, 
+        v2Remaining: 0, 
+        v3Remaining: 0, 
+        v1Total: 0,
+        v2Total: 0,
+        v3Total: 0,
+        netPrice: 0, 
+        paid: 0,
+        isPaid: false,
+        isPartial: false
+      }
+    }
+
+    const payment = paymentData[student.id]
+    const price = toNumber(facultyPrice.price)
+    const remise = toNumber(payment?.discount || 0)
+    const balance = toNumber(payment?.balance || 0)
+    
+    const netPrice = price - remise
+    const paid = netPrice - balance
+    
+    const v1Total = toNumber(facultyPrice.v_1)
+    const v2Total = toNumber(facultyPrice.v_2)
+    const v3Total = toNumber(facultyPrice.v_3)
+
+    // Calculate remaining amounts for each versement
+    const isPaid = balance === 0
+    const isPartial = paid > 0 && !isPaid
+    
+    let v1Remaining = v1Total
+    let v2Remaining = v2Total
+    let v3Remaining = v3Total
+
+    if (isPartial || isPaid) {
+      // Deduct from v1 first
+      if (paid >= v1Total) {
+        v1Remaining = 0
+        const remainingAfterV1 = paid - v1Total
+        
+        // Then deduct from v2
+        if (remainingAfterV1 >= v2Total) {
+          v2Remaining = 0
+          v3Remaining = Math.max(0, v3Total - (remainingAfterV1 - v2Total))
+        } else {
+          v2Remaining = v2Total - remainingAfterV1
+        }
+      } else {
+        v1Remaining = v1Total - paid
+      }
+    }
+
+    return { 
+      v1Remaining, 
+      v2Remaining, 
+      v3Remaining,
+      v1Total,
+      v2Total,
+      v3Total,
+      netPrice, 
+      paid,
+      isPaid,
+      isPartial
+    }
+  }
+
+  // Helper function to get versement status color and text
+  const getVersementStatus = (remaining: number, total: number) => {
+    if (remaining === 0) {
+      return { color: 'text-green-600', status: '✓ Payé', bgColor: 'bg-green-50' }
+    } else if (remaining < total && remaining > 0) {
+      return { color: 'text-amber-600', status: '◐ Partiel', bgColor: 'bg-amber-50' }
+    } else {
+      return { color: 'text-red-600', status: '○ Impayé', bgColor: 'bg-red-50' }
+    }
+  }
+
+  // Export handlers
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true)
+
+      const rows = [
+        ['Nom Étudiant', 'Faculté', 'Année', 'Total Année', 'Versement 1', 'Versement 2', 'Versement 3', 'Payé'],
+        ...filteredStudents.map(student => {
+          const vers = calculateVersements(student)
+          return [
+            `${student.last_name} ${student.first_name}`,
+            student.faculty || '-',
+            `Année ${studentYearMap[student.id] || '-'}`,
+            formatCurrency(vers.netPrice),
+            formatCurrency(vers.v1Total),
+            formatCurrency(vers.v2Total),
+            formatCurrency(vers.v3Total),
+            formatCurrency(vers.paid)
+          ]
+        })
+      ]
+
+      const csvContent = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+
+      link.setAttribute('href', url)
+      link.setAttribute('download', `liste_paiements_${selectedFaculty || 'tous'}_${selectedYear ? `année${selectedYear}` : 'tous'}_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Error exporting to CSV:', error)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportJSON = async () => {
+    try {
+      setExporting(true)
+
+      const data = {
+        exportDate: new Date().toISOString(),
+        faculty: selectedFaculty || 'Toutes facultés',
+        year: selectedYear ? `Année ${selectedYear}` : 'Tous niveaux',
+        totalRecords: filteredStudents.length,
+        data: filteredStudents.map(student => {
+          const vers = calculateVersements(student)
+          return {
+            nom: `${student.last_name} ${student.first_name}`,
+            faculte: student.faculty,
+            annee: studentYearMap[student.id] || 0,
+            totalAnnee: vers.netPrice,
+            versement1: vers.v1Total,
+            versement2: vers.v2Total,
+            versement3: vers.v3Total,
+            montantPaye: vers.paid
+          }
+        })
+      }
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+
+      link.setAttribute('href', url)
+      link.setAttribute('download', `liste_paiements_${selectedFaculty || 'tous'}_${selectedYear ? `année${selectedYear}` : 'tous'}_${new Date().toISOString().split('T')[0]}.json`)
+      link.style.visibility = 'hidden'
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Error exporting to JSON:', error)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handlePrint = () => {
+    try {
+      const printWindow = window.open('', '', 'height=900,width=1200')
+      if (!printWindow) return
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+          <meta charset="UTF-8">
+          <title>Liste des Paiements</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; padding: 20px; background: white; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #0077B6; padding-bottom: 15px; }
+            .header h1 { font-size: 24px; color: #0077B6; margin-bottom: 10px; }
+            .filter-info { font-size: 13px; color: #666; text-align: center; margin-top: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            thead { background-color: #0077B6; color: white; }
+            th { padding: 12px; text-align: left; font-weight: 600; border: 1px solid #ddd; }
+            td { padding: 10px; border: 1px solid #ddd; }
+            tbody tr:nth-child(odd) { background-color: #f9f9f9; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Liste des Paiements</h1>
+            <div class="filter-info">
+              Date: ${new Date().toLocaleDateString('fr-FR')} | 
+              ${selectedFaculty ? `Faculté: ${selectedFaculty} | ` : ''}
+              ${selectedYear ? `Année: ${selectedYear} | ` : ''}
+              Total: ${filteredStudents.length} étudiant(s)
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Nom Étudiant</th>
+                <th class="text-center">Faculté</th>
+                <th class="text-center">Année</th>
+                <th class="text-right">Total Année</th>
+                <th class="text-right">Versement 1</th>
+                <th class="text-right">Versement 2</th>
+                <th class="text-right">Versement 3</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredStudents
+                .map(student => {
+                  const vers = calculateVersements(student)
+                  return `
+                <tr>
+                  <td><strong>${student.last_name} ${student.first_name}</strong></td>
+                  <td class="text-center">${student.faculty || '-'}</td>
+                  <td class="text-center">Année ${studentYearMap[student.id] || '-'}</td>
+                  <td class="text-right">${formatCurrency(vers.netPrice)}</td>
+                  <td class="text-right">${formatCurrency(vers.v1Total)}</td>
+                  <td class="text-right">${formatCurrency(vers.v2Total)}</td>
+                  <td class="text-right">${formatCurrency(vers.v3Total)}</td>
+                </tr>
+              `
+                })
+                .join('')}
+            </tbody>
+          </table>
+          <div class="footer">
+            <p>Document généré le ${new Date().toLocaleString('fr-FR')}</p>
+            <p>UDEI - Système de Gestion Administratif Universitaire</p>
+          </div>
+        </body>
+        </html>
+      `
+
+      printWindow.document.write(html)
+      printWindow.document.close()
+      setTimeout(() => printWindow.print(), 250)
+    } catch (error) {
+      console.error('Error printing:', error)
+    }
+  }
+
   // Loading state while student and filter data are being fetched
   if (loading) {
     return (
@@ -937,10 +1410,49 @@ export function Student_pay() {
         <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-2a6 6 0 0112 0v2zm0 0h6v-2a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
-        <h2 className="text-2xl font-bold text-gray-900">Liste des étudiants</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Liste des étudiants - Paiements</h2>
         <span className="ml-auto bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
           {filteredStudents.length} étudiant{filteredStudents.length > 1 ? 's' : ''}
         </span>
+      </div>
+
+      {/* Export Actions */}
+      <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200 flex gap-3 flex-wrap">
+        <button
+          onClick={handleExportCSV}
+          disabled={exporting || filteredStudents.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all disabled:opacity-50"
+          title="Télécharger en Excel/CSV"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          {exporting ? 'Export en cours...' : 'Télécharger Excel'}
+        </button>
+
+        <button
+          onClick={handleExportJSON}
+          disabled={exporting || filteredStudents.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-all disabled:opacity-50"
+          title="Exporter en JSON"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Exporter JSON
+        </button>
+
+        <button
+          onClick={handlePrint}
+          disabled={filteredStudents.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all disabled:opacity-50"
+          title="Imprimer la liste"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Imprimer
+        </button>
       </div>
 
       {/* Filter Controls */}
@@ -1021,59 +1533,86 @@ export function Student_pay() {
           <p className="text-yellow-800 font-medium">Aucun étudiant ne correspond aux filtres</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+        <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-gray-200">
           {/* Student table header */}
-          <div className="grid grid-cols-5 gap-5 bg-gray-50 p-4 font-semibold text-gray-700 border-b border-gray-200">
-            <div>Nom et Prénom</div>
-            <div className="text-center">Balance</div>
-            <div>Faculté</div>
-            <div>Niveau</div>
-            <div className="text-center">Actions</div>
-          </div>
-
-          <div className="divide-y divide-gray-200">
-            {filteredStudents.map((student, index) => (
-              <Link
-                href={`/admin/payment?id=${student.id}`}
-                key={student.id}
-                className={`grid grid-cols-5 gap-4 p-4 items-center transition-all hover:shadow-md ${
-                  ROW_COLORS[index % ROW_COLORS.length]
-                }`}
-              >
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {student.last_name} {student.first_name}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">ID: {student.id}</p>
-                </div>
-                <div className="text-center">
-                  {paymentData[student.id] ? (
-                    <span className={`font-semibold ${toNumber(paymentData[student.id].balance) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      $ {formatCurrency(paymentData[student.id].balance)} {CURRENCY}
-                    </span>
-                  ) : (
-                    <span className="text-gray-500">-</span>
-                  )}
-                </div>
-                <div>
-                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                    {student.faculty}
-                  </span>
-                </div>
-                <div>
-                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                    {/* Display student year/niveau via Filter2 from student_status */}
-                    <Filter2 id={student.id} bool/>
-                  </span>
-                </div>
-                <div className="text-center">
-                  <svg className="w-5 h-5 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nom et Prénom</th>
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Faculté</th>
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Année</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Total Année</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Versement 1</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Versement 2</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Versement 3</th>
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filteredStudents.map((student, index) => {
+                const vers = calculateVersements(student)
+                const v1Status = getVersementStatus(vers.v1Remaining, vers.v1Total)
+                const v2Status = getVersementStatus(vers.v2Remaining, vers.v2Total)
+                const v3Status = getVersementStatus(vers.v3Remaining, vers.v3Total)
+                
+                return (
+                  <tr
+                    key={student.id}
+                    className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}
+                  >
+                    <td className="px-6 py-4">
+                      <p className="font-semibold text-gray-900">
+                        {student.last_name} {student.first_name}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Code: {student.student_code}</p>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                        {student.faculty || '-'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                        Année {studentYearMap[student.id] || '-'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-semibold text-gray-900">{formatCurrency(vers.netPrice)} {CURRENCY}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className={`${v1Status.bgColor} rounded px-2 py-1 inline-block`}>
+                        <p className={`text-sm font-bold ${v1Status.color}`}>{formatCurrency(vers.v1Remaining)}</p>
+                        <p className="text-xs text-gray-600">{v1Status.status}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className={`${v2Status.bgColor} rounded px-2 py-1 inline-block`}>
+                        <p className={`text-sm font-bold ${v2Status.color}`}>{formatCurrency(vers.v2Remaining)}</p>
+                        <p className="text-xs text-gray-600">{v2Status.status}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className={`${v3Status.bgColor} rounded px-2 py-1 inline-block`}>
+                        <p className={`text-sm font-bold ${v3Status.color}`}>{formatCurrency(vers.v3Remaining)}</p>
+                        <p className="text-xs text-gray-600">{v3Status.status}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Link
+                        href={`/admin/payment?id=${student.id}`}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Détails
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
@@ -1152,7 +1691,7 @@ export function Confirm({ id, v_1, v_2, v_3, onSuccess }: StudentIdProp) {
                 type="button"
                 onClick={() => handleToggle(item.key, !item.value)}
                 disabled={loading}
-                className={`relative inline-flex h-9 w-16 flex-shrink-0 items-center rounded-full p-1 transition ${item.value ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                className={`relative inline-flex h-9 w-16 shrink-0 items-center rounded-full p-1 transition ${item.value ? 'bg-emerald-500' : 'bg-gray-300'}`}
               >
                 <span className={`inline-block h-7 w-7 rounded-full bg-white shadow transform transition ${item.value ? 'translate-x-7' : 'translate-x-0'}`} />
               </button>
@@ -1181,10 +1720,11 @@ export function Confirm({ id, v_1, v_2, v_3, onSuccess }: StudentIdProp) {
 // ============ PAYMENTS HISTORY ============
 export function Payments() {
   const [payments, setPayments] = useState<StudentPayment[]>([])
-  const [student, setStudent] = useState<User | null>(null)
+  const [student, setStudent] = useState<User | null | any>(null)
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<Toast | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
+  const [versement, setVersement] = useState<{ v_1: number; v_2: number; v_3: number }>({ v_1: 0, v_2: 0, v_3: 0 })
 
   const searchParams = useSearchParams()
   const studentId = searchParams.get('id')
@@ -1203,6 +1743,18 @@ export function Payments() {
           .from('student_payment')
           .select('*')
           .eq('student_id', studentId)
+
+          const f = paymentData?.[0]?.faculty
+        const {data: versementData, error: versementError } = await supabase
+        .from('faculty_price')
+        .select('*')
+        .eq('faculty', f);
+        
+        if (versementError) throw versementError
+        if (versementData && versementData.length > 0) {
+          const v = versementData[0]
+          setVersement({ v_1: v.v_1, v_2: v.v_2, v_3: v.v_3 })
+        }
 
         if (paymentError) throw paymentError
 
@@ -1241,7 +1793,7 @@ export function Payments() {
     )
   }
 
-  if (!student) {
+  if (!student && studentId) {
     return (
       <div className="bg-red-50 border-2 border-red-200 rounded-lg p-8 text-center">
         <svg className="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1252,7 +1804,7 @@ export function Payments() {
     )
   }
 
-  const currentPayment = payments[0]
+  const currentPayment:any = payments[0]
 
   return (
     <>
@@ -1266,13 +1818,13 @@ export function Payments() {
 
       <div className="space-y-6 p-6">
         {/* Student Info */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg shadow-lg p-6 text-white">
+        <div className="bg-linear-to-r from-blue-600 to-blue-500 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center gap-3 mb-2">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
             </svg>
             <h2 className="text-2xl font-bold">
-              {student.last_name} {student.first_name}
+              {student?.last_name} {student?.first_name}
             </h2>
           </div>
           <p className="text-blue-100 text-sm">ID Étudiant: #{student.id}</p>
@@ -1283,12 +1835,12 @@ export function Payments() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => {
-                const title = `Historique Paiements - ${student.last_name} ${student.first_name}`
+                const title = `Historique Paiements - ${student?.last_name} ${student?.first_name}`
                 const html = `
                   <h2>${title}</h2>
                   <div class="info">
-                    <p><strong>Code:</strong> ${student.student_code}</p>
-                    <p><strong>Faculté:</strong> ${student.faculty}</p>
+                    <p><strong>Code:</strong> ${student?.student_code}</p>
+                    <p><strong>Faculté:</strong> ${student?.faculty}</p>
                     <p><strong>Prix:</strong> ${formatCurrency(currentPayment.price)} ${CURRENCY}</p>
                     <p><strong>Remise:</strong> ${formatCurrency(toNumber(currentPayment.discount))} ${CURRENCY}</p>
                     <p><strong>Solde:</strong> ${formatCurrency(currentPayment.balance)} ${CURRENCY}</p>
@@ -1297,7 +1849,7 @@ export function Payments() {
                   <table>
                     <thead><tr><th>Montant</th><th>Solde après</th><th>Date</th></tr></thead>
                     <tbody>
-                      ${currentPayment.payment_history.map((p: PaymentRecord) => `
+                      ${(currentPayment.payment_history || []).map((p: PaymentRecord) => `
                         <tr>
                           <td>${formatCurrency(p.amount)} ${CURRENCY}</td>
                           <td>${formatCurrency(p.balance)} ${CURRENCY}</td>
@@ -1317,12 +1869,12 @@ export function Payments() {
             <button
               onClick={() => {
                 const headers = ['Montant', 'Solde après', 'Date']
-                const rows = currentPayment.payment_history.map((p: PaymentRecord) => [
+                const rows = (currentPayment.payment_history || []).map((p: PaymentRecord) => [
                   `${formatCurrency(p.amount)} ${CURRENCY}`,
                   `${formatCurrency(p.balance)} ${CURRENCY}`,
                   typeof p.date === 'string' ? new Date(p.date).toLocaleDateString('fr-FR') : new Date(p.date).toLocaleDateString('fr-FR'),
                 ])
-                exportToCSV(headers, rows, `paiements_${student.student_code}`)
+                exportToCSV(headers, rows, `paiements_${student?.student_code}`)
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition text-sm font-medium"
             >
@@ -1346,7 +1898,7 @@ export function Payments() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg border-2 border-green-200 shadow-md p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Prix/An</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">{formatCurrency(currentPayment.price-currentPayment.discount)}</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">{formatCurrency(currentPayment.price - (currentPayment.discount || 0))}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
@@ -1358,7 +1910,7 @@ export function Payments() {
 
             <div className="bg-white rounded-lg border-2 border-blue-200 shadow-md p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Solde actuel</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{currentPayment.price===currentPayment.balance ? formatCurrency(currentPayment.balance-currentPayment.discount) : formatCurrency(currentPayment.balance)}</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{currentPayment.price===currentPayment.balance ? formatCurrency(currentPayment.balance-currentPayment?.discount) : formatCurrency(currentPayment.balance)}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
@@ -1391,10 +1943,14 @@ export function Payments() {
             <Pay
               id={currentPayment.id}
               price={currentPayment.price}
-              discount={currentPayment.discount}
+              discount={currentPayment.discount || 0}
               balance={currentPayment.balance}
               history={currentPayment.payment_history || []}
               onSuccess={refreshPayments}
+              v_1={versement?.v_1}
+              v_2={versement?.v_2}
+              v_3={versement?.v_3}
+              remise={currentPayment?.discount || 0}
             />
           </div>
         )}

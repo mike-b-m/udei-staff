@@ -31,6 +31,8 @@ interface EditFormRow {
   hour_session: string
   total_hour: string
   pass_grade: string
+  year: string
+  session: string
 }
 
 interface FormErrors {
@@ -261,6 +263,8 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
           hour_session: rowToEdit.hour_session.toString(),
           total_hour: rowToEdit.total_hour.toString(),
           pass_grade: rowToEdit.pass_grade?.toString() ?? "",
+          year: rowToEdit.year.toString(),
+          session: rowToEdit.session.toString(),
         }])
         setEditMode('single')
       }
@@ -274,6 +278,8 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
         hour_session: item.hour_session.toString(),
         total_hour: item.total_hour.toString(),
         pass_grade: item.pass_grade?.toString() ?? "",
+        year: item.year.toString(),
+        session: item.session.toString(),
       })))
       setEditMode('bulk')
     }
@@ -301,6 +307,8 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
       if (!row.hour_session || parseFloat(row.hour_session) <= 0) newErrors[`hour_session-${index}`] = 'Requis'
       if (!row.total_hour || parseFloat(row.total_hour) <= 0) newErrors[`total_hour-${index}`] = 'Requis'
       if (row.pass_grade === '' || row.pass_grade === undefined || parseFloat(row.pass_grade) < 0) newErrors[`pass_grade-${index}`] = 'La note de passage doit être >= 0'
+      if (!row.year || parseFloat(row.year) <= 0) newErrors[`year-${index}`] = 'L\'année est requise'
+      if (!row.session || parseFloat(row.session) <= 0) newErrors[`session-${index}`] = 'La session est requise'
     })
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -322,7 +330,9 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
             session_subjet: parseFloat(row.session_subjet),
             hour_session: parseFloat(row.hour_session),
             total_hour: parseFloat(row.total_hour),
-            pass_grade: parseFloat(row.pass_grade)
+            pass_grade: parseFloat(row.pass_grade),
+            year: parseFloat(row.year),
+            session: parseFloat(row.session)
           })
           .eq('id', row.id)
 
@@ -397,7 +407,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
 
   if (filteredData.length === 0) {
     return (
-      <div className="m-6 p-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+      <div className="m-6 p-6 bg-linear-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
         <div className="flex items-center gap-3">
           <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -424,7 +434,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
       )}
 
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-5">
+      <div className="bg-linear-to-r from-blue-600 to-blue-500 px-6 py-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -450,7 +460,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
           <div className="relative flex gap-2 flex-wrap">
             <button
               onClick={() => openEditModal()}
-              className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-all shadow-md hover:shadow-lg"
+              className="px-4 py-2 bg-linear-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-all shadow-md hover:shadow-lg"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -460,7 +470,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
 
             <button
               onClick={() => setDeleteConfirm('all')}
-              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-all shadow-md hover:shadow-lg"
+              className="px-4 py-2 bg-linear-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-all shadow-md hover:shadow-lg"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -554,7 +564,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-8 animate-in fade-in zoom-in duration-300">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-amber-600 to-amber-500 px-6 py-6 rounded-t-2xl">
+            <div className="bg-linear-to-r from-amber-600 to-amber-500 px-6 py-6 rounded-t-2xl">
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -656,7 +666,6 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
                       {errors[`total_hour-${index}`] && <p className="text-red-600 text-xs mt-0.5">{errors[`total_hour-${index}`]}</p>}
                     </div>
 
-                    
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Note de Passage</label>
                       <input
@@ -670,6 +679,36 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
                         step="0.1"
                       />
                       {errors[`pass_grade-${index}`] && <p className="text-red-600 text-xs mt-0.5">{errors[`pass_grade-${index}`]}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Année</label>
+                      <input
+                        type="number"
+                        value={row.year}
+                        onChange={(e) => handleEditRowChange(index, 'year', e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all ${
+                          errors[`year-${index}`] ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400 focus:border-amber-500'
+                        }`}
+                        placeholder="0"
+                        step="1"
+                      />
+                      {errors[`year-${index}`] && <p className="text-red-600 text-xs mt-0.5">{errors[`year-${index}`]}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Session</label>
+                      <input
+                        type="number"
+                        value={row.session}
+                        onChange={(e) => handleEditRowChange(index, 'session', e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all ${
+                          errors[`session-${index}`] ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400 focus:border-amber-500'
+                        }`}
+                        placeholder="0"
+                        step="1"
+                      />
+                      {errors[`session-${index}`] && <p className="text-red-600 text-xs mt-0.5">{errors[`session-${index}`]}</p>}
                     </div>
                   </div>
                 </div>
@@ -693,7 +732,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
                 className={`flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2 ${
                   loading
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 shadow-lg hover:shadow-xl'
+                    : 'bg-linear-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 shadow-lg hover:shadow-xl'
                 }`}
               >
                 {loading ? (
@@ -705,6 +744,79 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
                   </>
                 ) : (
                   'Enregistrer les modifications'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-in fade-in zoom-in duration-300">
+            <div className="bg-red-50 px-6 py-6 rounded-t-2xl border-b-2 border-red-200">
+              <div className="flex items-center gap-3">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4v2m0 0v2m0-6H9m3 0h3M12 5a7 7 0 100 14 7 7 0 000-14z" />
+                </svg>
+                <div>
+                  <h3 className="text-lg font-bold text-red-900">Confirmation de suppression</h3>
+                  <p className="text-sm text-red-700">
+                    {deleteConfirm === 'all' ? 'tous les cours' : 'ce cours'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-6">
+              <p className="text-gray-700 font-medium mb-4">
+                Êtes-vous sûr de vouloir supprimer {deleteConfirm === 'all' ? 'tous les cours' : 'ce cours'} ?
+              </p>
+              <p className="text-sm text-gray-600">
+                Cette action <span className="font-semibold text-red-600">ne peut pas être annulée</span>.
+              </p>
+            </div>
+
+            <div className="flex gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="flex-1 px-4 py-3 rounded-lg font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (deleteConfirm === 'all') {
+                    handleDeleteAll()
+                  } else if (typeof deleteConfirm === 'number') {
+                    handleDeleteRow(deleteConfirm)
+                  }
+                }}
+                disabled={deleting}
+                className={`flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2 ${
+                  deleting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-linear-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {deleting ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Suppression...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Supprimer définitivement
+                  </>
                 )}
               </button>
             </div>
@@ -750,7 +862,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
                   index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                 }`}
               >
-                <td className="px-4 py-4 text-center">
+                <td className="px-4 py-4 text-center flex gap-2 justify-center">
                   <button
                     onClick={() => openEditModal(course.id)}
                     title="Éditer cette ligne"
@@ -758,6 +870,15 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirm(course.id)}
+                    title="Supprimer cette ligne"
+                    className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:bg-red-100 rounded-lg transition-all hover:shadow-md"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 </td>
@@ -779,7 +900,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
       </div>
 
       {/* Totals Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-5 border-t-2 border-gray-200">
+      <div className="bg-linear-to-r from-blue-50 to-indigo-50 px-6 py-5 border-t-2 border-gray-200">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="text-center p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
             <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Cours</p>

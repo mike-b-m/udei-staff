@@ -1,6 +1,7 @@
 'use client'
 import { Price, Payments, Student_pay } from "@/app/component/add-payment/addpayment"
-import { Suspense, useState, useMemo } from "react"
+import { Suspense, useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 
 // ============ ICON COMPONENTS ============
 const Icons = {
@@ -141,6 +142,12 @@ function TabContent({ activeTab }: { activeTab: string }) {
 // ============ MAIN PAGE ============
 export default function PaymentPage() {
   const [activeTab, setActiveTab] = useState('price')
+  
+    const searchParams = useSearchParams()
+    const studentId = searchParams.get('id')
+    useEffect(() => {
+      if (studentId) {setActiveTab('payments')}
+    }, [studentId])
 
   const activeTabData = useMemo(
     () => TABS.find(tab => tab.id === activeTab),
@@ -181,7 +188,7 @@ export default function PaymentPage() {
                     </span>
                   </div>
                   <p className="text-slate-300 mt-2 text-sm font-medium">
-                    {activeTabData?.description}
+                    {activeTabData?.description}l
                   </p>
                 </div>
               </div>
