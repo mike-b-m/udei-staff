@@ -311,4 +311,4 @@ export function CreateSeanceModal({
   )
 }
 
-export default CreateSeanceModal
+//export default CreateSeanceModal
