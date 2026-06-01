@@ -4,11 +4,11 @@
  */
 
 // Components
-export { AttendanceFilter } from './attendanceFilter'
-export { AttendanceSummary } from './attendanceSummary'
-export { AttendanceTable } from './AttendanceTable'
-export { AttendanceActions } from './attendanceActions'
-export { CreateSeanceModal } from './CreateSeanceModal'
+// export { AttendanceFilter } from './AttendanceFilter'
+// export { AttendanceSummary } from './AttendanceSummary'
+// export { AttendanceTable } from './AttendanceTable'
+// export { AttendanceActions } from './AttendanceActions'
+// export { CreateSeanceModal } from './CreateSeanceModal'
 
 // Hooks
 export { useAttendance } from './useAttendance'
