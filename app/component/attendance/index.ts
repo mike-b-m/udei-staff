@@ -19,7 +19,6 @@ export type {
   AttendanceSeance,
   AttendanceDay,
   AttendanceRecord,
-  AttendanceSummary,
   AttendanceFilters,
   StudentAttendanceView,
   AttendanceTableRow,
