@@ -662,7 +662,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
     useEffect(() => {
         const getData = async () => {
             const { data: stud, error: second } = await supabase.from('student')
-                .select('id,last_name,first_name,student_code,faculty');
+                .select('id,last_name,first_name,student_code,faculty').eq('id',id);
                 if (!stud || stud.length === 0) {
   console.error("Student not found");
   return; // or handle appropriately
