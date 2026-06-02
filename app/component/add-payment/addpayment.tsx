@@ -1151,15 +1151,44 @@ export function Student_pay() {
 
     const payment = paymentData[student.id]
     const price = toNumber(facultyPrice.price)
-    const remise = toNumber(payment?.discount || 0)
+    const discount = toNumber(payment?.discount || 0)
     const balance = toNumber(payment?.balance || 0)
     
-    const netPrice = price - remise
+    const netPrice = price - discount
     const paid = netPrice - balance
     
-    const v1Total = toNumber(facultyPrice.v_1)
-    const v2Total = toNumber(facultyPrice.v_2)
-    const v3Total = toNumber(facultyPrice.v_3)
+    let v1Total = toNumber(facultyPrice.v_1)
+    let v2Total = toNumber(facultyPrice.v_2)
+    let v3Total = toNumber(facultyPrice.v_3)
+
+    // Apply discount to versement amounts (v3 first, then v2, then v1)
+    let remainingDiscount = discount
+    
+    if (remainingDiscount > 0) {
+      // Subtract from v3 first
+      if (remainingDiscount >= v3Total) {
+        remainingDiscount -= v3Total
+        v3Total = 0
+        
+        // If discount still remains, subtract from v2
+        if (remainingDiscount > 0 && remainingDiscount >= v2Total) {
+          remainingDiscount -= v2Total
+          v2Total = 0
+          
+          // If discount still remains, subtract from v1
+          if (remainingDiscount > 0) {
+            v1Total = Math.max(0, v1Total - remainingDiscount)
+          }
+        } else if (remainingDiscount > 0) {
+          v2Total -= remainingDiscount
+          remainingDiscount = 0
+        }
+      } else {
+        // Discount is less than v3, just reduce v3
+        v3Total -= remainingDiscount
+        remainingDiscount = 0
+      }
+    }
 
     // Calculate remaining amounts for each versement
     const isPaid = balance === 0
@@ -1210,6 +1239,65 @@ export function Student_pay() {
     } else {
       return { color: 'text-red-600', status: '○ Impayé', bgColor: 'bg-red-50' }
     }
+  }
+
+  // Helper function to get balance color based on amount
+  const getBalanceColor = (balance: number, total: number): string => {
+    if (balance === 0) return 'text-green-600'
+    if (balance < total) return 'text-amber-600'
+    return 'text-red-600'
+  }
+
+  // Calculate faculty summary data with versement breakdown
+  const calculateFacultySummary = () => {
+    const facultySummary: { [key: string]: { 
+      studentCount: number
+      v1Total: number
+      v1Balance: number
+      v2Total: number
+      v2Balance: number
+      v3Total: number
+      v3Balance: number
+      totalPrice: number
+      totalPaid: number
+      totalDiscount: number
+    }} = {}
+
+    // Group students by faculty and calculate totals
+    filteredStudents.forEach(student => {
+      const faculty = student.faculty || 'Non spécifié'
+      const vers = calculateVersements(student)
+      const payment = paymentData[student.id]
+      const discount = toNumber(payment?.discount || 0)
+
+      if (!facultySummary[faculty]) {
+        facultySummary[faculty] = {
+          studentCount: 0,
+          v1Total: 0,
+          v1Balance: 0,
+          v2Total: 0,
+          v2Balance: 0,
+          v3Total: 0,
+          v3Balance: 0,
+          totalPrice: 0,
+          totalPaid: 0,
+          totalDiscount: 0
+        }
+      }
+
+      facultySummary[faculty].studentCount += 1
+      facultySummary[faculty].v1Total += vers.v1Total
+      facultySummary[faculty].v1Balance += vers.v1Remaining
+      facultySummary[faculty].v2Total += vers.v2Total
+      facultySummary[faculty].v2Balance += vers.v2Remaining
+      facultySummary[faculty].v3Total += vers.v3Total
+      facultySummary[faculty].v3Balance += vers.v3Remaining
+      facultySummary[faculty].totalPrice += vers.netPrice
+      facultySummary[faculty].totalPaid += vers.paid
+      facultySummary[faculty].totalDiscount += discount
+    })
+
+    return facultySummary
   }
 
   // Export handlers
@@ -1533,7 +1621,9 @@ export function Student_pay() {
           <p className="text-yellow-800 font-medium">Aucun étudiant ne correspond aux filtres</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-gray-200">
+        <div className="space-y-6">
+          {/* Individual Student Table */}
+          <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-gray-200">
           {/* Student table header */}
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -1613,6 +1703,117 @@ export function Student_pay() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Faculty Summary Section */}
+        <div className="mt-8 bg-white rounded-lg shadow-md overflow-x-auto border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Résumé par Faculté
+            </h3>
+          </div>
+          
+          <table className="w-full">
+            <thead className="bg-linear-to-r from-blue-600 to-blue-500 text-white">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-semibold">Faculté</th>
+                <th className="px-6 py-3 text-center text-sm font-semibold">Effectif</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold">Versement 1</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold">Solde V1</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold">Versement 2</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold">Solde V2</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold">Versement 3</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold">Solde V3</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {Object.entries(calculateFacultySummary()).map(([faculty, data], index) => (
+                <tr key={faculty} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}>
+                  <td className="px-6 py-4">
+                    <p className="font-semibold text-gray-900">{faculty}</p>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                      {data.studentCount}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="font-semibold text-gray-900">{formatCurrency(data.v1Total)} {CURRENCY}</span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={`font-semibold ${getBalanceColor(data.v1Balance, data.v1Total)}`}>
+                      {formatCurrency(data.v1Balance)} {CURRENCY}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="font-semibold text-gray-900">{formatCurrency(data.v2Total)} {CURRENCY}</span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={`font-semibold ${getBalanceColor(data.v2Balance, data.v2Total)}`}>
+                      {formatCurrency(data.v2Balance)} {CURRENCY}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="font-semibold text-gray-900">{formatCurrency(data.v3Total)} {CURRENCY}</span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={`font-semibold ${getBalanceColor(data.v3Balance, data.v3Total)}`}>
+                      {formatCurrency(data.v3Balance)} {CURRENCY}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              
+              {/* Grand Total Row */}
+              {(() => {
+                const summary = calculateFacultySummary()
+                const totals = {
+                  studentCount: Object.values(summary).reduce((sum, f) => sum + f.studentCount, 0),
+                  v1Total: Object.values(summary).reduce((sum, f) => sum + f.v1Total, 0),
+                  v1Balance: Object.values(summary).reduce((sum, f) => sum + f.v1Balance, 0),
+                  v2Total: Object.values(summary).reduce((sum, f) => sum + f.v2Total, 0),
+                  v2Balance: Object.values(summary).reduce((sum, f) => sum + f.v2Balance, 0),
+                  v3Total: Object.values(summary).reduce((sum, f) => sum + f.v3Total, 0),
+                  v3Balance: Object.values(summary).reduce((sum, f) => sum + f.v3Balance, 0),
+                }
+
+                return (
+                  <tr className="bg-blue-50 border-t-2 border-blue-600">
+                    <td className="px-6 py-4">
+                      <p className="font-bold text-gray-900">TOTAL GÉNÉRAL</p>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-block px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-sm font-bold">
+                        {totals.studentCount}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-bold text-gray-900">{formatCurrency(totals.v1Total)} {CURRENCY}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-bold text-blue-600">{formatCurrency(totals.v1Balance)} {CURRENCY}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-bold text-gray-900">{formatCurrency(totals.v2Total)} {CURRENCY}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-bold text-blue-600">{formatCurrency(totals.v2Balance)} {CURRENCY}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-bold text-gray-900">{formatCurrency(totals.v3Total)} {CURRENCY}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-bold text-blue-600">{formatCurrency(totals.v3Balance)} {CURRENCY}</span>
+                    </td>
+                  </tr>
+                )
+              })()}
+            </tbody>
+          </table>
+        </div>
         </div>
       )}
     </div>
