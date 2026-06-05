@@ -20,7 +20,6 @@ export type {
   ViewMode,
   AttendanceSeance,
   AttendanceDay,
-  //AttendanceSummary,
   AttendanceSummaryData,
   AttendanceRecord,
   AttendanceFilters,
