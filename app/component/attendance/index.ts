@@ -5,9 +5,9 @@
 
 // Components
 export { AttendanceFilter } from './AttendanceFilter'
-export { AttendanceSummary } from './attendanceSummary'
+export { AttendanceSummary } from './AttendanceSummary'
 export { AttendanceTable } from './AttendanceTable'
-export { AttendanceActions } from './attendanceActions'
+export { AttendanceActions } from './AttendanceActions'
 export { CreateSeanceModal } from './CreateSeanceModal'
 
 // Hooks
