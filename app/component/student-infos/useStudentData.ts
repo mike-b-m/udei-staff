@@ -13,7 +13,7 @@ import { StudentData, StudentStatus, UserProfile, StudentPreview } from './types
  * Hook: Fetch complete student data (personal info + status + role)
  * Only re-fetches when studentCode changes
  */
-export const useStudentData = (studentCode: string | null) => {
+export const useStudentData = (studentCode: string | null, enabled = true) => {
   const [student, setStudent] = useState<StudentData | null>(null)
   const [status, setStatus] = useState<StudentStatus | null>(null)
   const [userRole, setUserRole] = useState<UserProfile | null>(null)
@@ -21,7 +21,7 @@ export const useStudentData = (studentCode: string | null) => {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!studentCode) {
+    if (!studentCode || !enabled) {
       setStudent(null)
       setStatus(null)
       return
@@ -66,10 +66,11 @@ export const useStudentData = (studentCode: string | null) => {
     }
 
     fetchData()
-  }, [studentCode])
+  }, [studentCode, enabled])
 
-  // Fetch user role only once on mount (optimization)
+  // Fetch user role once when the modal is first opened
   useEffect(() => {
+    if (!enabled) return
     const fetchUserRole = async () => {
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -90,7 +91,7 @@ export const useStudentData = (studentCode: string | null) => {
     }
 
     fetchUserRole()
-  }, []) // Empty dependency - only on mount
+  }, [enabled]) // Only fetch role when modal opens
 
   return { student, status, userRole, loading, error }
 }

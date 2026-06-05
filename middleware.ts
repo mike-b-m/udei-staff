@@ -16,7 +16,6 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          // Re-instantiate the response with the modified request headers
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -26,19 +25,28 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: This refreshes the auth token and triggers setAll if needed
+  // Refreshes the session token — MUST be called before any redirect
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
-  // 1. NOT LOGGED IN: Redirect to login
-  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/result')) {
+  // Helper: build a redirect that carries ALL session cookies from supabaseResponse
+  const redirectTo = (pathname: string) => {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    // FIX: Merge cookies from supabaseResponse into the redirect response
-    return NextResponse.redirect(url, { headers: supabaseResponse.headers })
+    url.pathname = pathname
+    const redirectResponse = NextResponse.redirect(url)
+    // Copy every cookie supabase wrote (including sb-* session cookies) onto the redirect
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+    })
+    return redirectResponse
   }
 
-  // 2. LOGGED IN ON LOGIN PAGE: Redirect to dashboard based on role
+  // 1. NOT LOGGED IN → send to login
+  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/result')) {
+    return redirectTo('/login')
+  }
+
+  // 2. LOGGED IN + ON LOGIN PAGE → send to dashboard
   if (user && pathname.startsWith('/login')) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -46,14 +54,11 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const url = request.nextUrl.clone()
-    url.pathname = profile?.role === 'student' ? '/student' : '/admin'
-    // FIX: Merge cookies from supabaseResponse into the redirect response
-    return NextResponse.redirect(url, { headers: supabaseResponse.headers })
+    return redirectTo(profile?.role === 'student' ? '/student' : '/admin')
   }
 
-  // 3. ROLE PROTECTION FOR /ADMIN
-  if (user && pathname.startsWith('/admin') && !pathname.startsWith('/result')) {
+  // 3. LOGGED IN + /admin route → check staff role
+  if (user && pathname.startsWith('/admin')) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -62,10 +67,7 @@ export async function middleware(request: NextRequest) {
 
     const staffRoles = ['admin', 'editor', 'administration', 'prof']
     if (!profile || !staffRoles.includes(profile.role)) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/student'
-      // FIX: Merge cookies from supabaseResponse into the redirect response
-      return NextResponse.redirect(url, { headers: supabaseResponse.headers })
+      return redirectTo('/student')
     }
   }
 
@@ -74,6 +76,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|public|image).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

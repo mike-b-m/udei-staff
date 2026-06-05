@@ -67,7 +67,8 @@ function Home() {
   useEffect(() => {
     const getData = async () => {
     setLoad(true)
-      let query = supabase.from('student').select('*')
+      let query = supabase.from('student')
+        .select('id,first_name,last_name,faculty,student_code,photo_url,enroll_date,email,phone_number')
         .order('last_name', { ascending: true })
 
       if (faculty) query = query.eq('faculty', faculty)
@@ -97,13 +98,17 @@ function Home() {
     setLoad(false)
     }; 
     getData();
-    const channel = supabase.channel("live-table").on("postgres_changes", { event: "*", schema: "public", table: "student" },
-       (payload) => {
-         console.log("Realtime update:", payload)
-         if (payload.eventType === "INSERT") {setDat(prev => [...prev, payload.new])}
-       }).subscribe((status) => {
-  console.log("STATUS:", status);
-})
+     const channelName = `live-table-${Date.now()}`
+  const channel = supabase
+    .channel(channelName)          // ← unique name
+    .on("postgres_changes", { event: "*", schema: "public", table: "student" },
+      (payload) => {
+        if (payload.eventType === "INSERT") {
+          setDat(prev => [...prev, payload.new])
+        }
+      }
+    )
+    .subscribe()
        return () => {
         supabase.removeChannel(channel)
        };},[send])

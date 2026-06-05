@@ -50,8 +50,11 @@ export default function StudentInfos(props: StudentSearchProps) {
   const [searchMode, setSearchMode] = useState(true) // true = name search, false = code search
   const [isOpen, setIsOpen] = useState(false)
 
-  // Data fetching
-  const { student, status, userRole, loading, error } = useStudentData(studentCode)
+  // Data fetching — only runs when modal is open (prevents N×3 queries on list pages)
+  const { student, status, userRole, loading, error } = useStudentData(
+    studentCode,
+    displayMode === 'full-page' || isOpen   // full-page always loads; modal waits for open
+  )
   const { searchResults, searching, search } = useStudentSearch()
 
   // Handlers

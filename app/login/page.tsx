@@ -1,7 +1,7 @@
 'use client'
 import { supabase } from "@/app//component/db";
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import Image from "next/image";
 
 export default function LogIn() {
@@ -19,35 +19,21 @@ export default function LogIn() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (session) {
-          // User is logged in, get their role
-          const { data: { user } } = await supabase.auth.getUser()
-          
-          if (user) {
-            // Fetch user profile to determine role
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', user.id)
-              .maybeSingle()
-
-            // Redirect based on role
-            if (profile?.role === 'student') {
-              window.location.href = '/student'
-            } else {
-              window.location.href = '/admin'
-            }
-          }
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle()
+          router.replace(profile?.role === 'student' ? '/student' : '/admin')
         }
       } catch (err) {
         console.error('Error checking session:', err)
       }
     }
-
     checkSession()
-  }, [router])
+  }, [])
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -62,7 +48,6 @@ export default function LogIn() {
     try {
       setLoading(true)
 
-      // Sign in with email and password
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -71,7 +56,6 @@ export default function LogIn() {
       if (signInError) throw signInError
 
       if (data.user) {
-        // Fetch user profile to get role
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -82,14 +66,10 @@ export default function LogIn() {
         setEmail('')
         setPassword('')
 
-        // Hard redirect so middleware sees the new cookies
-        setTimeout(() => {
-          if (profile?.role === 'student') {
-            window.location.href = '/student'
-          } else {
-            window.location.href = '/admin'
-          }
-        }, 1500)
+        // router.refresh() first so Next.js picks up the new session cookie,
+        // then router.replace() navigates — no setTimeout, no window.location
+        router.refresh()
+        router.replace(profile?.role === 'student' ? '/student' : '/admin')
       }
     } catch (err) {
       console.error('Login error:', err)
