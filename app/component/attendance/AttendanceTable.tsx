@@ -188,7 +188,7 @@ export function AttendanceTable({
                   const editable = canModify && !cell.confirmed
                   const today = new Date()
                   today.setHours(0, 0, 0, 0)
-                  const cellDate = new Date(day.date_day)
+                  const cellDate = new Date(day.date_day.replace(/-/g, '/'))
                   cellDate.setHours(0, 0, 0, 0)
                   const isPast = cellDate < today
 
