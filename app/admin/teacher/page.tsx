@@ -18,9 +18,9 @@ export default function Teacher() {
     const [note, setNote] = useState<any[]>([])
     const [program, setProgram] = useState<FormRow[]>([])
     const [faculty, setFaculty] = useState('')
-    const [intra, setIntra] = useState(true)
+    const [intra, setIntra] = useState(false)
     const [read, setRead] = useState(false)
-    const [sessionTab, setSessionTab] = useState(false)
+    const [sessionTab, setSessionTab] = useState(true)
     const [loading, setLoading] = useState(false)
 
     const [student, setStudent] = useState<any[]>([])
@@ -28,6 +28,9 @@ export default function Teacher() {
     const [selectedStudent, setSelectedStudent] = useState<any>(null)
     const [modalOpen, setModalOpen] = useState(false)
     const [modalLoading, setModalLoading] = useState(false)
+    const [facultyFilter, setFacultyFilter] = useState('')
+    const [yearFilter, setYearFilter] = useState('')
+    const [sessionFilter, setSessionFilter] = useState('')
     
     const searchpara = useSearchParams()
     const search = searchpara.get('faculty') || ''
@@ -39,21 +42,21 @@ export default function Teacher() {
             setLoading(true);
             try {
                 // Validate required filters
-                if (!search || !search3 || !search4) {
-                    setStudent([]);
-                    setFullname([]);
-                    setProgram([]);
-                    setLoading(false);
-                    return;
-                }
+                // if (!search || !search3 || !search4) {
+                //     setStudent([]);
+                //     setFullname([]);
+                //     setProgram([]);
+                //     setLoading(false);
+                //     return;
+                // }
 
                 // Get courses
                 const { data: pro, error: theError } = await supabase
                     .from('course_program')
                     .select('*')
-                    .eq('faculty', search)
-                    .eq('session', search4)
-                    .eq('year', search3);
+                    .eq('faculty', facultyFilter || search)
+                    .eq('session', sessionFilter || search4)
+                    .eq('year', yearFilter || search3);
 
                 if (theError) {
                     console.error('Error fetching courses:', theError.message);
@@ -62,8 +65,8 @@ export default function Teacher() {
                 // Get students with student info joined
                 const { data: stud, error: second } = await supabase.from('student_status')
                     .select('id,student_id,year_study,academic_year,student(id,last_name,first_name,student_code,faculty)')
-                    .eq('year_study', search3)
-                    .eq('faculty', search)
+                    .eq('year_study', yearFilter || search3)
+                    .eq('faculty', facultyFilter || search)
                     .order('student(last_name)', { ascending: true });
 
                 if (second) {
@@ -124,7 +127,7 @@ export default function Teacher() {
             }
         };
         getData()
-    }, [search, search3, search4])
+    }, [facultyFilter, yearFilter, sessionFilter]);
 
     return (
         <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 md:p-8">
@@ -148,9 +151,13 @@ export default function Teacher() {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             >
                                 <option value="">Sélectionner une matière</option>
-                                {program.map((pro) => (
-                                    <option key={pro.courses}>{pro.courses}</option>
-                                ))}
+                                {program && program.length > 0 ? (
+                                    program.map((pro) => (
+                                        <option key={pro.courses}>{pro.courses}</option>
+                                    ))
+                                ) : (
+                                    <option disabled>aucune matière disponible</option>
+                                )}
                             </select>
                         </div>
 
@@ -159,8 +166,9 @@ export default function Teacher() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Faculté</label>
                             <select
                                 name="faculty"
+                                value={facultyFilter}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                            >
+                            onChange={(e)=>setFacultyFilter(e.target.value)}>
                                 <option value="">Sélectionner une faculté</option>
                                 <option>Génie Civil</option>
                                 <option>Médecine Générale</option>
@@ -187,8 +195,9 @@ export default function Teacher() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Niveau</label>
                             <select
                                 name="year"
+                                    value={yearFilter}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                            >
+                                onChange={(e)=>setYearFilter(e.target.value)}>
                                 <option value="">Sélectionner un niveau</option>
                                 <option>1</option>
                                 <option>2</option>
@@ -204,8 +213,9 @@ export default function Teacher() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Session</label>
                             <select
                                 name="session"
+                                    value={sessionFilter}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                            >
+                                onChange={(e)=>setSessionFilter(e.target.value)}>
                                 <option value="">Sélectionner une session</option>
                                 <option>1</option>
                                 <option>2</option>
@@ -213,33 +223,33 @@ export default function Teacher() {
                         </div>
 
                         {/* Filter Button */}
-                        <div className="flex items-end">
-                            <button
+                        {/* <div className="flex items-end">
+                            <button disabled
                                 type="submit"
                                 className="w-full px-6 py-2 bg-linear-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-600 transition shadow-md"
                             >
                                 Filtrer
                             </button>
-                        </div>
+                        </div> */}
                     </form>
 
                     {/* Active Filters Display */}
                     <div className="flex flex-wrap gap-2 mt-4">
-                        {search && (
+                        {search || facultyFilter ? (
                             <div className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                                Faculté: {search}
+                                Faculté: {search || facultyFilter}
                             </div>
-                        )}
-                        {search3 && (
+                        ) : null}
+                        {search3 || yearFilter ? (
                             <div className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                                Niveau: {search3}
+                                Niveau: {search3 || yearFilter}
                             </div>
-                        )}
-                        {search4 && (
+                        ) : null}
+                        {search4 || sessionFilter ? (
                             <div className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                                Session: {search4}
+                                Session: {search4 || sessionFilter}
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
 
@@ -292,8 +302,9 @@ export default function Teacher() {
                     </div>
                 ) : (
                     <div className="text-center mb-4 text-gray-600">
+                        
                         Matière sélectionnée: <span className="font-bold text-blue-600">{faculty}</span>
-                    </div>
+                       </div>
                 )}
 
                 {/* Content Sections */}
@@ -487,9 +498,9 @@ export default function Teacher() {
                                             </div>
                                         ) : selectedStudent.student_id ? (
                                             <Readsession
-                                                faculty={search}
-                                                session={search4}
-                                                year={search3}
+                                                faculty={search || facultyFilter}
+                                                session={search4 || sessionFilter}
+                                                year={search3 || yearFilter}
                                                 id={selectedStudent.student_id}
                                                 name={selectedStudent.full_name}
                                                 matiere={faculty}
@@ -537,13 +548,14 @@ export default function Teacher() {
                                                 <div className="text-center">Note</div>
                                                 <div className="text-center">Action</div>
                                             </div>
+                                            
                                             {/* Student Rows */}
                                             {student.map((exa: any, index) => (
                                                 <div key={exa.id} className={`p-4 rounded-lg ${index % 2 === 0 ? 'bg-purple-50' : 'bg-white'} border border-gray-100`}>
                                                     <TeacherSession
-                                                        faculty={search}
-                                                        session={search4}
-                                                        year={search3}
+                                                        faculty={search || facultyFilter}
+                                                        session={search4 || sessionFilter}
+                                                        year={search3 || yearFilter}
                                                         name={[exa.academic_year, program.filter((p) => p.courses === faculty).map((p) => p.pass_grade)]}
                                                         matiere={faculty}
                                                         id={exa.student_id}
