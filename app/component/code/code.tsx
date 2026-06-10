@@ -20,7 +20,7 @@ export function Code({ sequenceNumber, faculty, onCodeGenerated }: CodeProps) {
     // Faculty can be empty initially, just use default chars
     const facultyParts = faculty ? faculty.split(' ') : []
     const firstChar = facultyParts[0]?.[0] || 'X'
-    const secondChar = facultyParts[1]?.[0] || facultyParts[0]?.[1] || 'X'
+    const secondChar = facultyParts[1]?.[0] || '' //facultyParts[0]?.[1] || 'X'
 
     const year = new Date().getFullYear()
     const yearLastTwo = year.toString().slice(-2)
