@@ -10,6 +10,7 @@ import { StudentSearchProps, StudentData, StudentStatus } from './types'
 import { supabase } from '../db'
 import { exportToCSV, printHTML } from '../export/exportUtils'
 import { Readsession } from '../teacher/teacher'
+import StudentCardModal from '../studentcard/StudentCardModal';
 
 const yearexam = [
   '1',
@@ -867,6 +868,7 @@ function StudentDisplayContent({
   const [editInfoOpen, setEditInfoOpen] = useState(false)
   const [editStatusOpen, setEditStatusOpen] = useState(false)
   const [open, setOpen] = useState('')
+  const [cardOpen, setCardOpen] = useState(false)
   const [photoChangeOpen, setPhotoChangeOpen] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
@@ -1231,6 +1233,23 @@ function StudentDisplayContent({
           </Link>
         )}
 
+      {/*id card generator */}
+      <button
+        onClick={() => setCardOpen(true)}
+        className="rounded-lg bg-green-600 px-4 py-2 text-white font-semibold hover:bg-green-700"
+      >
+        Voir la carte
+      </button>
+         {cardOpen && (
+        <StudentCardModal
+          student={student}
+          studentStatus={status}
+          cardOpen={cardOpen}
+          setCardOpen={setCardOpen}
+          academicYear="2025-2026"
+          logoUrl="/udei-logo.png"
+        />
+      )}
         {/* Years and Sessions */}
         <div className='flex flex-wrap gap-2'>
           {yearexam.map(j => sessionexam.map(s =>

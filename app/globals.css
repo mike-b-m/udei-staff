@@ -19,6 +19,16 @@
   }
 } */
 
+/* Force background colors/images to print exactly as shown on screen */
+.force-print-colors,
+.force-print-colors * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+
+
+
 body {
   background: var(--background);
   color: var(--foreground);

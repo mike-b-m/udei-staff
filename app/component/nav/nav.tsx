@@ -95,6 +95,12 @@ const NAV_ITEMS = [
     label: 'Présence',
     icon: 'attendance',
     roles: ['admin', 'editor', 'prof', 'administration']
+  },
+  {
+    href: '/admin/scan',
+    label: 'Scan',
+    icon: 'scan',
+    roles: ['admin', 'editor', 'prof', 'administration']
   }
 ]
 

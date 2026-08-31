@@ -1,5 +1,5 @@
 'use client'
-import { Price, Payments, Student_pay } from "@/app/component/add-payment/addpayment"
+import { Price, Payments, Student_pay, QrcodeScan } from "@/app/component/add-payment/addpayment"
 import { Suspense, useState, useMemo, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 
@@ -60,6 +60,15 @@ const TABS = [
     bgColor: 'bg-purple-50',
     component: Payments,
     description: 'Historique des paiements'
+  },
+  {
+    id: 'scanner',
+    label: 'Scanner QR',
+    icon: Icons.students,
+    iconColor: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+    component: QrcodeScan,
+    description: 'Consulter un étudiant par QR code'
   }
 ]
 

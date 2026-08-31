@@ -39,7 +39,8 @@ export default function Teacher() {
         matiere: '',
         id: ''
     })
-    const { facultyNames } = useFaculties()
+    const [facultyNames, setFacultyNames] = useState<any[]>([])
+    //const { facultyNames } = useFaculties()
     const { role} = useAuth()
 
     useEffect(() => {
@@ -53,11 +54,19 @@ export default function Teacher() {
                 const { data: pro, error: theError } = await supabase
                     .from('course_program')
                     .select('*').eq('faculty', search).eq('session', search4).eq('year', search3);
-                //Get courses for prof
+                  
+                    //Get courses for prof
+                const { data: p, error: theErr }:any = await supabase
+                    .from('prof_assignment')
+                    .select('*').eq('prof_id', user?.id);
+                    if (theErr) console.error(theErr.message)
+                        else {setFacultyNames(p)}
+                
+                    //Get courses for prof
                 const { data: pr, error: theErro }:any = await supabase
                     .from('prof_assignment')
                     .select('*').eq('prof_id', user?.id).eq('faculty', search).eq('session', search4).eq('year_study', search3);
-
+                
                 // Get students
                 const { data: stud, error: second } = await supabase.from('student_status')
                     .select('id,student_id,year_study')
@@ -88,6 +97,8 @@ export default function Teacher() {
         getData()
     }, [search, search3, search4])
 
+    const uniqueYears = [...new Set(facultyNames.map(e => e.year_study).filter(Boolean))].sort((a, b) => b - a)
+     const uniquefaculties = [...new Set(facultyNames.map(e => e.faculty).filter(Boolean))].sort((a, b) => b - a)
     return (
         <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 md:p-8">
             <div className="max-w-7xl mx-auto">
@@ -123,7 +134,11 @@ export default function Teacher() {
             //   value={faculty} onChange={(e)=>setFaculty(e.target.value)} 
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                 <option value="">-- Toutes les Facultés --</option>
-                {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
+                {uniquefaculties.map((faculty) => (
+                    <option key={faculty} value={faculty}>
+                        {faculty}
+                    </option>
+                ))}
               </select>
                         </div>
 
@@ -135,12 +150,17 @@ export default function Teacher() {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             >
                                 <option value="">Sélectionner un niveau</option>
-                                <option>1</option>
+                                 {uniqueYears.map((year) => (
+                                    <option key={year} value={year}>
+                                        {year}
+                                    </option>
+                                ))}
+                                {/* <option>1</option>
                                 <option>2</option>
                                 <option>3</option>
                                 <option>4</option>
                                 <option>5</option>
-                                <option>6</option>
+                                <option>6</option> */}
                             </select>
                         </div>
 
@@ -197,35 +217,9 @@ export default function Teacher() {
                             : 'text-gray-700 hover:bg-gray-100'
                             }`}
                     >
-                        Note Intra
+                        Note d'examen
                     </button>
-                    <button
-                        onClick={() => { setIntra(false); setRead(false); setSessionTab(false); }}
-                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${!intra && !read && !sessionTab
-                            ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-md'
-                            : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                    >
-                        Note Finale
-                    </button>
-                    <button
-                        onClick={() => { setSessionTab(true); setIntra(false); setRead(false); }}
-                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${sessionTab
-                            ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-md'
-                            : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                    >
-                        Session
-                    </button>
-                    <button
-                        onClick={() => { setRead(true); setIntra(false); setSessionTab(false); }}
-                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${read
-                            ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-md'
-                            : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                    >
-                        Consultation
-                    </button>
+                   
                 </div>
 
                 {/* Matière Selection Warning */}
@@ -258,140 +252,17 @@ export default function Teacher() {
                                     ) : student.length > 0 ? (
                                         <div className="space-y-2">
                                             {/* Header */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg font-semibold text-gray-700">
+                                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg font-semibold text-gray-700">
                                                 <div>Nom et Prénom</div>
-                                                <div className="text-center">Note</div>
-                                                <div className="text-center">Action</div>
+                                                <div className="pl-2">Note</div>
+                                                <div className="pl-2">Intra</div>
+                                                <div className="">Final</div>
+                                                <div className="">Action</div>
                                             </div>
                                             {/* Student Rows */}
                                             {student.map((exa: any, index) => (
                                                 <div key={exa.id} className={`p-4 rounded-lg ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'} border border-gray-100`}>
                                                     <TheacherInput
-                                                        faculty={search}
-                                                        session={search4}
-                                                        year={search3}
-                                                        name={''}
-                                                        matiere={faculty}
-                                                        id={exa.student_id}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8 text-gray-500">
-                                            Aucun étudiant trouvé avec les critères sélectionnés
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Final Notes Section */}
-                        {!intra && !read && !sessionTab && (
-                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                                <div className="bg-linear-to-r from-blue-600 to-blue-500 text-white p-4">
-                                    <h3 className="text-lg font-semibold">Saisie des Notes Finales</h3>
-                                </div>
-                                <div className="p-6">
-                                    {loading ? (
-                                        <div className="text-center py-8">
-                                            <p className="text-gray-500">Chargement...</p>
-                                        </div>
-                                    ) : student.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {/* Header */}
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg font-semibold text-gray-700">
-                                                <div>Nom et Prénom</div>
-                                                <div className="text-center">Note Intra</div>
-                                                <div className="text-center">Note Finale</div>
-                                                <div className="text-center">Action</div>
-                                            </div>
-                                            {/* Student Rows */}
-                                            {student.map((exa: any, index) => (
-                                                <div key={exa.id} className={`p-4 rounded-lg ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'} border border-gray-100`}>
-                                                    <TheacherInput2
-                                                        faculty=""
-                                                        session={search4}
-                                                        year={search3}
-                                                        name={`${exa.last_name} ${exa.first_name}`}
-                                                        matiere={faculty}
-                                                        id={exa.student_id}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8 text-gray-500">
-                                            Aucun étudiant trouvé avec les critères sélectionnés
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Read/Consultation Section */}
-                        {read && (
-                            <div>
-                                {loading ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        <p>Chargement...</p>
-                                    </div>
-                                ) : student.length > 0 ? (
-                                    <div className="space-y-6">
-                                        {student.map((stud) => (
-                                           <div key={stud.id}>
-                                            {/* <ReadNote
-                                                faculty=""
-                                                session={search4}
-                                                year={search3}
-                                                id={stud.student_id}
-                                                name=""
-                                                matiere=''
-                                            /> */}
-                                            <Readsession
-                                                faculty=""
-                                                session={search4}
-                                                year={search3}
-                                                id={stud.student_id}
-                                                name=""
-                                                matiere=''
-                                            />
-                                           </div>
-
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="bg-white rounded-2xl p-8 text-center text-gray-500">
-                                        Aucun étudiant trouvé avec les critères sélectionnés
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Session Notes Section */}
-                        {sessionTab && (
-                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                                <div className="bg-linear-to-r from-purple-600 to-purple-500 text-white p-4">
-                                    <h3 className="text-lg font-semibold">Saisie des Notes de Session</h3>
-                                    <p className="text-sm text-purple-100 mt-1">Notes enregistrées dans la table exam_1</p>
-                                </div>
-                                <div className="p-6">
-                                    {loading ? (
-                                        <div className="text-center py-8">
-                                            <p className="text-gray-500">Chargement...</p>
-                                        </div>
-                                    ) : student.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {/* Header */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg font-semibold text-gray-700">
-                                                <div>Nom et Prénom</div>
-                                                <div className="text-center">Note</div>
-                                                <div className="text-center">Action</div>
-                                            </div>
-                                            {/* Student Rows */}
-                                            {student.map((exa: any, index) => (
-                                                <div key={exa.id} className={`p-4 rounded-lg ${index % 2 === 0 ? 'bg-purple-50' : 'bg-white'} border border-gray-100`}>
-                                                    <TeacherSession
                                                         faculty={search}
                                                         session={search4}
                                                         year={search3}

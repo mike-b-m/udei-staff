@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "../db"
 import { Update } from "@/app/component/add-buuton/add_button"
@@ -6,6 +8,7 @@ import Link from "next/link"
 import Time from "../time/time"
 import { Filter2 } from "../filter/filter"
 import { exportToCSV, printHTML } from "../export/exportUtils"
+import { Scanner } from "@yudiel/react-qr-scanner"
 
 // ============ TYPES ============
 interface PaymentProps {
@@ -2202,5 +2205,176 @@ export function Payments() {
         )}
       </div>
     </>
+  )
+}
+
+interface ScannedPayment {
+  balance: number
+  discount: number
+  price: number
+  v_1: boolean
+  v_2: boolean
+  v_3: boolean
+}
+
+interface ScannedStudent {
+  id: number
+  first_name: string
+  last_name: string
+  faculty: string
+  photo_url?: string | null
+  student_code?: string | null
+}
+
+interface ScannedVersement {
+  label: string
+  total: number
+  paid: number
+  remaining: number
+  complete: boolean
+}
+
+export function QrcodeScan() {
+  const [scanning, setScanning] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [student, setStudent] = useState<ScannedStudent | null>(null)
+  const [payment, setPayment] = useState<ScannedPayment | null>(null)
+  const [academicYear, setAcademicYear] = useState('')
+  const [versements, setVersements] = useState<ScannedVersement[]>([])
+
+  const resetScan = () => {
+    setStudent(null)
+    setPayment(null)
+    setAcademicYear('')
+    setVersements([])
+    setError('')
+    setScanning(true)
+  }
+
+  const loadStudent = async (rawValue: string) => {
+    const scanresult = Number(rawValue.trim())
+    if (!Number.isInteger(scanresult) || scanresult <= 0) {
+      setError('Le QR code ne contient pas un identifiant étudiant valide.')
+      return
+    }
+
+    setScanning(false)
+    setLoading(true)
+    setError('')
+
+    try {
+      const { data: studentData, error: studentError } = await supabase
+        .from('student')
+        .select('id, first_name, last_name, faculty, photo_url, student_code')
+        .eq('id', scanresult)
+        .single()
+
+      if (studentError) throw studentError
+
+      const [{ data: paymentData, error: paymentError }, { data: statusData, error: statusError }, { data: facultyData, error: facultyError }] = await Promise.all([
+        supabase.from('student_payment').select('balance, discount, price, v_1, v_2, v_3').eq('student_id', scanresult).maybeSingle(),
+        supabase.from('student_status').select('academic_year').eq('student_id', scanresult).order('id', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('faculty_price').select('v_1, v_2, v_3').eq('faculty', studentData.faculty).maybeSingle(),
+      ])
+
+      if (paymentError) throw paymentError
+      if (statusError) throw statusError
+      if (facultyError) throw facultyError
+      if (!paymentData) throw new Error('Aucune information de paiement trouvée pour cet étudiant.')
+      if (!facultyData) throw new Error('Aucun montant de versement trouvé pour la faculté de cet étudiant.')
+
+      const currentPayment = {
+        balance: toNumber(paymentData.balance),
+        discount: toNumber(paymentData.discount),
+        price: toNumber(paymentData.price),
+        v_1: Boolean(paymentData.v_1),
+        v_2: Boolean(paymentData.v_2),
+        v_3: Boolean(paymentData.v_3),
+      }
+      const totals = [toNumber(facultyData?.v_1), toNumber(facultyData?.v_2), toNumber(facultyData?.v_3)]
+      const discountedTotals = [...totals]
+      let remainingDiscount = currentPayment.discount
+      for (let index = 2; index >= 0; index -= 1) {
+        const reduction = Math.min(discountedTotals[index], remainingDiscount)
+        discountedTotals[index] -= reduction
+        remainingDiscount -= reduction
+      }
+
+      const paid = Math.max(0, currentPayment.price - currentPayment.discount - currentPayment.balance)
+      const remainingAmounts = [...discountedTotals]
+      let remainingPaid = paid
+      for (let index = 0; index < remainingAmounts.length; index += 1) {
+        const applied = Math.min(remainingAmounts[index], remainingPaid)
+        remainingAmounts[index] -= applied
+        remainingPaid -= applied
+      }
+
+      setStudent(studentData)
+      setPayment(currentPayment)
+      setAcademicYear(statusData?.academic_year || 'Non renseignée')
+      setVersements(remainingAmounts.map((remaining, index) => ({
+        label: `Versement ${index + 1}`,
+        total: discountedTotals[index],
+        paid: discountedTotals[index] - remaining,
+        remaining,
+        complete: remaining <= 0,
+      })))
+    } catch (loadError) {
+      setStudent(null)
+      setPayment(null)
+      setVersements([])
+      setError(loadError instanceof Error ? loadError.message : 'Impossible de charger les informations de paiement.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleScan = (results: Array<{ rawValue: string }>) => {
+    if (!loading && scanning && results[0]?.rawValue) void loadStudent(results[0].rawValue)
+  }
+
+  return (
+    <section className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+      <div className="rounded-2xl bg-slate-950 p-5 text-white shadow-xl sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Paiements</p>
+            <h2 className="mt-1 text-2xl font-bold sm:text-3xl">Scanner une carte étudiant</h2>
+            <p className="mt-2 max-w-xl text-sm text-slate-300">Scannez le QR code présent sur la carte pour consulter le dossier de paiement.</p>
+          </div>
+          {!scanning && <button type="button" onClick={resetScan} className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-cyan-300">Nouveau scan</button>}
+        </div>
+        {scanning && <div className="mx-auto mt-6 max-w-md overflow-hidden rounded-xl border border-slate-700 bg-black"><Scanner onScan={handleScan} onError={() => setError('Autorisez l’accès à la caméra pour scanner un QR code.')} /></div>}
+        {loading && <p className="mt-5 text-center text-sm text-cyan-200">Chargement du dossier...</p>}
+        {error && <p className="mt-5 rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
+      </div>
+
+      {student && payment && <div className="space-y-5">
+        <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center">
+          <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-4 ring-cyan-50">
+            {student.photo_url ? <img src={student.photo_url} alt={`${student.first_name} ${student.last_name}`} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-3xl font-bold text-slate-300">{student.first_name[0]}{student.last_name[0]}</div>}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold uppercase tracking-wider text-cyan-600">Étudiant #{student.id}</p>
+            <h3 className="mt-1 truncate text-2xl font-bold text-slate-900">{student.last_name} {student.first_name}</h3>
+            <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
+              <p><span className="font-semibold text-slate-900">Faculté:</span> {student.faculty || 'Non renseignée'}</p>
+              <p><span className="font-semibold text-slate-900">Année académique:</span> {academicYear}</p>
+              <p><span className="font-semibold text-slate-900">Code:</span> {student.student_code || 'Non renseigné'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          {versements.map((versement) => <div key={versement.label} className={`rounded-xl border p-5 ${versement.complete ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+            <div className="flex items-center justify-between gap-2"><h4 className="font-bold text-slate-900">{versement.label}</h4><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${versement.complete ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>{versement.complete ? 'Complet' : 'En cours'}</span></div>
+            <p className="mt-5 text-2xl font-bold text-slate-900">{formatCurrency(versement.complete ? versement.total : versement.remaining)} <span className="text-sm font-semibold">{CURRENCY}</span></p>
+            <p className="mt-1 text-sm text-slate-600">{versement.complete ? 'Versement payé' : `Reste à payer sur ${formatCurrency(versement.total)} ${CURRENCY}`}</p>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/80"><div className={`h-full rounded-full ${versement.complete ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${versement.total ? Math.min(100, (versement.paid / versement.total) * 100) : 100}%` }} /></div>
+          </div>)}
+        </div>
+      </div>}
+    </section>
   )
 }

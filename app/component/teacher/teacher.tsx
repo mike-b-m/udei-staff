@@ -230,10 +230,14 @@ function RepriseButton({
 }
 //----- insert intra ---------
 export default function TeacherInput({session, name, matiere, id, year, faculty, }: TeacherInputProps) {
-    const [note, setNote] = useState('')
-    const [read, setRead] = useState(false)
+    const [note, setNote] = useState<number>(0)
+    const [intra,setIntra] = useState<number>(0)
+    const [final,setFinal] = useState<number>(0)
+    const [read, setRead] = useState(true)
     const [fullname, setFullname] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const [saveUpdate,setSaveUpdate]=useState(false)
+    const [theId,setTheId]=useState<number>(0)
 
     useEffect(() => {
         const getData = async () => {
@@ -256,9 +260,14 @@ export default function TeacherInput({session, name, matiere, id, year, faculty,
                 .select('*')
                 .eq('student_id', id).eq('matiere', matiere).eq('session', session).eq('year', year).maybeSingle();
             if (data?.matiere === matiere) {
-                setRead(false)
+                //setRead(false)
+                setSaveUpdate(true)
+                setNote(data?.note)
+                setIntra(data?.intra)
+                setFinal(data?.final)
+                setTheId(data?.id)
             }
-            else if (matiere) setRead(true)
+            else if (matiere) //setRead(true)
             if (error) {
                 console.error(error.message)
             }
@@ -267,8 +276,16 @@ export default function TeacherInput({session, name, matiere, id, year, faculty,
     }, [matiere, id, session, year])
 
     const handleSave = async () => {
-        if (!note || note === '0') {
-            alert('Veuillez entrer une note');
+        if (!note || note > 10 || note < 0 ) {
+            alert('Veuillez entrer une note valide');
+            return;
+        }
+        if (!intra || intra > 45 || intra < 0) {
+            alert('Veuillez entrer une note intra valide');
+            return;
+        }
+        if (!final || final > 45 || final < 0) {
+            alert('Veuillez entrer une note finale valide');
             return;
         }
 
@@ -278,10 +295,10 @@ export default function TeacherInput({session, name, matiere, id, year, faculty,
                 .select('*')
                 .eq('student_id', id).eq('matiere', matiere).single();
             
-            if (data?.matiere !== null) {
+            if (!data) {
                 if (matiere) {
                     const { error: status_error } = await supabase.from('exam')
-                        .insert([{ intra: note, matiere, session, year, faculty, student_id: id }])
+                        .insert([{ intra,note, matiere, session, year,final, faculty, student_id: id }])
                         .select('*')
                         .eq('student_id', id);
                     
@@ -290,14 +307,28 @@ export default function TeacherInput({session, name, matiere, id, year, faculty,
                         alert('Erreur lors de la sauvegarde')
                     } else {
                         console.log('Note intra sauvegardée')
-                        setNote('')
-                        setRead(false)
+                        setNote(0)
+                        //setRead(false)
                     }
                 }
                 else console.error('matiere non selected')
             }
             else {
-                console.error('donnees non existent')
+                //update section
+                const { error: status_error } = await supabase.from('exam')
+                .update([{ final,intra,note }])
+                .select('*')
+                .eq('student_id', id).eq('matiere', matiere).eq('session', session).eq('year', year);
+
+            if (status_error) {
+                console.error(status_error.message)
+                alert('Erreur lors de la sauvegarde')
+            } else {
+                console.log('Note finale sauvegardée')
+                //setNote(0)
+                //setRead(false)
+            }
+               // console.error('donnees non existent')
             }
         } finally {
             setIsLoading(false);
@@ -307,16 +338,34 @@ export default function TeacherInput({session, name, matiere, id, year, faculty,
     return (
         <div className="w-full">
             {read ? (
-                <div className="flex items-center gap-3 p-3">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg font-semibold text-gray-700">
                     <div className="flex-1 text-sm font-medium">{fullname[0]?.last_name} {fullname[0]?.first_name}</div>
                     <input 
                         type="number" 
                         value={note} 
-                        max={100} 
+                        max={10} 
                         min={0}
                         placeholder="0"
                         className="w-20 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                        onChange={(e) => setNote(e.target.value)}
+                        onChange={(e) => setNote(e.target.value ? parseFloat(e.target.value) : 0)}
+                    />
+                    <input 
+                        type="number" 
+                        value={intra} 
+                        max={45} 
+                        min={0}
+                        placeholder="0"
+                        className="w-20 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                        onChange={(e) => setIntra(e.target.value ? parseFloat(e.target.value) : 0)}
+                    />
+                    <input 
+                        type="number" 
+                        value={final} 
+                        max={45} 
+                        min={0}
+                        placeholder="0"
+                        className="w-20 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                        onChange={(e) => setFinal(e.target.value ? parseFloat(e.target.value) : 0)}
                     />
                     <button 
                         onClick={handleSave}
