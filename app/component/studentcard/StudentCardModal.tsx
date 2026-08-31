@@ -1,10 +1,23 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type SyntheticEvent } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 import { useReactToPrint } from 'react-to-print';
+
+const DEFAULT_LOGO = '/image/icon.png';
+const DEFAULT_AVATAR = '/image/icon.png';
+
+const getSafeImageSrc = (value?: string | null, fallback = DEFAULT_LOGO) =>
+  value && value.trim() ? value : fallback;
+
+const handleBrokenImage = (event: SyntheticEvent<HTMLImageElement>, fallback = DEFAULT_LOGO) => {
+  const img = event.currentTarget;
+  if (img.dataset.fallbackApplied === 'true') return;
+  img.dataset.fallbackApplied = 'true';
+  img.src = fallback;
+};
 
 interface Student {
   id: string;
@@ -42,7 +55,7 @@ export default function StudentCardModal({
   cardOpen,
   setCardOpen,
   academicYear = '2025-2026',
-  logoUrl = '/udei-logo.png',
+  logoUrl = '/image/icon.png',
 }: StudentCardModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
@@ -143,10 +156,11 @@ export default function StudentCardModal({
                     src={logoUrl}
                     alt="UDEI"
                     crossOrigin="anonymous"
+                    onError={(event) => handleBrokenImage(event, DEFAULT_LOGO)}
                     className="h-10 w-10 rounded-full bg-white object-contain p-0.5"
                   />
                   <div>
-                    <p className="text-[10px] font-bold uppercase leading-tight text-white">
+                    <p className="text-[12px] font-bold uppercase leading-tight text-white">
                       Université d&apos;Études Internationales
                     </p>
                     <div className="flex items-center gap-2">
@@ -158,7 +172,7 @@ export default function StudentCardModal({
               </div>
 
                 <div className="relative -mt-80 rounded-tr-[20%] rounded-bl-[20%]  pb-2 pt-4  bg-green-700">
-                     <div className="relative  rounded-tr-[20%] rounded-bl-[20%]   bg-white px-4 pb-6 pt-4  border-green-700">
+                     <div className="relative  rounded-tr-[20%] rounded-bl-[20%]   bg-white px-4 pb-2 pt-4  border-green-700">
                 <h2 className="text-center text-base font-bold text-green-600">
                   CARTE {student.sex === 'M' || student.sex === 'Masculin' || student.sex === 'masculin' ? 'DE L\'ÉTUDIANT' : 'DE L\'ÉTUDIANTE'}
                 </h2>
@@ -166,9 +180,10 @@ export default function StudentCardModal({
                 <div className="mx-auto mt-3 h-32 w-28 overflow-hidden rounded-lg border-2 border-green-500 bg-gray-100">
                   {student.photo_url ? (
                     <img
-                      src={student.photo_url}
+                      src={getSafeImageSrc(student.photo_url, DEFAULT_AVATAR)}
                       alt={`${student.first_name} ${student.last_name}`}
                       crossOrigin="anonymous"
+                      onError={(event) => handleBrokenImage(event, DEFAULT_AVATAR)}
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -193,7 +208,7 @@ export default function StudentCardModal({
               </div>
               </div>
 
-              <div className="h-8 bg-green-500" />
+              <div className="h-4 bg-green-500" />
             </div>
 
             {/* ===== BACK SIDE ===== */}
@@ -218,17 +233,19 @@ export default function StudentCardModal({
 
                 <div className="flex items-center justify-between pt-2">
                   <img
-                    src={logoUrl}
+                    src={getSafeImageSrc(logoUrl, DEFAULT_LOGO)}
                     alt="UDEI seal"
                     crossOrigin="anonymous"
+                    onError={(event) => handleBrokenImage(event, DEFAULT_LOGO)}
                     className="h-14 w-14 object-contain opacity-80"
                   />
                   <div className="text-center">
                     {student.signature_url ? (
                       <img
-                        src={student.signature_url}
+                        src={getSafeImageSrc(student.signature_url, DEFAULT_LOGO)}
                         alt="Signature"
                         crossOrigin="anonymous"
+                        onError={(event) => handleBrokenImage(event, DEFAULT_LOGO)}
                         className="h-10 w-24 object-contain"
                       />
                     ) : (

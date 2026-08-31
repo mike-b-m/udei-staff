@@ -1247,7 +1247,7 @@ function StudentDisplayContent({
           cardOpen={cardOpen}
           setCardOpen={setCardOpen}
           academicYear="2025-2026"
-          logoUrl="/udei-logo.png"
+          logoUrl="/image/icon.png"
         />
       )}
         {/* Years and Sessions */}
