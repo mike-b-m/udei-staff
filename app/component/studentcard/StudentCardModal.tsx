@@ -30,6 +30,7 @@ interface Student {
   student_code: string;
   photo_url?: string | null;
   signature_url?: string | null;
+  gs:string | null; // Added gs property to the Student interface
 }
 
 interface Status {
@@ -47,6 +48,7 @@ interface StudentCardModalProps {
   setCardOpen: (open: boolean) => void;
   academicYear?: string;
   logoUrl?: string;
+  gs?: string; // Added gs property to the props
 }
 
 export default function StudentCardModal({
@@ -56,6 +58,7 @@ export default function StudentCardModal({
   setCardOpen,
   academicYear = '2025-2026',
   logoUrl = '/image/icon.png',
+  gs = 'GS1', // Default value for GS
 }: StudentCardModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
@@ -250,6 +253,7 @@ export default function StudentCardModal({
                           <Row label="Fac" value={student.faculty} />
                           <Row label="Code" value={student.student_code} />
                           <Row label="Niveau" value={studentStatus.year_study} />
+                          <Row label="GS" value={student.gs} />
                         </div>
                       </div>
 

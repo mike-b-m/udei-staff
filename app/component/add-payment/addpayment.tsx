@@ -62,7 +62,12 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           h2 { color: #0077B6; margin-bottom: 20px; }
-          .info { margin-bottom: 15px; font-size: 14px; }
+          .info { margin-bottom: 15px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+           font-size: 14px;
+            }
           table {
             width: 100%;
             border-collapse: collapse;
@@ -93,6 +98,13 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+}
+  .logo-section{
+  width: 100%;}
+
+  .logo{
+  width: 100%;
+  height: auto;
 }
 
 /* Cell padding (px-6 py-4 equivalent) */
@@ -137,7 +149,9 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
 
         </style>
       </head><body>
-        <h2>Historique des paiements</h2>
+        <div class="logo-section">
+          <img src="/image/h.png" alt="UDEI Logo" class="logo">
+        </div>
         <div class="info">
         <p><strong>Nom:</strong> ${user.last_name}</p>
         <p><strong>Prénom:</strong> ${user.first_name}</p>
@@ -145,7 +159,7 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
           <p><strong>Faculté:</strong> ${faculty}</p>
           <p><strong>Année:</strong> ${year}</p>
           <p><strong>Prix:</strong> ${formatCurrency(data?.price)} ${CURRENCY}</p>
-          <p><strong>Remise:</strong> ${formatCurrency(data?.discount)} ${CURRENCY}</p>
+          <p><strong>Réduction:</strong> ${formatCurrency(data?.discount)} ${CURRENCY}</p>
           <p><strong>Solde:</strong> ${formatCurrency(data?.balance)} ${CURRENCY}</p>
           <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
         </div>
@@ -457,7 +471,7 @@ export default function Pay({ id, history, balance, discount,remise, price,v_1, 
         </div>
           {/* discount button  */}
           {!discount ? (<div className="bg-white p-6 outline-none rounded-lg border-2 border-gray-200 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-700 mb-4">Remise Étudiante</h3>
+            <h3 className="text-lg font-bold text-gray-700 mb-4">Réduction Étudiante</h3>
             <input
               type="number"
               value={studentdiscount}
@@ -2107,7 +2121,7 @@ export function Payments() {
             </div>
 
             <div className="bg-white rounded-lg border-2 border-orange-200 shadow-md p-6">
-              <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Remise</p>
+              <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Réduction</p>
               <p className="text-3xl font-bold text-orange-600 mt-2">{formatCurrency(toNumber(currentPayment.discount))}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
