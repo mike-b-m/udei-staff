@@ -66,12 +66,13 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
-           font-size: 14px;
+           font-size: 50%;
             }
           table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
+            font-size: 50%;
           }
           th {
             background-color: #0077B6;
@@ -175,7 +176,7 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
             ${data?.payment_history?.map((payment: PaymentRecord, index: number) =>`
               <tr>
                 <td> ${formatCurrency(payment.amount)} ${CURRENCY}</td>
-                  <td> ${formatCurrency(payment.balance)}  ${CURRENCY}L</td>
+                  <td> ${formatCurrency(payment.balance)}  ${CURRENCY}</td>
                   <td>  ${new Date(payment.date).toLocaleDateString('fr-FR')}</td>
               </tr>
    `).join('')}
