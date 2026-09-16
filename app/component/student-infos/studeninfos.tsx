@@ -764,6 +764,7 @@ function exportStudentCSV(student: any) {
     ['Lieu de Naissance', student.place_of_birth || ''],
     ['NIF/CIN', student.nif_cin || ''],
     ['Adresse', student.adress || ''],
+    ['groupe sanguin', student.gs || ''],
     ['--- Mère ---', ''],
     ['Nom Mère', student.mother_name || ''],
     ['Lieu Naissance Mère', student.mother_birth || ''],
@@ -1151,6 +1152,7 @@ function StudentDisplayContent({
           <Lecture int="Lieu de Naissance" out={student.place_of_birth} />
           <Lecture int="NIF/CIN" out={student.nif_cin} />
           <Lecture int="Adresse" out={student.adress} />
+          <Lecture int="Groupe Sanguin" out={student.gs} />
         </div>
       </div>
 

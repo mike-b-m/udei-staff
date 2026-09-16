@@ -83,13 +83,14 @@ export default function StudentInput() {
     student_code: '',
     photo_url: ''
   })
-
+const listgroup = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
   const [photo, setPhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
   const [sequenceNumber, setSequenceNumber] = useState(0)
+  const[bloodGroups, setBloodGroups] = useState<string[]>([])
 
   useEffect(() => {
     const getNextSequence = async () => {
@@ -224,7 +225,8 @@ export default function StudentInput() {
         {
           ...formData,
           photo_url,
-          agreement: true
+          agreement: true,
+          gs: bloodGroups[0] || null
         }
       ])
 
@@ -452,6 +454,25 @@ export default function StudentInput() {
                   {facultyNames.map(f => <option key={f}>{f}</option>)}
                 </select>
                 {errors.faculty && <p className="mt-1 text-sm text-red-600">{errors.faculty}</p>}
+              </div>
+
+              <div className="flex flex-col w-full mb-0">
+                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  Groupe sanguin <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={bloodGroups}
+                  onChange={(e) => setBloodGroups([e.target.value])}
+                  className={`w-full px-4 py-2.5 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-300 ${
+                    errors.gs
+                      ? 'border-red-500 bg-red-50 focus:border-red-600'
+                      : 'border-gray-300 bg-white hover:border-gray-400 focus:border-blue-500'
+                  }`}
+                >
+                  <option value="">Sélectionner un groupe sanguin</option>
+                  {listgroup.map(g => <option key={g}>{g}</option>)}
+                </select>
+                {errors.gs && <p className="mt-1 text-sm text-red-600">{errors.gs}</p>}
               </div>
             </div>
           </section>
