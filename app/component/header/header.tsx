@@ -50,7 +50,7 @@ export default function Header() {
         setProfiles(profile)
         // Role-based redirects — use router.push, not redirect()
         if (profile.role === 'prof' && pathname !== '/teacher') router.push('/teacher')
-        if (profile.role === 'administration' && pathname !== '/spend') router.push('/spend')
+        //if (profile.role === 'administration' && pathname !== '/admin') router.push('/admin')
       }
     }
 
