@@ -75,7 +75,7 @@ const TABS = [
 // ============ LOADING SKELETON ============
 function LoadingSkeleton() {
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
       <div className="h-12 bg-gradient-to-r from-gray-200 to-gray-100 rounded-lg w-1/2 animate-pulse"></div>
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
@@ -90,14 +90,14 @@ function LoadingSkeleton() {
 function TabNavigation({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tabId: string) => void }) {
   return (
     <nav className="border-b border-gray-200 bg-white sticky top-0 z-10 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex gap-1">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 overflow-x-auto">
+        <div className="flex min-w-max gap-1">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={`
-                relative group px-6 py-4 font-semibold transition-all duration-300
+                relative group px-3 sm:px-6 py-3 sm:py-4 font-semibold transition-all duration-300
                 flex items-center gap-3
                 ${
                   activeTab === tab.id
@@ -168,9 +168,9 @@ export default function PaymentPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
         {/* Premium Header */}
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 shadow-2xl">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                 {/* Icon Bg */}
                 <div className={`
                   p-3 rounded-xl shadow-lg
@@ -179,7 +179,7 @@ export default function PaymentPage() {
                   border border-opacity-20 border-white
                 `}>
                   <span className={`
-                    text-3xl inline-block
+                    text-2xl sm:text-3xl inline-block
                     ${activeTabData?.iconColor}
                   `}>
                     {activeTabData?.icon}
@@ -189,7 +189,7 @@ export default function PaymentPage() {
                 {/* Content */}
                 <div className="text-white">
                   <div className="flex items-center gap-2">
-                    <h1 className="text-3xl font-bold tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">
                       {activeTabData?.label}
                     </h1>
                     <span className="px-3 py-1 text-xs font-semibold bg-white bg-opacity-10 rounded-full text-white border border-white border-opacity-20">
@@ -203,8 +203,8 @@ export default function PaymentPage() {
               </div>
               
               {/* Status Badge */}
-              <div className="text-right">
-                <div className="flex items-center gap-2 text-emerald-400 bg-emerald-500 bg-opacity-10 px-4 py-2 rounded-lg border border-emerald-500 border-opacity-30">
+              <div className="text-left sm:text-right">
+                <div className="inline-flex items-center gap-2 text-emerald-400 bg-emerald-500 bg-opacity-10 px-4 py-2 rounded-lg border border-emerald-500 border-opacity-30">
                   {Icons.checkCircle}
                   <span className="text-sm font-semibold">Actif</span>
                 </div>
@@ -217,7 +217,7 @@ export default function PaymentPage() {
         <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Tab Content */}
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto min-w-0">
           <TabContent activeTab={activeTab} />
         </div>
       </div>

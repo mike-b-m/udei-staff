@@ -62,7 +62,8 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           h2 { color: #0077B6; margin-bottom: 20px; }
-          .info { margin-bottom: 15px;
+          .info { 
+          margin-bottom: 15px;
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
@@ -453,7 +454,7 @@ export default function Pay({ id, history, balance, discount,remise, price,v_1, 
         </div>
 
         {/* Summary */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
             <p className="text-xs font-semibold text-gray-600 uppercase">Solde actuel</p>
             <p className="text-2xl font-bold text-blue-600 mt-1">{formatCurrency(numBalance)}</p>
@@ -724,7 +725,7 @@ export function Price() {
         />
       )}
 
-      <div className="space-y-6 p-6">
+      <div className="space-y-5 sm:space-y-6 p-3 sm:p-6">
         {/* Add Faculty Button/Form */}
         {showForm ? (
           <div className="bg-white rounded-lg border-2 border-blue-200 shadow-lg p-6 animate-in fade-in slide-in-from-top duration-300">
@@ -2037,12 +2038,12 @@ export function Payments() {
 
       <div className="space-y-6 p-6">
         {/* Student Info */}
-        <div className="bg-linear-to-r from-blue-600 to-blue-500 rounded-lg shadow-lg p-6 text-white">
-          <div className="flex items-center gap-3 mb-2">
+        <div className="bg-linear-to-r from-blue-600 to-blue-500 rounded-lg shadow-lg p-4 sm:p-6 text-white">
+          <div className="flex items-start gap-3 mb-2">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
             </svg>
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-xl sm:text-2xl font-bold break-words">
               {student?.last_name} {student?.first_name}
             </h2>
           </div>
@@ -2051,7 +2052,7 @@ export function Payments() {
 
         {/* Export Buttons */}
         {currentPayment?.payment_history && currentPayment.payment_history.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:flex gap-2">
             <button
               onClick={() => {
                 const title = `Historique Paiements - ${student?.last_name} ${student?.first_name}`
@@ -2080,7 +2081,7 @@ export function Payments() {
                 `
                 printHTML(title, html)
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
               PDF
@@ -2095,7 +2096,7 @@ export function Payments() {
                 ])
                 exportToCSV(headers, rows, `paiements_${student?.student_code}`)
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition text-sm font-medium"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition text-sm font-medium"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
               Excel
@@ -2104,7 +2105,7 @@ export function Payments() {
               onClick={() => {
                 printTable(currentPayment, student?.faculty, 1, student)
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
               Imprimer
@@ -2114,26 +2115,26 @@ export function Payments() {
 
         {/* Payment Info Cards */}
         {currentPayment && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg border-2 border-green-200 shadow-md p-6">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white rounded-lg border-2 border-green-200 shadow-md p-4 sm:p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Prix/An</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">{formatCurrency(currentPayment.price - (currentPayment.discount || 0))}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-2">{formatCurrency(currentPayment.price - (currentPayment.discount || 0))}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
-            <div className="bg-white rounded-lg border-2 border-orange-200 shadow-md p-6">
+            <div className="bg-white rounded-lg border-2 border-orange-200 shadow-md p-4 sm:p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Réduction</p>
-              <p className="text-3xl font-bold text-orange-600 mt-2">{formatCurrency(toNumber(currentPayment.discount))}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-orange-600 mt-2">{formatCurrency(toNumber(currentPayment.discount))}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
-            <div className="bg-white rounded-lg border-2 border-blue-200 shadow-md p-6">
+            <div className="bg-white rounded-lg border-2 border-blue-200 shadow-md p-4 sm:p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Solde actuel</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{currentPayment.price===currentPayment.balance ? formatCurrency(currentPayment.balance-currentPayment?.discount) : formatCurrency(currentPayment.balance)}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-2">{currentPayment.price===currentPayment.balance ? formatCurrency(currentPayment.balance-currentPayment?.discount) : formatCurrency(currentPayment.balance)}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
-            <div className="bg-white rounded-lg border-2 border-gray-200 shadow-md p-6">
+            <div className="bg-white rounded-lg border-2 border-gray-200 shadow-md p-4 sm:p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Faculté</p>
               <p className="text-lg font-bold text-gray-800 mt-2">{currentPayment.faculty}</p>
             </div>
@@ -2152,8 +2153,8 @@ export function Payments() {
 
         {/* Payment Form */}
         {currentPayment && (
-          <div className="bg-white rounded-lg border-2 border-green-200 shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-lg border-2 border-green-200 shadow-lg p-4 sm:p-6">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -2177,8 +2178,8 @@ export function Payments() {
         {/* Payment History */}
         {currentPayment?.payment_history && currentPayment.payment_history.length > 0 && (
           <div className="bg-white rounded-lg border-2 border-gray-200 shadow-md overflow-hidden">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <div className="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-200">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -2188,7 +2189,7 @@ export function Payments() {
 
             <div className="divide-y divide-gray-200">
               {currentPayment.payment_history.map((payment: PaymentRecord, index: number) => (
-                <div key={index} className={`px-6 py-4 grid grid-cols-3 gap-4 items-center ${ROW_COLORS[index % ROW_COLORS.length]}`}>
+                <div key={index} className={`px-4 sm:px-6 py-4 grid grid-cols-1 min-[420px]:grid-cols-3 gap-3 sm:gap-4 items-start sm:items-center ${ROW_COLORS[index % ROW_COLORS.length]}`}>
                   <div>
                     <p className="text-sm text-gray-600 font-medium">Montant</p>
                     <p className="text-lg font-bold text-amber-600">{formatCurrency(payment.amount)} {CURRENCY}</p>
