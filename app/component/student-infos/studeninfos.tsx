@@ -25,6 +25,7 @@ const sessionexam = [
   '2',
 ]
 
+const listgroup = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 /**
  * Unified StudentInfos Component
  *
@@ -748,6 +749,7 @@ function getStudentPersonalAndFamilyHTML(student: any, photoUrl?: string) {
   `
 }
 
+const boollist=[false, true]
 function exportStudentCSV(student: any) {
   const headers = ['Champ', 'Valeur']
   const rows = [
@@ -786,7 +788,7 @@ function EditFieldModal({ isOpen, onClose, title, fields, onSave }: {
   isOpen: boolean
   onClose: () => void
   title: string
-  fields: { label: string; key: string; value: string; type?: string }[]
+  fields: { label: string; key: string; value: string; type?: string; options?: (string | boolean)[] }[]
   onSave: (values: Record<string, string>) => Promise<void>
 }) {
   const [values, setValues] = useState<Record<string, string>>(
@@ -819,12 +821,27 @@ function EditFieldModal({ isOpen, onClose, title, fields, onSave }: {
           {fields.map(f => (
             <div key={f.key}>
               <label className="block text-sm font-semibold text-gray-700 mb-1">{f.label}</label>
-              <input
-                type={f.type || 'text'}
-                value={values[f.key] || ''}
-                onChange={e => setValues({ ...values, [f.key]: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
-              />
+              {f.type === 'select' ? (
+                <select
+                  value={values[f.key] ?? ''}
+                  onChange={e => setValues({ ...values, [f.key]: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
+                >
+                  <option value="">Sélectionner</option>
+                  {f.options?.map(option => (
+                    <option key={String(option)} value={String(option)}>
+                      {typeof option === 'boolean' ? (option ? 'Oui' : 'Non') : option}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={f.type || 'text'}
+                  value={values[f.key] ?? ''}
+                  onChange={e => setValues({ ...values, [f.key]: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
+                />
+              )}
             </div>
           ))}
         </div>
@@ -889,9 +906,19 @@ function StudentDisplayContent({
   }
 
   const handleSaveStatus = async (values: Record<string, string>) => {
-    const payload: Record<string, any> = { ...values }
-    if (values.year_study) payload.year_study = parseInt(values.year_study)
-    if (values.year_completed) payload.year_completed = parseInt(values.year_completed)
+    const payload: Record<string, string | number | boolean | null> = {
+      academic_year: values.academic_year || null,
+      year_study: values.year_study === '' ? null : parseInt(values.year_study, 10),
+      year_completed: values.year_completed === '' ? null : parseInt(values.year_completed, 10),
+    }
+
+    if (values.faculty_completion !== '') {
+      payload.faculty_completion = values.faculty_completion === 'true'
+    }
+    if (values.is_active !== '') {
+      payload.is_active = values.is_active === 'true'
+    }
+
     const { error } = await supabase.from('student_status').update(payload).eq('student_id', student.id)
     if (error) throw error
     window.location.reload()
@@ -966,6 +993,7 @@ function StudentDisplayContent({
           { label: 'Sexe', key: 'sex', value: student.sex || '' },
           { label: 'Statut Matrimonial', key: 'marital_status', value: student.marital_status || '' },
           { label: 'NIF/CIN', key: 'nif_cin', value: student.nif_cin || '' },
+          { label: 'Groupe Sanguin', key: 'gs', value: student.gs || '', type: 'select', options: listgroup },
         ]}
         onSave={handleSaveInfo}
       />
@@ -978,6 +1006,8 @@ function StudentDisplayContent({
             { label: 'Année Actuelle', key: 'year_study', value: String(status.year_study || ''), type: 'number' },
             { label: 'Année Complétée', key: 'year_completed', value: String(status.year_completed || ''), type: 'number' },
             { label: 'Année Académique', key: 'academic_year', value: String(status.academic_year || ''), type: 'string' },
+            { label: 'Faculté Complétée', key: 'faculty_completion', value: String(status.faculty_completion ?? ''), type: 'select', options: boollist },
+            { label: 'Est actif', key: 'is_active', value: String(status.is_active ?? ''), type: 'select', options: boollist },
           ]}
           onSave={handleSaveStatus}
         />
@@ -1176,6 +1206,7 @@ function StudentDisplayContent({
             <Lecture int="Vu par" out={student.seen_by || 'Non assigné'} />
             <Lecture int="Année Académique" out={status.academic_year || 'Non assigné'} />
             <Lecture int="Faculté Complétée" out={status.faculty_completion ? '✅ Oui' : '❌ Non'} />
+            <Lecture int="Est actif" out={status.is_active ? '✅ Oui' : '❌ Non'} />
           </div>
         </div>
       )}
