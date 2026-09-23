@@ -202,6 +202,7 @@ export default function Exam() {
   const [filterCourse, setFilterCourse] = useState('')
   const [filterSession, setFilterSession] = useState('')
   const [filterYear, setFilterYear] = useState('')
+  const [filterAcademicYear, setFilterAcademicYear] = useState('')
 
   // Edit mode
   const [editId, setEditId] = useState<number | null>(null)
@@ -303,6 +304,7 @@ export default function Exam() {
     if (filterCourse && e.matiere !== filterCourse) return false
     if (filterSession && e.session !== parseInt(filterSession)) return false
     if (filterYear && e.year !== parseInt(filterYear)) return false
+    if (filterAcademicYear && e.academic_year !== filterAcademicYear) return false
     return true
   })
 
@@ -321,6 +323,7 @@ export default function Exam() {
     : courses
 
   const uniqueYears = [...new Set(exams.map(e => e.year).filter(Boolean))].sort((a, b) => b - a)
+  const uniqueAcademicYears = [...new Set(exams.map(e => e.academic_year).filter(Boolean))].sort((a, b) => b.localeCompare(a))
 
   if (loading) {
     return (
@@ -432,6 +435,18 @@ export default function Exam() {
             >
               <option value="">Toutes les années</option>
               {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Année</label>
+            <select
+              value={filterAcademicYear}
+              onChange={e => setFilterAcademicYear(e.target.value)}
+              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+            >
+              <option value="">Année Académique</option>
+              {uniqueAcademicYears.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
         </div>

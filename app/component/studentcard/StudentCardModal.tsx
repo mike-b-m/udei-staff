@@ -214,7 +214,7 @@ export default function StudentCardModal({
                       className="h-7 w-7 rounded-full bg-white object-contain p-0.5"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-bold uppercase leading-tight text-white">
+                      <p className="text-[11px] font-bold uppercase leading-tight text-white">
                         Université d&apos;Études Internationales
                       </p>
                       <div className="mt-0.5 flex items-center gap-2">
@@ -283,6 +283,11 @@ export default function StudentCardModal({
                     <div className="flex items-center justify-center">
                       <QRCodeSVG value={student.id.toString()} size={54} />
                     </div>
+
+                    <p className="text-[6.5px] leading-snug text-gray-600"> 
+                      #5 Village Zao, Maïs Gâté 13 (Bloc Gérald bataille) Port-au-Prince HAITI
+                      
+                    </p>
 
                     <div className="flex items-end justify-between gap-2">
                       <img
