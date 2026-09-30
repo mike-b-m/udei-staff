@@ -3,6 +3,8 @@ import { supabase } from "@/app/component/db";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import TheacherInput, { ReadNote, Readsession, TeacherSession, TheacherInput2 } from "@/app/component/teacher/teacher";
+ import { useFaculties } from '@/app/component/student-infos/useFaculties'
+
 
 interface FormRow {
   courses: string
@@ -36,6 +38,8 @@ export default function Teacher() {
     const search = searchpara.get('faculty') || ''
     const search3 = searchpara.get('year') || ''
     const search4 = searchpara.get('session') || ''
+
+      const { facultyNames } = useFaculties()
 
     useEffect(() => {
         const getData = async () => {
@@ -162,7 +166,7 @@ export default function Teacher() {
                         </div>
 
                         {/* Faculty Filter */}
-                        <div>
+                        <div> 
                             <label className="block text-sm font-medium text-gray-700 mb-2">Faculté</label>
                             <select
                                 name="faculty"
@@ -170,23 +174,9 @@ export default function Teacher() {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             onChange={(e)=>setFacultyFilter(e.target.value)}>
                                 <option value="">Sélectionner une faculté</option>
-                                <option>Génie Civil</option>
-                                <option>Médecine Générale</option>
-                                <option>Odontologie</option>
-                                <option>Sciences Infirmières</option>
-                                <option>Sciences Administratives</option>
-                                <option>Sciences Comptables</option>
-                                <option>Science Informatique</option>
-                                <option>Gestion Des Affaires</option>
-                                <option>Sciences Agronomiques</option>
-                                <option>Sciences Economiques</option>
-                                <option>Sciences De L'Education</option>
-                                <option>Sciences Juridiques</option>
-                                <option>Pharmacologies</option>
-                                <option>Médecine Vétérinaire</option>
-                                <option>Laboratoire Médicale</option>
-                                <option>Physiothérapie</option>
-                                <option>Jardinières D'enfants</option>
+              {facultyNames.map(fac => (
+                <option key={fac} value={fac}>{fac}</option>
+              ))}
                             </select>
                         </div>
 

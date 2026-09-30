@@ -694,6 +694,11 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
     const [refreshTrigger, setRefreshTrigger] = useState(0)
     const [role, setRole] = useState<string | null>(null)
     const [f,setF] =useState<any[]>([])
+    const [editingNoteId, setEditingNoteId] = useState<number | null>(null)
+    const [editNote, setEditNote] = useState('')
+    const [editRepriNote, setEditRepriNote] = useState('')
+    const [savingNoteId, setSavingNoteId] = useState<number | null>(null)
+    const [editError, setEditError] = useState('')
 
      useEffect(() => {
         const getData = async () => {
@@ -745,6 +750,48 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
     const handleRepriseSuccess = () => {
         // Refetch the data after a reprise is saved
         setRefreshTrigger(prev => prev + 1);
+    }
+
+    const startEditingNote = (item: any) => {
+        setEditingNoteId(item.id)
+        setEditNote(item.note == null ? '' : String(item.note))
+        setEditRepriNote(item.repri_note == null ? '' : String(item.repri_note))
+        setEditError('')
+    }
+
+    const saveEditedNote = async (item: any) => {
+        const parsedNote = editNote.trim() === '' ? null : Number(editNote)
+        const parsedRepriNote = editRepriNote.trim() === '' ? null : Number(editRepriNote)
+        const invalidScore = [parsedNote, parsedRepriNote].some(
+            score => score !== null && (!Number.isFinite(score) || score < 0 || score > 100)
+        )
+
+        if (invalidScore) {
+            setEditError('Les notes doivent être comprises entre 0 et 100.')
+            return
+        }
+
+        if (!window.confirm(`Confirmer la modification des notes de ${item.matiere} ?`)) return
+
+        setSavingNoteId(item.id)
+        setEditError('')
+        const { error } = await supabase.from('exam_1')
+            .update({ note: parsedNote, repri_note: parsedRepriNote })
+            .eq('id', item.id)
+            .eq('student_id', id)
+            .eq('session', session)
+            .eq('year', year)
+
+        if (error) {
+            console.error('Error updating session notes:', error.message)
+            setEditError('La sauvegarde a échoué. Veuillez réessayer.')
+            setSavingNoteId(null)
+            return
+        }
+
+        setEditingNoteId(null)
+        setSavingNoteId(null)
+        setRefreshTrigger(prev => prev + 1)
     }
 
     const totalSession = note?.reduce((acc: number, item: any) => acc + Number(item.note || 0), 0) || 0;
@@ -845,6 +892,7 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
             ): null}
 
             {/* Notes Table */}
+            {editError ? <p role="alert" className="mb-3 text-sm text-red-700">{editError}</p> : null}
             {note.length > 0 ? (
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
                     <table className="w-full">
@@ -884,36 +932,99 @@ export function Readsession({ session, year, id }: TeacherInputProps) {
                                     >
                                         <td className={`px-4 py-3 font-medium text-gray-800`}>{not.matiere}</td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className={` ${not.note >= not.pass_grade ? 'bg-green-50 text-green-700':'bg-red-50 text-red-700'} inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full`}>
-                                                {not.note || '-'}
-                                            </span>
+                                            {role === 'admin' && editingNoteId === not.id ? (
+                                                <input
+                                                    aria-label={`Note de session pour ${not.matiere}`}
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.01"
+                                                    value={editNote}
+                                                    onChange={event => setEditNote(event.target.value)}
+                                                    className="w-24 rounded border border-gray-300 px-2 py-1 text-center text-gray-900"
+                                                />
+                                            ) : (
+                                                <span className={` ${not.note >= not.pass_grade ? 'bg-green-50 text-green-700':'bg-red-50 text-red-700'} inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full`}>
+                                                    {not.note ?? '-'}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className={` ${statusTex} ${statusColo} inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full`}>
-                                                {not.repri_note  || '-'}
-                                            </span>
+                                            {role === 'admin' && editingNoteId === not.id ? (
+                                                <input
+                                                    aria-label={`Note de reprise pour ${not.matiere}`}
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.01"
+                                                    value={editRepriNote}
+                                                    onChange={event => setEditRepriNote(event.target.value)}
+                                                    className="w-24 rounded border border-gray-300 px-2 py-1 text-center text-gray-900"
+                                                />
+                                            ) : (
+                                                <span className={` ${statusTex} ${statusColo} inline-block bg-blue-100 text-blue-900 font-semibold px-3 py-1 rounded-full`}>
+                                                    {not.repri_note ?? '-'}
+                                                </span>
+                                            )}
                                         </td>
                                             {role ==='admin' || role === 'editor' || role === 'administration' || role === 'prof' ? (
                                                 <td className="px-4 py-3 text-center">
-                                               {not.note > not.pass_grade ? (
-                                                    <span className="inline-block bg-orange-100 text-orange-900 font-semibold px-3 py-1 rounded-full">
-                                                        {not.repri_note}
-                                                    </span>
+                                                    {role === 'admin' && editingNoteId === not.id ? (
+                                                    <div className="flex justify-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => saveEditedNote(not)}
+                                                            disabled={savingNoteId === not.id}
+                                                            className="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                                                        >
+                                                            {savingNoteId === not.id ? 'Sauvegarde...' : 'Enregistrer'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setEditingNoteId(null)
+                                                                setEditError('')
+                                                            }}
+                                                            disabled={savingNoteId === not.id}
+                                                            className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50 disabled:opacity-50"
+                                                        >
+                                                            Annuler
+                                                        </button>
+                                                    </div>
                                                 ) : (
-                                                     <RepriseButton
-                                                    score={not.note}
-                                                    repriseScore={not.pass_grade}
-                                                    studentName={`${fullname[0]?.last_name} ${fullname[0]?.first_name}`}
-                                                    matiere={not.matiere}
-                                                    repriseType="session"
-                                                    examId={not.id}
-                                                    studentId={id}
-                                                    session={not.session}
-                                                    year={not.year}
-                                                    tabl="exam_1"
-                                                    onSuccess={handleRepriseSuccess}
-                                                />   
-                                            )} </td>): null}
+                                                    <>
+                                                        {role === 'admin' ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => startEditingNote(not)}
+                                                                className="mb-2 rounded border border-blue-200 px-3 py-1 text-sm font-medium text-blue-700 hover:bg-blue-50"
+                                                            >
+                                                                Modifier
+                                                            </button>
+                                                        ) : null}
+                                                        {not.note > not.pass_grade ? (
+                                                            <span className="inline-block bg-orange-100 text-orange-900 font-semibold px-3 py-1 rounded-full">
+                                                                {not.repri_note}
+                                                            </span>
+                                                        ) : (
+                                                            <RepriseButton
+                                                                score={not.note}
+                                                                repriseScore={not.pass_grade}
+                                                                studentName={`${fullname[0]?.last_name} ${fullname[0]?.first_name}`}
+                                                                matiere={not.matiere}
+                                                                repriseType="session"
+                                                                examId={not.id}
+                                                                studentId={id}
+                                                                session={not.session}
+                                                                year={not.year}
+                                                                tabl="exam_1"
+                                                                onSuccess={handleRepriseSuccess}
+                                                            />
+                                                        )}
+                                                    </>
+                                                    )}
+                                                </td>
+                                            ) : null}
                                        
                                         {/* <td className={`px-4 py-3 text-center`}>
                                             <span className={`inline-block ${statusColor} ${statusText} font-bold px-3 py-1 rounded-full`}>

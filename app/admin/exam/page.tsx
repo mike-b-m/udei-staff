@@ -5,6 +5,7 @@ import { useFaculties } from "@/app/component/student-infos/useFaculties";
 import { getGradeInfo } from "@/app/lib/gpa";
 import Link from "next/link";
 import type { OnlineExam, ExamAttempt } from "@/app/component/exam/types";
+import { exportToCSV, printHTML } from "@/app/component/export/exportUtils";
 
 interface ExamRecord {
   id: number
@@ -190,12 +191,196 @@ function OnlineExamsTab() {
   )
 }
 
+interface AcademicRosterRow {
+  student_id: number
+  first_name: string
+  last_name: string
+  student_code: string
+  faculty: string
+  year_study: number | string | null
+  academic_year: string
+  id?: number
+}
+
+function escapeHTML(value: string | number | null | undefined) {
+  return String(value ?? '').replace(/[&<>\"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[character] || character)
+}
+
+function AcademicYearRosterTab() {
+  const [rows, setRows] = useState<AcademicRosterRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filterAcademicYear, setFilterAcademicYear] = useState('')
+  const [filterFaculty, setFilterFaculty] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchRoster() {
+      setLoading(true)
+      const { data: statuses, error: statusError } = await supabase
+        .from('exam_1')
+        .select('student_id, year, academic_year, faculty')
+
+      if (cancelled) return
+      if (statusError) {
+        console.error('Error fetching academic-year roster:', statusError.message)
+        setRows([])
+        setLoading(false)
+        return
+      }
+
+      const studentIds = [...new Set((statuses || []).map(status => status.student_id))]
+      if (studentIds.length === 0) {
+        setRows([])
+        setLoading(false)
+        return
+      }
+
+      const { data: students, error: studentError } = await supabase
+        .from('student')
+        .select('id, first_name, last_name, student_code, faculty')
+        .in('id', studentIds)
+
+      if (cancelled) return
+      if (studentError) {
+        console.error('Error fetching roster student details:', studentError.message)
+        setRows([])
+        setLoading(false)
+        return
+      }
+
+      const studentById = new Map((students || []).map(student => [student.id, student]))
+      const roster = (statuses || []).flatMap(status => {
+        const student = studentById.get(status.student_id)
+        if (!student || !status.academic_year) return []
+        return [{
+          student_id: student.id,
+          first_name: student.first_name || '',
+          last_name: student.last_name || '',
+          student_code: student.student_code || '',
+          faculty: status.faculty || student.faculty || '',
+          year_study: status.year,
+          academic_year: status.academic_year,
+        }]
+      }).sort((a, b) => a.last_name.localeCompare(b.last_name))
+
+      setRows(roster)
+      setLoading(false)
+    }
+
+    fetchRoster()
+    return () => { cancelled = true }
+  }, [])
+
+  const displayRows =  [...new Set(rows.map(row => row.last_name))].sort((a, b) => b.localeCompare(a))
+  const academicYears = [...new Set(rows.map(row => row.academic_year))].sort((a, b) => b.localeCompare(a))
+  const faculties = [...new Set(rows.map(row => row.faculty).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  const filteredRows = rows.filter(row =>
+    (!filterAcademicYear || row.academic_year === filterAcademicYear) &&
+    (!filterFaculty || row.faculty === filterFaculty)
+  )
+  const seenRosterEntries = new Set<string>()
+  const uniqueFilteredRows = filteredRows.filter(row => {
+    const key = `${row.last_name.trim().toLocaleLowerCase()}\u0000${row.first_name.trim().toLocaleLowerCase()}\u0000${row.academic_year}`
+    if (seenRosterEntries.has(key)) return false
+    seenRosterEntries.add(key)
+    return true
+  })
+
+  const exportRows = uniqueFilteredRows.map(row => [
+    row.student_code,
+    row.last_name,
+    row.first_name,
+    row.faculty,
+    String(row.year_study ?? ''),
+    row.academic_year,
+  ])
+  const rosterTitle = `Étudiants - ${filterAcademicYear || 'Toutes les années académiques'}`
+  const tableHTML = `<table><thead><tr><th>Code</th><th>Nom</th><th>Prénom</th><th>Faculté</th><th>Année d'étude</th><th>Année académique</th></tr></thead><tbody>${uniqueFilteredRows.map(row => `<tr>${[
+    row.student_code, row.last_name, row.first_name, row.faculty, row.year_study, row.academic_year,
+  ].map(value => `<td>${escapeHTML(value)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+
+  return (
+    <section className="bg-white rounded-xl shadow-md p-4 md:p-6">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:max-w-2xl">
+          <label className="text-sm font-medium text-gray-700">
+            Année académique
+            <select value={filterAcademicYear} onChange={e => setFilterAcademicYear(e.target.value)}
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
+              <option value="">Toutes les années</option>
+              {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
+            </select>
+          </label>
+          <label className="text-sm font-medium text-gray-700">
+            Faculté
+            <select value={filterFaculty} onChange={e => setFilterFaculty(e.target.value)}
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
+              <option value="">Toutes les facultés</option>
+              {faculties.map(faculty => <option key={faculty} value={faculty}>{faculty}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button disabled={!uniqueFilteredRows.length} onClick={() => exportToCSV(
+            ['Code', 'Nom', 'Prénom', 'Faculté', "Année d'étude", 'Année académique'],
+            exportRows,
+            `etudiants_${(filterAcademicYear || 'toutes_annees').replace(/[^a-zA-Z0-9_-]/g, '_')}`
+          )} className="px-3 py-2 rounded-lg bg-green-700 text-white text-sm font-medium disabled:opacity-50">
+            Excel / CSV
+          </button>
+          <button disabled={!uniqueFilteredRows.length} onClick={() => printHTML(`${rosterTitle} - PDF`, `<h1>${escapeHTML(rosterTitle)}</h1><p>${uniqueFilteredRows.length} étudiant(s)</p>${tableHTML}`)}
+            className="px-3 py-2 rounded-lg bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
+            PDF
+          </button>
+          <button disabled={!uniqueFilteredRows.length} onClick={() => printHTML(rosterTitle, `<h1>${escapeHTML(rosterTitle)}</h1><p>${uniqueFilteredRows.length} étudiant(s)</p>${tableHTML}`)}
+            className="px-3 py-2 rounded-lg bg-gray-700 text-white text-sm font-medium disabled:opacity-50">
+            Imprimer
+          </button>
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-500 mb-3">{loading ? 'Chargement...' : `${uniqueFilteredRows.length} étudiant(s)`}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-600">
+            <tr>
+              <th className="px-3 py-3 text-left">Code</th>
+              <th className="px-3 py-3 text-left">Nom</th>
+              <th className="px-3 py-3 text-left">Prénom</th>
+              <th className="px-3 py-3 text-left">Faculté</th>
+              <th className="px-3 py-3 text-center">Année d&apos;étude</th>
+              <th className="px-3 py-3 text-left">Année académique</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {!loading && filteredRows.length === 0 ? (
+              <tr><td colSpan={6} className="px-3 py-10 text-center text-gray-500">Aucun étudiant trouvé</td></tr>
+            ) : uniqueFilteredRows.map(row => (
+              <tr key={`${row.last_name}-${row.first_name}-${row.academic_year}`}>
+                <td className="px-3 py-3">{row.student_code || '—'}</td>
+                <td className="px-3 py-3 font-medium">{row.last_name}</td>
+                <td className="px-3 py-3">{row.first_name}</td>
+                <td className="px-3 py-3">{row.faculty || '—'}</td>
+                <td className="px-3 py-3 text-center">{row.year_study ?? '—'}</td>
+                <td className="px-3 py-3">{row.academic_year}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
 export default function Exam() {
   const { facultyNames } = useFaculties()
   const [exams, setExams] = useState<ExamRecord[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'grades' | 'online'>('online')
+  const [activeTab, setActiveTab] = useState<'grades' | 'online' | 'roster'>('online')
 
   // Filters
   const [filterFaculty, setFilterFaculty] = useState('')
@@ -303,7 +488,7 @@ export default function Exam() {
     if (filterFaculty && e.faculty !== filterFaculty) return false
     if (filterCourse && e.matiere !== filterCourse) return false
     if (filterSession && e.session !== parseInt(filterSession)) return false
-    if (filterYear && e.year !== parseInt(filterYear)) return false
+    if (filterYear && Number(e.year) !== Number(filterYear)) return false
     if (filterAcademicYear && e.academic_year !== filterAcademicYear) return false
     return true
   })
@@ -322,7 +507,8 @@ export default function Exam() {
     ? courses.filter(c => c.faculty === filterFaculty)
     : courses
 
-  const uniqueYears = [...new Set(exams.map(e => e.year).filter(Boolean))].sort((a, b) => b - a)
+  const uniqueYears = [...new Set([1, 2, 3, 4, 5, 6, ...exams.map(e => Number(e.year)).filter(Number.isFinite)])]
+    .sort((a, b) => a - b)
   const uniqueAcademicYears = [...new Set(exams.map(e => e.academic_year).filter(Boolean))].sort((a, b) => b.localeCompare(a))
 
   if (loading) {
@@ -357,10 +543,18 @@ export default function Exam() {
           }`}>
           Notes Manuelles
         </button>
+        <button onClick={() => setActiveTab('roster')}
+          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+            activeTab === 'roster' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+          }`}>
+          Étudiants par année
+        </button>
       </div>
 
       {activeTab === 'online' ? (
         <OnlineExamsTab />
+      ) : activeTab === 'roster' ? (
+        <AcademicYearRosterTab />
       ) : (
       <>
       {/* Stats */}

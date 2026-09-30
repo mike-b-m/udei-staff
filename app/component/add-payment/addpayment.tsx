@@ -22,6 +22,8 @@ interface PaymentProps {
   v_2: number
   v_3: number
   remise: number
+  student_id: number | null
+  level:number| null
 }
 
 interface PaymentRecord {
@@ -51,7 +53,7 @@ const TABLE_COLUMNS = [
   { key: 'total_hour', label: 'Total Heures', width: 'w-1/6' }
 ]
 
-const printTable = (data: StudentPayment, faculty: string | null, year: number, user:User) => {
+const printTable = (data: StudentPayment, faculty: string | null, year: number, user:User, role:any) => {
   const printWindow = window.open('', '', 'height=600,width=900')
   if (!printWindow) return
 
@@ -68,6 +70,12 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
           flex-wrap: wrap;
           gap: 10px;
            font-size: 50%;
+            }
+           .center { 
+          margin-bottom: 15px;
+          display: grid;
+          justify-content: center; /* Centers horizontally */
+  align-items: center;
             }
           table {
             width: 100%;
@@ -154,22 +162,33 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
         <div class="logo-section">
           <img src="/image/h.png" alt="UDEI Logo" class="logo">
         </div>
-        <div class="info">
-        <p><strong>Nom:</strong> ${user.last_name}</p>
-        <p><strong>Prénom:</strong> ${user.first_name}</p>
-        <p><strong>Code Étudiant:</strong> ${user.student_code}</p>
-          <p><strong>Faculté:</strong> ${faculty}</p>
-          <p><strong>Année:</strong> ${year}</p>
-          <p><strong>Prix:</strong> ${formatCurrency(data?.price)} ${CURRENCY}</p>
-          <p><strong>Réduction:</strong> ${formatCurrency(data?.discount)} ${CURRENCY}</p>
-          <p><strong>Solde:</strong> ${formatCurrency(data?.balance)} ${CURRENCY}</p>
-          <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+        <div class="info" style="justify-content: center; align-items: center; border-bottom: 1px solid #ddd;">
+        <div>#5 Village Zao, Maïs Gâté 13 (Bloc Gérald bataille) Port-au-Prince HAITI
         </div>
+        <div class="text-center">+(509) 40 03 4090 / +(509) 48809772 </div>
+        </div>
+        <div class="info">
+        <div><strong>Nom:</strong> ${user.last_name}</div>
+        <div><strong>Prénom:</strong> ${user.first_name}</div>
+        <div><strong>Code Étudiant:</strong> ${user.student_code}</div>
+          <div><strong>Faculté:</strong> ${faculty}</div>
+          <div><strong>Année:</strong> ${year}</div>
+          <div><strong>Prix:</strong> ${formatCurrency(data?.price)} ${CURRENCY}</div>
+          <div><strong>Réduction:</strong> ${formatCurrency(data?.discount)} ${CURRENCY}</div>
+          <div><strong>Balance:</strong> ${formatCurrency(data?.balance)} ${CURRENCY}</div>
+          <div><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</div>
+        </div>
+        <div class=" info ">
+        <div ><strong>Nov-fev:</strong>1ere Vers</div>
+        <div ><strong>Mars-juin:</strong>2eme Vers</div>
+        <div "><strong>Juil-sept:</strong>3eme Vers</div></div>
+
+        <div class=" info center"><strong>Versement .....</strong></div>
         <table>
           <thead>
             <tr>
             <td>Montant</td> 
-             <td>Solde après</td>
+             <td>Balance</td>
             <td>Date</td>
             </tr>
           </thead>
@@ -183,6 +202,11 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
    `).join('')}
           </tbody>
         </table>
+        <div class="info">
+          <div><strong>N.B:</strong> le montant n'est pas remboursable en aucun cas </div>
+          </div>
+          <div class=" info text-end strong" style="justify-content: end;
+           align-items: center;"> <strong>Émis par: ${role}</strong></div>
       </body> 
     </html>
   `
@@ -298,7 +322,7 @@ const Toast = ({ type, message, onClose }: { type: Toast['type']; message: strin
 }
 
 // ============ PAYMENT FORM ============
-export default function Pay({ id, history, balance, discount,remise, price,v_1, v_2, v_3, onSuccess }: PaymentProps) {
+export default function Pay({ id,student_id, history, balance,level, discount,remise, price,v_1, v_2, v_3, onSuccess }: PaymentProps) {
   const [amount, setAmount] = useState<number>(0)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -350,9 +374,18 @@ export default function Pay({ id, history, balance, discount,remise, price,v_1, 
             v_3: remainingBalance === 0 ? true : false,
         })
         .eq('id', id)
+        const { error: discountError } = await supabase
+        .from('payment_history')
+        .insert({
+          amount,
+          balance: numBalance - studentdiscount,
+          student_id: student_id,
+          level: level
+        })
+        .eq('id', id)
 
       if (error) throw error
-      
+      if (discountError) throw discountError
 
       setToast({
         id: Date.now().toString(),
@@ -1945,7 +1978,8 @@ export function Payments() {
   const [toast, setToast] = useState<Toast | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [versement, setVersement] = useState<{ v_1: number; v_2: number; v_3: number }>({ v_1: 0, v_2: 0, v_3: 0 })
-
+  const [role,setRole] = useState<string | null>(null)
+  const[level,setLevel] = useState<number | null>(null)
   const searchParams = useSearchParams()
   const studentId = searchParams.get('id')
 
@@ -1984,10 +2018,26 @@ export function Payments() {
           .eq('id', studentId)
           .single()
 
+          const { data: statusData, error: statusError } = await supabase
+          .from('student_status')
+          .select('year_study')
+          .eq('id', studentId)
+          .single()
+
         if (studentError) throw studentError
 
         setPayments(paymentData || [])
         setStudent(studentData)
+        setLevel(statusData?.year_study || null)
+        //get role 
+        const { data: { user } } = await supabase.auth.getUser()
+                    const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', user?.id)
+              .single()
+              setRole(profile?.full_name || null)
+                
       } catch (err) {
         setToast({
           id: Date.now().toString(),
@@ -2103,7 +2153,7 @@ export function Payments() {
             </button>
             <button
               onClick={() => {
-                printTable(currentPayment, student?.faculty, 1, student)
+                printTable(currentPayment, student?.faculty, 1, student,role)
               }}
               className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
             >
@@ -2162,6 +2212,7 @@ export function Payments() {
             </h3>
             <Pay
               id={currentPayment.id}
+              student_id={Number(studentId)}
               price={currentPayment.price}
               discount={currentPayment.discount || 0}
               balance={currentPayment.balance}
@@ -2171,6 +2222,7 @@ export function Payments() {
               v_2={versement?.v_2}
               v_3={versement?.v_3}
               remise={currentPayment?.discount || 0}
+              level={level}
             />
           </div>
         )}

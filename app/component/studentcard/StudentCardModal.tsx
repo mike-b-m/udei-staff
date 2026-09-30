@@ -173,39 +173,43 @@ export default function StudentCardModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm"
       onClick={() => setCardOpen(false)}
     >
       {/* Modal box: capped height + scroll */}
       <div
-        className="relative flex max-h-[90vh] w-full max-w-sm flex-col rounded-2xl bg-white shadow-2xl"
+        className="relative flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
           onClick={() => setCardOpen(false)}
-          className="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-600 shadow-lg hover:bg-gray-100"
+          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-lg ring-1 ring-slate-200 transition hover:bg-white"
           aria-label="Fermer"
         >
           ✕
         </button>
 
         {/* Scrollable area */}
-        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto bg-slate-50">
+        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto bg-slate-100 p-3 sm:p-6">
           <div
             ref={cardRef}
             id="printable-card"
-            className="force-print-colors flex w-[120mm] items-center justify-center gap-4 rounded-2xl bg-white p-3"
-            style={{ minWidth: '120mm' }}
+            className="force-print-colors flex w-[120mm] items-center justify-center gap-4 rounded-2xl bg-white p-3 shadow-sm"
+            style={{ minWidth: '120mm', backgroundImage: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}
           >
             <div className="flex w-full items-start justify-center gap-4">
               {/* ===== FRONT SIDE ===== */}
               <div
-                className="card-side relative overflow-hidden rounded-[18px] border border-slate-200 bg-green-500 shadow-lg ring-1 ring-slate-200"
-                style={{ width: '54mm', height: '86mm' }}
+                className="card-side relative overflow-hidden rounded-[18px] border border-blue-950/20 bg-blue-700 shadow-lg ring-1 ring-blue-950/20"
+                style={{
+                  width: '54mm',
+                  height: '86mm',
+                  backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0, rgba(255,255,255,.07) 1px, transparent 1px, transparent 7px), linear-gradient(145deg, #0f2f68 0%, #1769b0 48%, #0b3f82 100%)',
+                }}
               >
                 <div className="flex h-full flex-col">
-                  <div className="flex items-center gap-2 bg-green-500 px-3 pb-2 pt-3">
+                  <div className="flex items-center gap-2 bg-blue-950/35 px-3 pb-2 pt-3">
                     <img
                       src={logoUrl}
                       alt="UDEI"
@@ -219,21 +223,21 @@ export default function StudentCardModal({
                       </p>
                       <div className="mt-0.5 flex items-center gap-2">
                         <span className="text-[13px] font-extrabold text-white">UDEI</span>
-                        <span className="h-1.5 flex-1 rounded bg-red-600" />
+                        <span className="h-1.5 flex-1 rounded bg-cyan-300" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex-1 bg-green-700/95 px-3 pb-2 pt-2 rounded-tr-4xl">
-                    <div className="h-full rounded-[18px] bg-white px-2.5 pb-2 pt-2">
-                      <h2 className="text-center text-[9px] font-bold uppercase tracking-wide text-green-700">
+                  <div className="flex-1 rounded-tr-[28px] bg-blue-900/70 px-3 pb-2 pt-2">
+                    <div className="h-full rounded-[18px] bg-white/95 px-2.5 pb-2 pt-2 shadow-inner">
+                      <h2 className="text-center text-[9px] font-bold uppercase tracking-wide text-blue-800">
                         {student.sex === 'M' || student.sex === 'Masculin' || student.sex === 'masculin'
                           ? 'Carte de l\'étudiant'
                           : 'Carte de l\'étudiante'}
                       </h2>
 
                       <div className="mt-2 flex flex-col items-center gap-1">
-                        <div className="h-16 w-14 overflow-hidden rounded-md border-2 border-green-600 bg-gray-100">
+                        <div className="h-16 w-14 overflow-hidden rounded-md border-2 border-blue-600 bg-slate-100 shadow-sm">
                           {student.photo_url ? (
                             <img
                               src={getSafeImageSrc(student.photo_url, DEFAULT_AVATAR)}
@@ -253,11 +257,11 @@ export default function StudentCardModal({
                           <Row label="Fac" value={student.faculty} />
                           <Row label="Code" value={student.student_code} />
                           <Row label="Niveau" value={studentStatus.year_study} />
-                          <Row label="GS" value={student.gs} />
+                          <Row label="GS" value={student.gs ?? gs} />
                         </div>
                       </div>
 
-                      <div className="mt-2 flex items-center justify-between text-[8px] font-semibold text-green-700">
+                      <div className="mt-2 flex items-center justify-between border-t border-blue-100 pt-1 text-[8px] font-semibold text-blue-800">
                         <span>Année Academique</span>
                         <span>{academicYear || studentStatus.academic_year}</span>
                       </div>
@@ -268,28 +272,37 @@ export default function StudentCardModal({
 
               {/* ===== BACK SIDE ===== */}
               <div
-                className="card-side relative overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-lg ring-1 ring-slate-200"
-                style={{ width: '54mm', height: '86mm' }}
+                className="card-side relative overflow-hidden rounded-[18px] border border-blue-950/20 bg-white shadow-lg ring-1 ring-blue-950/20"
+                style={{
+                  width: '54mm',
+                  height: '86mm',
+                  backgroundImage: 'repeating-linear-gradient(0deg, rgba(15,47,104,.025) 0, rgba(15,47,104,.025) 1px, transparent 1px, transparent 5px), linear-gradient(180deg, #ffffff 0%, #eff6ff 100%)',
+                }}
               >
                 <div className="flex h-full flex-col">
-                  <div className="h-2.5 bg-black" />
-                  <div className="flex flex-1 flex-col justify-between bg-white px-3 py-2">
-                    <p className="text-[6.5px] leading-snug text-gray-600">
+                  <div className="h-2.5 bg-blue-950" />
+                  <div className="flex flex-1 flex-col justify-between px-3 py-2">
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-blue-900">Informations</p>
+                      <div className="mx-auto mt-1 h-0.5 w-12 rounded bg-cyan-500" />
+                    </div>
+
+                    <p className="text-[6.5px] leading-snug text-slate-600">
                       Cette carte est la propriété de l&apos;Université d&apos;Études
                       Internationales (UDEI). En cas de perte, merci de la retourner à
                       l&apos;administration.
                     </p>
 
-                    <div className="flex items-center justify-center">
-                      <QRCodeSVG value={student.id.toString()} size={54} />
+                    <div className="flex items-center justify-center rounded-lg border border-blue-100 bg-white/80 p-1.5 shadow-sm">
+                      <QRCodeSVG value={student.id.toString()} size={54} fgColor="#0f2f68" />
                     </div>
 
-                    <p className="text-[6.5px] leading-snug text-gray-600"> 
+                    <p className="text-center text-[6.5px] leading-snug text-slate-600"> 
                       #5 Village Zao, Maïs Gâté 13 (Bloc Gérald bataille) Port-au-Prince HAITI
                       
                     </p>
 
-                    <div className="flex items-end justify-between gap-2">
+                    <div className="flex items-end justify-between gap-2 border-t border-blue-100 pt-2">
                       <img
                         src={getSafeImageSrc(logoUrl, DEFAULT_LOGO)}
                         alt="UDEI seal"
@@ -297,25 +310,25 @@ export default function StudentCardModal({
                         onError={(event) => handleBrokenImage(event, DEFAULT_LOGO)}
                         className="h-8 w-8 object-contain opacity-80"
                       />
-                      <div className="flex flex-col items-center">
+                      <div className="flex min-w-[78px] flex-col items-center rounded-md border border-blue-100 bg-white/70 px-1.5 pb-1 pt-0.5">
                         {student.signature_url ? (
                           <img
                             src={getSafeImageSrc(student.signature_url, DEFAULT_LOGO)}
                             alt="Signature"
                             crossOrigin="anonymous"
                             onError={(event) => handleBrokenImage(event, DEFAULT_LOGO)}
-                            className="h-6 w-16 object-contain"
+                            className="h-7 w-[70px] object-contain"
                           />
                         ) : (
-                          <div className="h-6 w-16 border-b border-gray-400" />
+                          <div className="h-7 w-[70px] border-b border-slate-400" />
                         )}
-                        <p className="mt-0.5 text-[6px] font-semibold text-gray-700">
-                          Signature Autorisée
+                        <p className="mt-0.5 text-[6px] font-semibold text-blue-900">
+                          Signature autorisée
                         </p>
                       </div>
                     </div>
                   </div>
-                  <div className="h-2.5 bg-black" />
+                  <div className="h-2.5 bg-blue-950" />
                 </div>
               </div>
             </div>
@@ -323,17 +336,17 @@ export default function StudentCardModal({
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-wrap gap-2 border-t border-gray-100 p-4">
+        <div className="flex flex-wrap gap-2 border-t border-slate-200 bg-white p-4">
           <button
             onClick={() => handlePrint()}
-            className="min-w-[45%] flex-1 rounded-lg bg-gray-100 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200"
+            className="min-w-[45%] flex-1 rounded-xl bg-slate-100 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
           >
             🖨️ Imprimer
           </button>
           <button
             onClick={handleDownloadPDF}
             disabled={downloading}
-            className="min-w-[45%] flex-1 rounded-lg bg-green-600 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
+            className="min-w-[45%] flex-1 rounded-xl bg-blue-700 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
           >
             {downloading ? '...' : '⬇️ PDF'}
           </button>
