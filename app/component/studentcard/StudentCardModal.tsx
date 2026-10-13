@@ -237,7 +237,7 @@ export default function StudentCardModal({
                       </h2>
 
                       <div className="mt-2 flex flex-col items-center gap-1">
-                        <div className="h-16 w-14 overflow-hidden rounded-md border-2 border-blue-600 bg-slate-100 shadow-sm">
+                        <div className="h-26 w-24 overflow-hidden rounded-md border-2 border-blue-600 bg-slate-100 shadow-sm">
                           {student.photo_url ? (
                             <img
                               src={getSafeImageSrc(student.photo_url, DEFAULT_AVATAR)}
@@ -251,13 +251,19 @@ export default function StudentCardModal({
                           )}
                         </div>
 
-                        <div className="flex-1 space-y-1 text-[8px] text-gray-700">
-                          <Row label="Nom" value={student.last_name} />
+                        <div className="flex-1 flex-wrap border border-blue-200 w-full space-y-1 text-[12px] text-gray-700">
+                          <div className="flex wrap items-center justify-between gap-1 border-b border-blue-100 px-1 py-0.5">
+                            <Row label="Nom" value={student.last_name} />
                           <Row label="Prénom" value={student.first_name} />
-                          <Row label="Fac" value={student.faculty} />
+                            </div>
+                            <div className="flex wrap items-center justify-between gap-1 border-b border-blue-100 px-1 py-0.5">
+                            <Row label="Fac" value={student.faculty} />
                           <Row label="Code" value={student.student_code} />
-                          <Row label="Niveau" value={studentStatus.year_study} />
+                            </div>
+                            <div className="flex wrap items-center justify-between gap-1 border-b border-blue-100 px-1 py-0.5">
+                            <Row label="Niveau" value={studentStatus.year_study} />
                           <Row label="GS" value={student.gs ?? gs} />
+                            </div>
                         </div>
                       </div>
 

@@ -96,6 +96,12 @@ const NAV_ITEMS = [
     icon: 'attendance',
     roles: ['admin', 'editor', 'prof', 'administration']
   },
+  {
+    href: '/admin/clinic',
+    label: 'Clinique',
+    icon: 'clinic',
+    roles: ['admin', 'editor', 'prof', 'administration']
+  },
 ]
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -172,6 +178,11 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   attendance: (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  clinic: (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.25c-1.7 0-3.1 1.05-4.45 1.05-2.2 0-3.55 1.9-3.55 4.6 0 2.35.8 4.55 1.65 6.25.9 1.8 1.4 5.1 3 5.1 1.3 0 1.35-4.25 3.35-4.25s2.05 4.25 3.35 4.25c1.6 0 2.1-3.3 3-5.1.85-1.7 1.65-3.9 1.65-6.25 0-2.7-1.35-4.6-3.55-4.6C15.1 4.3 13.7 3.25 12 3.25Z" />
     </svg>
   )
 }

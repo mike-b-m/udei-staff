@@ -2,11 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "../db"
-import { Update } from "@/app/component/add-buuton/add_button"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Time from "../time/time"
-import { Filter2 } from "../filter/filter"
 import { exportToCSV, printHTML } from "../export/exportUtils"
 import { Scanner } from "@yudiel/react-qr-scanner"
 
@@ -20,7 +18,6 @@ interface PaymentProps {
   onSuccess?: () => void
   v_1: number
   v_2: number
-  v_3: number
   remise: number
   student_id: number | null
   level:number| null
@@ -32,35 +29,23 @@ interface PaymentRecord {
   balance: number | string
 }
 
-//======= section for download infos =======
-interface CourseProgram {
-  id: number
-  courses: string
-  credit: number
-  session_subjet: number
-  hour_session: number
-  total_hour: number
-  year: number
-  session: number
-  created_at?: string
-}
-
-const TABLE_COLUMNS = [
-  { key: 'courses', label: 'Cours', width: 'w-1/4' },
-  { key: 'credit', label: 'Crédit', width: 'w-1/6' },
-  { key: 'session_subjet', label: 'Séances/Mois', width: 'w-1/6' },
-  { key: 'hour_session', label: 'H/Séance', width: 'w-1/6' },
-  { key: 'total_hour', label: 'Total Heures', width: 'w-1/6' }
-]
-
-const printTable = (data: StudentPayment, faculty: string | null, year: number, user:User, role:any) => {
+const printTable = (
+  data: StudentPayment,
+  faculty: string | null,
+  year: number | string | null | undefined,
+  user: User,
+  role: string | null,
+  v_1: number | boolean | null,
+  v_2: number | boolean | null,
+  level: number | null| undefined,
+) => {
   const printWindow = window.open('', '', 'height=600,width=900')
   if (!printWindow) return
 
-  let html = `
+  const html = `
     <html>
       <head>
-        <title>${user.first_name} ${user.last_name} - ${faculty} - Année ${year} Hist-paiements </title>
+        <title>${user.first_name} ${user.last_name} - ${faculty} - Année ${year} ${level} Hist-paiements </title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           h2 { color: #0077B6; margin-bottom: 20px; }
@@ -69,7 +54,7 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
-           font-size: 50%;
+           font-size: 55%;
             }
            .center { 
           margin-bottom: 15px;
@@ -168,22 +153,18 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
         <div class="text-center">+(509) 40 03 4090 / +(509) 48809772 </div>
         </div>
         <div class="info">
-        <div><strong>Nom:</strong> ${user.last_name}</div>
-        <div><strong>Prénom:</strong> ${user.first_name}</div>
-        <div><strong>Code Étudiant:</strong> ${user.student_code}</div>
+        <div style="font-size: 140%"><strong>Nom:</strong> ${user.last_name}</div>
+        <div style="font-size: 140%"><strong>Prénom:</strong> ${user.first_name}</div>
+        <div style="font-size: 100%"><strong>Code Étudiant:</strong> ${user.student_code}</div>
           <div><strong>Faculté:</strong> ${faculty}</div>
           <div><strong>Année:</strong> ${year}</div>
-          <div><strong>Prix:</strong> ${formatCurrency(data?.price)} ${CURRENCY}</div>
-          <div><strong>Réduction:</strong> ${formatCurrency(data?.discount)} ${CURRENCY}</div>
+          <div><strong>Prix:</strong> ${formatCurrency(data?.price - data?.discount)} ${CURRENCY}</div>
+
           <div><strong>Balance:</strong> ${formatCurrency(data?.balance)} ${CURRENCY}</div>
           <div><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</div>
         </div>
-        <div class=" info ">
-        <div ><strong>Nov-fev:</strong>1ere Vers</div>
-        <div ><strong>Mars-juin:</strong>2eme Vers</div>
-        <div "><strong>Juil-sept:</strong>3eme Vers</div></div>
 
-        <div class=" info center"><strong>Versement .....</strong></div>
+        <div class=" info center"><strong> ${v_1 && !v_2 ? 'Versement 2' :v_2 ? 'Versement 3': 'Versement 1 '}</strong></div>
         <table>
           <thead>
             <tr>
@@ -193,7 +174,7 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
             </tr>
           </thead>
           <tbody>
-            ${data?.payment_history?.map((payment: PaymentRecord, index: number) =>`
+            ${data?.payment_history?.map((payment: PaymentRecord) =>`
               <tr>
                 <td> ${formatCurrency(payment.amount)} ${CURRENCY}</td>
                   <td> ${formatCurrency(payment.balance)}  ${CURRENCY}</td>
@@ -216,12 +197,51 @@ const printTable = (data: StudentPayment, faculty: string | null, year: number, 
   setTimeout(() => printWindow.print(), 250)
 }
 // ============ HELPER FUNCTIONS ============
-const toNumber = (value: any): number => {
-  const num = parseFloat(value)
-  return isNaN(num) ? 0 : num
+const toNumber = (value: unknown): number => {
+  const num = typeof value === "number"
+    ? value
+    : typeof value === "string"
+      ? Number.parseFloat(value)
+      : Number.NaN
+  return Number.isFinite(num) ? num : 0
 }
 
-const formatCurrency = (value: any): string => {
+const roundCurrency = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100
+
+const adjustInstallmentTotals = (totals: number[], price: number): number[] => {
+  const targetPrice = Math.max(0, roundCurrency(price))
+  const adjusted = totals.map((total) => Math.max(0, roundCurrency(total)))
+  let difference = roundCurrency(targetPrice - adjusted.reduce((sum, total) => sum + total, 0))
+
+  if (difference >= 0) {
+    adjusted[2] = roundCurrency(adjusted[2] + difference)
+    return adjusted
+  }
+
+  difference = Math.abs(difference)
+  for (let index = adjusted.length - 1; index >= 0 && difference > 0; index -= 1) {
+    const reduction = Math.min(adjusted[index], difference)
+    adjusted[index] = roundCurrency(adjusted[index] - reduction)
+    difference = roundCurrency(difference - reduction)
+  }
+
+  return adjusted
+}
+
+const applyDiscountToInstallments = (totals: number[], discount: number): number[] => {
+  const adjusted = [...totals]
+  let remainingDiscount = Math.max(0, Math.min(discount, adjusted.reduce((sum, total) => sum + total, 0)))
+
+  for (let index = adjusted.length - 1; index >= 0 && remainingDiscount > 0; index -= 1) {
+    const reduction = Math.min(adjusted[index], remainingDiscount)
+    adjusted[index] = roundCurrency(adjusted[index] - reduction)
+    remainingDiscount = roundCurrency(remainingDiscount - reduction)
+  }
+
+  return adjusted
+}
+
+const formatCurrency = (value: unknown): string => {
   return toNumber(value).toFixed(2)
 }
 
@@ -245,17 +265,14 @@ interface StudentPayment {
   payment_history?: PaymentRecord[]
   amount?: number
   balance: number
-  discount?: number
+  discount: number
   faculty?: string
   price: number
   remise?: number
   v_1?: boolean
   v_2?: boolean
   v_3?: boolean  
-}
-
-interface StudentBalance {
-  balance: number
+  level?: number | string | null
 }
 
 interface StudentIdProp {
@@ -322,19 +339,19 @@ const Toast = ({ type, message, onClose }: { type: Toast['type']; message: strin
 }
 
 // ============ PAYMENT FORM ============
-export default function Pay({ id,student_id, history, balance,level, discount,remise, price,v_1, v_2, v_3, onSuccess }: PaymentProps) {
+export default function Pay({ id,student_id, history, balance,level, discount,remise, price,v_1, v_2, onSuccess }: PaymentProps) {
   const [amount, setAmount] = useState<number>(0)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [toast, setToast] = useState<Toast | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [studentdiscount, setStudentdiscount] = useState<number>(0)
-  const [versement, setVersement] = useState<number>(0)
-
+  const [priceIncrease, setPriceIncrease] = useState<number>(0)
+  const [showPriceIncreaseConfirm, setShowPriceIncreaseConfirm] = useState(false)
   const numBalance = toNumber(balance)
-  const numDiscount = toNumber(discount)
   const numPrice = toNumber(price)
-  const remainingBalance = numBalance === numPrice ? numBalance - numDiscount - amount : numBalance - amount 
+  const newPrice = roundCurrency(numPrice + priceIncrease)
+  const remainingBalance = roundCurrency(numBalance - amount)
 
   const validatePayment = useCallback((): boolean => {
     const newErrors: { [key: string]: string } = {}
@@ -345,6 +362,9 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
     if (amount > numBalance) {
       newErrors.amount = "Le montant ne peut pas dépasser le solde"
     }
+    if (!Number.isFinite(amount)) {
+      newErrors.amount = "Le montant saisi est invalide"
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -352,6 +372,14 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
 
   const handlePayment = async () => {
     if (!validatePayment()) return
+    if (student_id === null) {
+      setToast({
+        id: Date.now().toString(),
+        type: 'error',
+        message: "Impossible d’enregistrer le paiement sans identifiant étudiant."
+      })
+      return
+    }
 
     setLoading(true)
     try {
@@ -370,22 +398,33 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
           balance: remainingBalance,
           payment_history: updatedHistory,
           v_1: v_1 <= ((price-remise)-remainingBalance) ? true : false,
-            v_2: v_2 <= ((price-remise)-remainingBalance) && v_1 <= ((price-remise)-remainingBalance) ? true : false,
+            v_2: v_2 +v_1 <= ((price-remise)-remainingBalance) ? true : false,
             v_3: remainingBalance === 0 ? true : false,
         })
         .eq('id', id)
-        const { error: discountError } = await supabase
+      if (error) throw error
+
+      const { error: historyError } = await supabase
         .from('payment_history')
         .insert({
           amount,
-          balance: numBalance - studentdiscount,
+          balance: remainingBalance,
           student_id: student_id,
           level: level
         })
-        .eq('id', id)
 
-      if (error) throw error
-      if (discountError) throw discountError
+      if (historyError) {
+        setToast({
+          id: Date.now().toString(),
+          type: 'error',
+          message: `Le paiement a été enregistré, mais l’historique comptable n’a pas été mis à jour : ${historyError.message}`
+        })
+        setAmount(0)
+        setShowConfirm(false)
+        setErrors({})
+        onSuccess?.()
+        return
+      }
 
       setToast({
         id: Date.now().toString(),
@@ -409,6 +448,14 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
   }
 
    const handlediscount = async () => {
+    if (!Number.isFinite(studentdiscount) || studentdiscount <= 0) {
+      setErrors({ discount: "La réduction doit être supérieure à 0" })
+      return
+    }
+    if (studentdiscount > numBalance) {
+      setErrors({ discount: "La réduction ne peut pas dépasser le solde actuel" })
+      return
+    }
 
     setLoading(true)
     try {
@@ -416,7 +463,7 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
         .from('student_payment')
         .update({
           discount: studentdiscount,
-          balance: numBalance - studentdiscount
+          balance: roundCurrency(numBalance - studentdiscount)
         })
         .eq('id', id)
 
@@ -427,12 +474,57 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
         message: `Remise de ${studentdiscount} ${CURRENCY} appliquée avec succès!`
       })
       setStudentdiscount(0)
+      setErrors({})
       onSuccess?.()
     } catch (err) {
       setToast({
         id: Date.now().toString(),
         type: 'error',
         message: err instanceof Error ? err.message : 'Erreur lors de l\'application de la remise'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePriceIncrease = async () => {
+    if (!Number.isFinite(priceIncrease) || priceIncrease <= 0 || !Number.isFinite(newPrice) || newPrice <= numPrice) {
+      setErrors({ priceIncrease: "Le montant ajouté doit être supérieur à 0" })
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('student_payment')
+        .update({
+          price: newPrice,
+          balance: newPrice,
+          discount: 0,
+          payment_history: [],
+          v_1: false,
+          v_2: false,
+          v_3: false,
+        })
+        .eq('id', id)
+
+      if (error) throw error
+
+      setToast({
+        id: Date.now().toString(),
+        type: 'success',
+        message: `Prix augmenté de ${priceIncrease} ${CURRENCY} avec succès!`
+      })
+      setPriceIncrease(0)
+      setStudentdiscount(0)
+      setShowPriceIncreaseConfirm(false)
+      setErrors({})
+      onSuccess?.()
+    } catch (err) {
+      setToast({
+        id: Date.now().toString(),
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Erreur lors de l\'augmentation du prix'
       })
     } finally {
       setLoading(false)
@@ -509,14 +601,23 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
             <h3 className="text-lg font-bold text-gray-700 mb-4">Réduction Étudiante</h3>
             <input
               type="number"
+              min="0"
+              max={numBalance}
+              step="0.01"
               value={studentdiscount}
-              onChange={(e) => setStudentdiscount(Number(e.target.value))}
+              onChange={(e) => {
+                setStudentdiscount(Number(e.target.value) || 0)
+                if (errors.discount) setErrors({})
+              }}
               className="w-full px-4 py-3 rounded-lg border-2 text-lg font-semibold focus:outline-none focus:ring-2 transition-all"
               placeholder="0.00"
+              disabled={loading}
             />
+            {errors.discount && <p className="mt-2 text-sm font-medium text-red-600">{errors.discount}</p>}
             <button
+            type="button"
             onClick={handlediscount}
-            disabled={discount ? true : false}
+            disabled={loading || discount > 0 || studentdiscount <= 0}
             className="w-full px-4 py-3 bg-linear-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -525,6 +626,79 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
             Effectuer la remise
           </button>
           </div>): null}
+
+        <div className="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm">
+          <h3 className="text-lg font-bold text-gray-700 mb-4">Ajouter au prix</h3>
+          <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="price-increase">
+            Montant à ajouter
+          </label>
+          <input
+            id="price-increase"
+            type="number"
+            min="0"
+            step="0.01"
+            value={priceIncrease || ''}
+            onChange={(e) => {
+              setPriceIncrease(Number(e.target.value) || 0)
+              if (errors.priceIncrease) setErrors({})
+            }}
+            className={`w-full px-4 py-3 rounded-lg border-2 text-lg font-semibold focus:outline-none focus:ring-2 transition-all ${
+              errors.priceIncrease ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white'
+            }`}
+            placeholder="0.00"
+            disabled={loading || showPriceIncreaseConfirm}
+          />
+
+          <p className="mt-2 text-sm text-gray-600">
+            Prix actuel : {formatCurrency(numPrice)} {CURRENCY} · Nouveau prix : {formatCurrency(newPrice)} {CURRENCY}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              if (!Number.isFinite(priceIncrease) || priceIncrease <= 0) {
+                setErrors({ priceIncrease: "Le montant ajouté doit être supérieur à 0" })
+                return
+              }
+              setErrors({})
+              setShowPriceIncreaseConfirm(true)
+            }}
+            disabled={loading || showPriceIncreaseConfirm || priceIncrease <= 0 || !Number.isFinite(newPrice) || newPrice <= numPrice}
+            className="mt-4 w-full px-4 py-3 bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Ajouter au prix
+          </button>
+        </div>
+
+        {showPriceIncreaseConfirm && (
+          <div className="space-y-3">
+            <div className="rounded border-l-4 border-amber-400 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-900">
+                Confirmez l’augmentation du prix de {formatCurrency(priceIncrease)} {CURRENCY} ?
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                Le solde sera réinitialisé à {formatCurrency(newPrice)} {CURRENCY}, la remise sera mise à 0, l’historique des paiements sera supprimé et les versements seront réinitialisés.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowPriceIncreaseConfirm(false)}
+                disabled={loading}
+                className="flex-1 rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-all hover:bg-gray-300 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handlePriceIncrease}
+                disabled={loading}
+                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition-all hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? 'Enregistrement...' : 'Confirmer l’enregistrement'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         {showConfirm ? (
@@ -606,13 +780,12 @@ export function Price() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [toast, setToast] = useState<Toast | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [stats, setStats] = useState({ total: 0, with0Balance: 0, withPositiveBalance: 0 })
 
   useEffect(() => {
-    fetchFacultiesAndStats()
+    fetchFaculties()
   }, [])
 
-  const fetchFacultiesAndStats = async () => {
+  const fetchFaculties = async () => {
     try {
       // Fetch faculty prices
       const { data: facultyData, error: facultyError } = await supabase
@@ -623,22 +796,11 @@ export function Price() {
       if (facultyError) throw facultyError
       setFaculties(facultyData || [])
 
-      // Fetch payment statistics
-      const { data: paymentData, error: paymentError } = await supabase
-        .from('student_payment')
-        .select('balance')
-
-      if (!paymentError && paymentData) {
-        const total = paymentData.length
-        const with0Balance = paymentData.filter((p: any) => parseFloat(p.balance) === 0).length
-        const withPositiveBalance = paymentData.filter((p: any) => parseFloat(p.balance) > 0).length
-        setStats({ total, with0Balance, withPositiveBalance })
-      }
     } catch (err) {
       setToast({
         id: Date.now().toString(),
         type: 'error',
-        message: 'Erreur lors du chargement des facultés'
+        message: err instanceof Error ? err.message : 'Erreur lors du chargement des facultés'
       })
     }
   }
@@ -646,10 +808,10 @@ export function Price() {
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {}
     if (!faculty.trim()) newErrors.faculty = 'Le nom de la faculté est requis'
-    if (!price || price <= 0) newErrors.price = 'Le prix doit être supérieur à 0'
-    if (!v_1 || v_1 < 0) newErrors.v_1 = 'Versement 1 requis'
-    if (!v_2 || v_2 < 0) newErrors.v_2 = 'Versement 2 requis'
-    if (!v_3 || v_3 < 0) newErrors.v_3 = 'Versement 3 requis'
+    if (!Number.isFinite(price) || price <= 0) newErrors.price = 'Le prix doit être supérieur à 0'
+    if (!Number.isFinite(v_1) || v_1 < 0) newErrors.v_1 = 'Le versement 1 ne peut pas être négatif'
+    if (!Number.isFinite(v_2) || v_2 < 0) newErrors.v_2 = 'Le versement 2 ne peut pas être négatif'
+    if (!Number.isFinite(v_3) || v_3 < 0) newErrors.v_3 = 'Le versement 3 ne peut pas être négatif'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -688,7 +850,7 @@ export function Price() {
       })
 
       resetForm()
-      fetchFacultiesAndStats()
+      await fetchFaculties()
     } catch (err) {
       setToast({
         id: Date.now().toString(),
@@ -738,12 +900,12 @@ export function Price() {
         message: 'Faculté supprimée avec succès!'
       })
 
-      fetchFacultiesAndStats()
+      await fetchFaculties()
     } catch (err) {
       setToast({
         id: Date.now().toString(),
         type: 'error',
-        message: 'Erreur lors de la suppression'
+        message: err instanceof Error ? err.message : 'Erreur lors de la suppression'
       })
     }
   }
@@ -1019,7 +1181,7 @@ export function Price() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1" />
             </svg>
             <p className="text-gray-600 font-medium">Aucune faculté enregistrée</p>
-            <p className="text-sm text-gray-500">Cliquez sur "Ajouter une faculté" pour commencer</p>
+            <p className="text-sm text-gray-500">Cliquez sur &quot;Ajouter une faculté&quot; pour commencer</p>
           </div>
         )}
       </div>
@@ -1031,8 +1193,14 @@ export function Price() {
 export function StudentBal({ id }: StudentIdProp) {
   const [balance, setBalance] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState("")
 
   useEffect(() => {
+    let isCurrent = true
+    setLoading(true)
+    setBalance(null)
+    setErrorMessage("")
+
     const fetchBalance = async () => {
       try {
         const { data, error } = await supabase
@@ -1042,24 +1210,33 @@ export function StudentBal({ id }: StudentIdProp) {
           .single()
 
         if (error) throw error
-        setBalance(data?.balance || 0)
+        if (isCurrent) setBalance(toNumber(data?.balance))
       } catch (err) {
         console.error('Error fetching balance:', err)
-        setBalance(0)
+        if (isCurrent) {
+          setBalance(null)
+          setErrorMessage(err instanceof Error ? err.message : 'Impossible de charger le solde.')
+        }
       } finally {
-        setLoading(false)
+        if (isCurrent) setLoading(false)
       }
     }
 
-    fetchBalance()
+    void fetchBalance()
+    return () => {
+      isCurrent = false
+    }
   }, [id])
 
   if (loading) {
     return <span className="text-gray-500 text-sm">Chargement...</span>
   }
+  if (errorMessage || balance === null) {
+    return <span role="alert" className="text-sm text-red-600">{errorMessage || 'Solde indisponible.'}</span>
+  }
 
   return (
-    <span className={`font-semibold ${balance && toNumber(balance) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+    <span className={`font-semibold ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
       $ {formatCurrency(balance)} {CURRENCY}
     </span>
   )
@@ -1071,6 +1248,7 @@ export function Student_pay() {
   const [students, setStudents] = useState<User[]>([])
   const [filteredStudents, setFilteredStudents] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [dataLoadError, setDataLoadError] = useState("")
 
   // Filter state
   const [faculties, setFaculties] = useState<string[]>([])
@@ -1082,10 +1260,12 @@ export function Student_pay() {
   // Auxiliary data maps for quick lookup
   const [paymentData, setPaymentData] = useState<{ [key: number]: StudentPayment }>({})
   const [studentYearMap, setStudentYearMap] = useState<{ [key: number]: number }>({})
-  const [facultyPriceMap, setFacultyPriceMap] = useState<{ [key: string]: any }>({})
+  const [facultyPriceMap, setFacultyPriceMap] = useState<Record<string, FacultyPriceExtended>>({})
   const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
+    let isCurrent = true
+
     const fetchStudentsAndData = async () => {
       try {
         // Fetch students
@@ -1095,65 +1275,69 @@ export function Student_pay() {
           .order('last_name', { ascending: true })
 
         if (studentError) throw studentError
-        setStudents(studentData || [])
-
-        // Extract unique faculties from the student list for the faculty filter
-        const uniqueFaculties = [...new Set((studentData || []).map(s => s.faculty).filter(Boolean))]
-        setFaculties(uniqueFaculties as string[])
 
         // Fetch student year (niveau) data for filters
         const { data: statusData, error: statusError } = await supabase
           .from('student_status')
-          .select('student_id, year_study')
-
-        if (!statusError && statusData) {
-          const yearMap: { [key: number]: number } = {}
-          statusData.forEach((status: any) => {
-            if (status.student_id != null) {
-              yearMap[status.student_id] = status.year_study || 0
-            }
-          })
-          setStudentYearMap(yearMap)
-
-          const uniqueYears = [...new Set(statusData.map((status: any) => status.year_study || 0))]
-            .filter((year) => year !== 0)
-            .sort((a, b) => a - b)
-          setYearOptions(uniqueYears)
-        }
+          .select('id, student_id, year_study')
+          .order('id', { ascending: false })
+        if (statusError) throw statusError
 
         // Fetch payment data for all students
         const { data: paymentDataRes, error: paymentError } = await supabase
           .from('student_payment')
           .select('id, student_id, balance, discount, price')
-
-        if (!paymentError && paymentDataRes) {
-          const paymentMap: { [key: number]: any } = {}
-          paymentDataRes.forEach((payment: any) => {
-            paymentMap[payment.student_id] = payment
-          })
-          setPaymentData(paymentMap)
-        }
+          .order('id', { ascending: false })
+        if (paymentError) throw paymentError
 
         // Fetch faculty price data with versement amounts
         const { data: facultyData, error: facultyError } = await supabase
           .from('faculty_price')
-          .select('faculty, price, v_1, v_2, v_3, symbol')
+          .select('id, faculty, price, v_1, v_2, v_3, symbol')
+        if (facultyError) throw facultyError
 
-        if (!facultyError && facultyData) {
-          const facultyMap: { [key: string]: any } = {}
-          facultyData.forEach((fac: any) => {
-            facultyMap[fac.faculty] = fac
-          })
-          setFacultyPriceMap(facultyMap)
+        if (!isCurrent) return
+
+        const studentsList = studentData ?? []
+        setStudents(studentsList)
+        setFaculties([...new Set(studentsList.map((student) => student.faculty).filter((faculty): faculty is string => Boolean(faculty)))])
+
+        const yearMap: Record<number, number> = {}
+        for (const status of statusData ?? []) {
+          if (status.student_id !== null && yearMap[status.student_id] === undefined) {
+            yearMap[status.student_id] = toNumber(status.year_study)
+          }
         }
+        setStudentYearMap(yearMap)
+        setYearOptions([...new Set(Object.values(yearMap).filter((year) => year > 0))].sort((a, b) => a - b))
+
+        const paymentMap: Record<number, StudentPayment> = {}
+        for (const payment of paymentDataRes ?? []) {
+          if (paymentMap[payment.student_id] === undefined) {
+            paymentMap[payment.student_id] = payment
+          }
+        }
+        setPaymentData(paymentMap)
+
+        const facultyMap: Record<string, FacultyPriceExtended> = {}
+        for (const faculty of facultyData ?? []) {
+          facultyMap[faculty.faculty] = faculty
+        }
+        setFacultyPriceMap(facultyMap)
+        setDataLoadError("")
       } catch (err) {
-        console.error('Error fetching students:', err)
+        if (isCurrent) {
+          setDataLoadError(err instanceof Error ? err.message : 'Impossible de charger les données des paiements.')
+        }
       } finally {
-        setLoading(false)
+        if (isCurrent) setLoading(false)
       }
     }
 
-    fetchStudentsAndData()
+    void fetchStudentsAndData()
+    return () => {
+      isCurrent = false
+    }
   }, [])
 
   useEffect(() => {
@@ -1175,8 +1359,8 @@ export function Student_pay() {
       })
     } else if (balanceFilter === 'zero') {
       filtered = filtered.filter(s => {
-        const balance = paymentData[s.id]?.balance || 0
-        return toNumber(balance) === 0
+        const payment = paymentData[s.id]
+        return payment !== undefined && toNumber(payment.balance) === 0
       })
     }
 
@@ -1202,46 +1386,18 @@ export function Student_pay() {
     }
 
     const payment = paymentData[student.id]
-    const price = toNumber(facultyPrice.price)
-    const discount = toNumber(payment?.discount || 0)
-    const balance = toNumber(payment?.balance || 0)
-    
+    const price = Math.max(0, toNumber(payment?.price ?? facultyPrice.price))
+    const discount = Math.max(0, Math.min(price, toNumber(payment?.discount)))
     const netPrice = price - discount
-    const paid = netPrice - balance
+    const balance = payment ? Math.max(0, toNumber(payment.balance)) : netPrice
+    const paid = Math.max(0, netPrice - balance)
     
-    let v1Total = toNumber(facultyPrice.v_1)
-    let v2Total = toNumber(facultyPrice.v_2)
-    let v3Total = toNumber(facultyPrice.v_3)
+    const installmentTotals = applyDiscountToInstallments(adjustInstallmentTotals(
+      [toNumber(facultyPrice.v_1), toNumber(facultyPrice.v_2), toNumber(facultyPrice.v_3)],
+      price
+    ), discount)
 
-    // Apply discount to versement amounts (v3 first, then v2, then v1)
-    let remainingDiscount = discount
-    
-    if (remainingDiscount > 0) {
-      // Subtract from v3 first
-      if (remainingDiscount >= v3Total) {
-        remainingDiscount -= v3Total
-        v3Total = 0
-        
-        // If discount still remains, subtract from v2
-        if (remainingDiscount > 0 && remainingDiscount >= v2Total) {
-          remainingDiscount -= v2Total
-          v2Total = 0
-          
-          // If discount still remains, subtract from v1
-          if (remainingDiscount > 0) {
-            v1Total = Math.max(0, v1Total - remainingDiscount)
-          }
-        } else if (remainingDiscount > 0) {
-          v2Total -= remainingDiscount
-          remainingDiscount = 0
-        }
-      } else {
-        // Discount is less than v3, just reduce v3
-        v3Total -= remainingDiscount
-        remainingDiscount = 0
-      }
-    }
-
+    const [v1Total, v2Total, v3Total] = installmentTotals
     // Calculate remaining amounts for each versement
     const isPaid = balance === 0
     const isPartial = paid > 0 && !isPaid
@@ -1528,6 +1684,14 @@ export function Student_pay() {
           <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
           <p className="text-gray-600 font-medium">Chargement des étudiants...</p>
         </div>
+      </div>
+    )
+  }
+
+  if (dataLoadError) {
+    return (
+      <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-5 text-red-800">
+        Impossible de charger les paiements des étudiants : {dataLoadError}
       </div>
     )
   }
@@ -1880,6 +2044,12 @@ export function Confirm({ id, v_1, v_2, v_3, onSuccess }: StudentIdProp) {
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<Toast | null>(null)
 
+  useEffect(() => {
+    setVerst_1(v_1 || false)
+    setVerst_2(v_2 || false)
+    setVerst_3(v_3 || false)
+  }, [id, v_1, v_2, v_3])
+
   const handleToggle = async (key: 'v_1' | 'v_2' | 'v_3', nextValue: boolean) => {
     setLoading(true)
     const prevState = { v_1: verst_1, v_2: verst_2, v_3: verst_3 }
@@ -1973,13 +2143,18 @@ export function Confirm({ id, v_1, v_2, v_3, onSuccess }: StudentIdProp) {
 // ============ PAYMENTS HISTORY ============
 export function Payments() {
   const [payments, setPayments] = useState<StudentPayment[]>([])
-  const [student, setStudent] = useState<User | null | any>(null)
+  const [student, setStudent] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [toast, setToast] = useState<Toast | null>(null)
+  const [loadError, setLoadError] = useState("")
   const [reloadKey, setReloadKey] = useState(0)
-  const [versement, setVersement] = useState<{ v_1: number; v_2: number; v_3: number }>({ v_1: 0, v_2: 0, v_3: 0 })
+  const [showLevelModal, setShowLevelModal] = useState(false)
+  const [levelDraft, setLevelDraft] = useState("")
+  const [levelSaving, setLevelSaving] = useState(false)
+  const [levelError, setLevelError] = useState("")
+  const [levelToast, setLevelToast] = useState<Toast | null>(null)
+  const [versement, setVersement] = useState<{ v_1: number; v_2: number }>({ v_1: 0, v_2: 0 })
   const [role,setRole] = useState<string | null>(null)
-  const[level,setLevel] = useState<number | null>(null)
+  const [level, setLevel] = useState<number | null>(null)
   const searchParams = useSearchParams()
   const studentId = searchParams.get('id')
 
@@ -1987,69 +2162,124 @@ export function Payments() {
     setReloadKey((prev) => prev + 1)
   }, [])
 
+  const handleLevelSave = async () => {
+    const nextLevel = Number(levelDraft)
+    if (!Number.isInteger(nextLevel) || nextLevel < 1) {
+      setLevelError("L’année doit être un nombre entier supérieur à 0.")
+      return
+    }
+    if (!currentPayment) return
+
+    setLevelSaving(true)
+    setLevelError("")
+    try {
+      const { error } = await supabase
+        .from('student_payment')
+        .update({ level: nextLevel })
+        .eq('id', currentPayment.id)
+
+      if (error) throw error
+
+      setShowLevelModal(false)
+      setLevelToast({
+        id: Date.now().toString(),
+        type: 'success',
+        message: "L’année d’étude a été mise à jour avec succès."
+      })
+      refreshPayments()
+    } catch (err) {
+      setLevelError(err instanceof Error ? err.message : "Erreur lors de la mise à jour de l’année.")
+    } finally {
+      setLevelSaving(false)
+    }
+  }
+
   useEffect(() => {
-    if (!studentId) return
-
-    const fetchPayment = async () => {
-      setLoading(true)
-      try {
-        const { data: paymentData, error: paymentError } = await supabase
-          .from('student_payment')
-          .select('*')
-          .eq('student_id', studentId)
-
-          const f = paymentData?.[0]?.faculty
-        const {data: versementData, error: versementError } = await supabase
-        .from('faculty_price')
-        .select('*')
-        .eq('faculty', f);
-        
-        if (versementError) throw versementError
-        if (versementData && versementData.length > 0) {
-          const v = versementData[0]
-          setVersement({ v_1: v.v_1, v_2: v.v_2, v_3: v.v_3 })
-        }
-
-        if (paymentError) throw paymentError
-
-        const { data: studentData, error: studentError } = await supabase
-          .from('student')
-          .select('last_name, first_name, id, faculty,student_code')
-          .eq('id', studentId)
-          .single()
-
-          const { data: statusData, error: statusError } = await supabase
-          .from('student_status')
-          .select('year_study')
-          .eq('id', studentId)
-          .single()
-
-        if (studentError) throw studentError
-
-        setPayments(paymentData || [])
-        setStudent(studentData)
-        setLevel(statusData?.year_study || null)
-        //get role 
-        const { data: { user } } = await supabase.auth.getUser()
-                    const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('id', user?.id)
-              .single()
-              setRole(profile?.full_name || null)
-                
-      } catch (err) {
-        setToast({
-          id: Date.now().toString(),
-          type: 'error',
-          message: 'Erreur lors du chargement des informations'
-        })
-      } finally {
-        setLoading(false)
+    let isCurrent = true
+    if (!studentId) {
+      setStudent(null)
+      setPayments([])
+      setLoading(false)
+      setLoadError("Aucun identifiant étudiant n’a été fourni.")
+      return () => {
+        isCurrent = false
       }
     }
 
-    fetchPayment()
+    const fetchPayment = async () => {
+      setLoading(true)
+      setLoadError("")
+      try {
+        const [paymentResult, studentResult] = await Promise.all([
+          supabase
+            .from('student_payment')
+            .select('*')
+            .eq('student_id', studentId)
+            .order('id', { ascending: false }),
+          supabase
+            .from('student')
+            .select('last_name, first_name, id, faculty, student_code')
+            .eq('id', studentId)
+            .single(),
+        ])
+        const { data: paymentData, error: paymentError } = paymentResult
+        const { data: studentData, error: studentError } = studentResult
+        if (paymentError) throw paymentError
+        if (studentError) throw studentError
+
+        const currentPayment = paymentData?.[0]
+        const [versementResult, statusResult, userResult] = await Promise.all([
+          currentPayment?.faculty
+            ? supabase.from('faculty_price').select('v_1, v_2').eq('faculty', currentPayment.faculty).maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
+          supabase
+            .from('student_status')
+            .select('year_study')
+            .eq('student_id', studentId)
+            .order('id', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase.auth.getUser(),
+        ])
+
+        if (versementResult.error) throw versementResult.error
+        if (statusResult.error) throw statusResult.error
+        if (userResult.error) throw userResult.error
+        let cashierName: string | null = null
+        if (userResult.data.user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', userResult.data.user.id)
+            .maybeSingle()
+          if (profileError) throw profileError
+          cashierName = profile?.full_name ?? null
+        }
+
+        if (!isCurrent) return
+        setPayments(paymentData ?? [])
+        setStudent(studentData)
+        setLevel(statusResult.data?.year_study ?? null)
+        setVersement({
+          v_1: toNumber(versementResult.data?.v_1),
+          v_2: toNumber(versementResult.data?.v_2),
+        })
+        setRole(cashierName)
+      } catch (err) {
+        if (isCurrent) {
+          setStudent(null)
+          setPayments([])
+          setLoadError(err instanceof Error ? err.message : 'Erreur lors du chargement des informations.')
+        }
+      } finally {
+        if (isCurrent) setLoading(false)
+      }
+    }
+
+    void fetchPayment()
+    return () => {
+      isCurrent = false
+    }
   }, [studentId, reloadKey])
 
   if (loading) {
@@ -2063,29 +2293,28 @@ export function Payments() {
     )
   }
 
-  if (!student && studentId) {
+  if (!student) {
     return (
       <div className="bg-red-50 border-2 border-red-200 rounded-lg p-8 text-center">
         <svg className="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4v2m0-4v2" />
         </svg>
-        <p className="text-red-700 font-semibold">Aucun étudiant trouvé</p>
+        <p className="text-red-700 font-semibold">{loadError || 'Aucun étudiant trouvé.'}</p>
       </div>
     )
   }
 
-  const currentPayment:any = payments[0]
+  const currentPayment = payments[0]
 
   return (
-    <>
-      {toast && (
+      <>
+      {levelToast && (
         <Toast
-          type={toast.type}
-          message={toast.message}
-          onClose={() => setToast(null)}
+          type={levelToast.type}
+          message={levelToast.message}
+          onClose={() => setLevelToast(null)}
         />
       )}
-
       <div className="space-y-6 p-6">
         {/* Student Info */}
         <div className="bg-linear-to-r from-blue-600 to-blue-500 rounded-lg shadow-lg p-4 sm:p-6 text-white">
@@ -2098,6 +2327,8 @@ export function Payments() {
             </h2>
           </div>
           <p className="text-blue-100 text-sm">ID Étudiant: #{student.id}</p>
+          <p className="text-blue-100 text-sm">Code Étudiant: #{student.student_code}</p>
+          <p className="text-blue-100 text-sm">Année: {level ?? 'Non renseignée'}</p>
         </div>
 
         {/* Export Buttons */}
@@ -2153,7 +2384,7 @@ export function Payments() {
             </button>
             <button
               onClick={() => {
-                printTable(currentPayment, student?.faculty, 1, student,role)
+                printTable(currentPayment, student.faculty, currentPayment.level, student, role, currentPayment.v_1 ?? null, currentPayment.v_2 ?? null, level)
               }}
               className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
             >
@@ -2163,7 +2394,7 @@ export function Payments() {
           </div>
         )}
 
-        {/* Payment Info Cards */}
+      {/* Payment Info Cards */}
         {currentPayment && (
           <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-white rounded-lg border-2 border-green-200 shadow-md p-4 sm:p-6">
@@ -2188,18 +2419,109 @@ export function Payments() {
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Faculté</p>
               <p className="text-lg font-bold text-gray-800 mt-2">{currentPayment.faculty}</p>
             </div>
+
+            <div className="bg-white rounded-lg border-2 border-gray-200 shadow-md p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Année</p>
+                <button
+                  type="button"
+                  aria-label="Modifier l’année d’étude"
+                  title="Modifier l’année d’étude"
+                  onClick={() => {
+                    setLevelDraft(currentPayment.level === null ? "" : String(currentPayment.level))
+                    setLevelError("")
+                    setShowLevelModal(true)
+                  }}
+                  className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m16.862 4.487 2.651 2.651M7 17l4.5-.9L19.5 8.1a1.875 1.875 0 0 0-2.652-2.652L8.85 13.45 7 17Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-lg font-bold text-gray-800 mt-2">{currentPayment.level ?? 'Non renseignée'}</p>
+            </div>
           </div>
         )}
 
-        <div className="h-25" >
-        <Confirm
-          id={currentPayment?.id || 0}
-          v_1={currentPayment?.v_1 || false}
-          v_2={currentPayment?.v_2 || false}
-          v_3={currentPayment?.v_3 || false}
-          onSuccess={refreshPayments}
-        />
-        </div>
+        {showLevelModal && currentPayment && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget && !levelSaving) setShowLevelModal(false)
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="level-modal-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            >
+              <h2 id="level-modal-title" className="text-xl font-bold text-gray-900">
+                Modifier l’année d’étude
+              </h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Confirmez la modification de l’année d’étude de {currentPayment.level ?? 'Non renseignée'} à {levelDraft || '—'}.
+              </p>
+              <label htmlFor="payment-level" className="mt-5 block text-sm font-semibold text-gray-700">
+                Nouvelle année
+              </label>
+              <input
+                id="payment-level"
+                type="number"
+                min="1"
+                step="1"
+                value={levelDraft}
+                onChange={(event) => {
+                  setLevelDraft(event.target.value)
+                  setLevelError("")
+                }}
+                disabled={levelSaving}
+                className="mt-2 w-full rounded-lg border-2 border-gray-300 px-4 py-3 text-lg font-semibold focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:bg-gray-100"
+              />
+              {levelError && (
+                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {levelError}
+                </p>
+              )}
+              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowLevelModal(false)}
+                  disabled={levelSaving}
+                  className="rounded-lg bg-gray-100 px-4 py-2.5 font-semibold text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLevelSave}
+                  disabled={levelSaving || !levelDraft}
+                  className="rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {levelSaving ? 'Enregistrement...' : 'Confirmer et enregistrer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentPayment ? (
+          <div className="h-25">
+            <Confirm
+              id={currentPayment.id}
+              v_1={currentPayment.v_1 || false}
+              v_2={currentPayment.v_2 || false}
+              v_3={currentPayment.v_3 || false}
+              onSuccess={refreshPayments}
+            />
+          </div>
+        ) : (
+          <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
+            Aucune information de paiement n’est enregistrée pour cet étudiant.
+          </p>
+        )}
 
         {/* Payment Form */}
         {currentPayment && (
@@ -2220,9 +2542,8 @@ export function Payments() {
               onSuccess={refreshPayments}
               v_1={versement?.v_1}
               v_2={versement?.v_2}
-              v_3={versement?.v_3}
               remise={currentPayment?.discount || 0}
-              level={level}
+              level={Number(currentPayment?.level)}
             />
           </div>
         )}
@@ -2262,17 +2583,17 @@ export function Payments() {
           </div>
         )}
 
-        {!currentPayment?.payment_history || currentPayment.payment_history.length === 0 && (
+        {currentPayment && (!currentPayment.payment_history || currentPayment.payment_history.length === 0) && (
           <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
             <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m0 0V5m0 0l-4 4m4-4l4 4" />
             </svg>
             <p className="text-gray-600 font-medium">Aucune transaction</p>
-            <p className="text-sm text-gray-500">Les paiements s\'afficheront ici</p>
+            <p className="text-sm text-gray-500">Les paiements s’afficheront ici</p>
           </div>
         )}
       </div>
-    </>
+      </>
   )
 }
 
@@ -2287,9 +2608,9 @@ interface ScannedPayment {
 
 interface ScannedStudent {
   id: number
-  first_name: string
-  last_name: string
-  faculty: string
+  first_name: string | null
+  last_name: string | null
+  faculty: string | null
   photo_url?: string | null
   student_code?: string | null
 }
@@ -2341,9 +2662,11 @@ export function QrcodeScan() {
       if (studentError) throw studentError
 
       const [{ data: paymentData, error: paymentError }, { data: statusData, error: statusError }, { data: facultyData, error: facultyError }] = await Promise.all([
-        supabase.from('student_payment').select('balance, discount, price, v_1, v_2, v_3').eq('student_id', scanresult).maybeSingle(),
+        supabase.from('student_payment').select('balance, discount, price, v_1, v_2, v_3').eq('student_id', scanresult).order('id', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('student_status').select('academic_year').eq('student_id', scanresult).order('id', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('faculty_price').select('v_1, v_2, v_3').eq('faculty', studentData.faculty).maybeSingle(),
+        studentData.faculty
+          ? supabase.from('faculty_price').select('v_1, v_2, v_3').eq('faculty', studentData.faculty).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
       ])
 
       if (paymentError) throw paymentError
@@ -2353,21 +2676,18 @@ export function QrcodeScan() {
       if (!facultyData) throw new Error('Aucun montant de versement trouvé pour la faculté de cet étudiant.')
 
       const currentPayment = {
-        balance: toNumber(paymentData.balance),
-        discount: toNumber(paymentData.discount),
-        price: toNumber(paymentData.price),
+        balance: Math.max(0, toNumber(paymentData.balance)),
+        discount: Math.max(0, Math.min(toNumber(paymentData.price), toNumber(paymentData.discount))),
+        price: Math.max(0, toNumber(paymentData.price)),
         v_1: Boolean(paymentData.v_1),
         v_2: Boolean(paymentData.v_2),
         v_3: Boolean(paymentData.v_3),
       }
-      const totals = [toNumber(facultyData?.v_1), toNumber(facultyData?.v_2), toNumber(facultyData?.v_3)]
-      const discountedTotals = [...totals]
-      let remainingDiscount = currentPayment.discount
-      for (let index = 2; index >= 0; index -= 1) {
-        const reduction = Math.min(discountedTotals[index], remainingDiscount)
-        discountedTotals[index] -= reduction
-        remainingDiscount -= reduction
-      }
+      const totals = adjustInstallmentTotals(
+        [toNumber(facultyData.v_1), toNumber(facultyData.v_2), toNumber(facultyData.v_3)],
+        currentPayment.price
+      )
+      const discountedTotals = applyDiscountToInstallments(totals, currentPayment.discount)
 
       const paid = Math.max(0, currentPayment.price - currentPayment.discount - currentPayment.balance)
       const remainingAmounts = [...discountedTotals]
@@ -2421,7 +2741,7 @@ export function QrcodeScan() {
       {student && payment && <div className="space-y-5">
         <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center">
           <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-4 ring-cyan-50">
-            {student.photo_url ? <img src={student.photo_url} alt={`${student.first_name} ${student.last_name}`} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-3xl font-bold text-slate-300">{student.first_name[0]}{student.last_name[0]}</div>}
+            {student.photo_url ? <img src={student.photo_url} alt={`${student.first_name ?? ''} ${student.last_name ?? ''}`.trim()} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-3xl font-bold text-slate-300">{student.first_name?.[0] ?? '?'}{student.last_name?.[0] ?? ''}</div>}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold uppercase tracking-wider text-cyan-600">Étudiant #{student.id}</p>
