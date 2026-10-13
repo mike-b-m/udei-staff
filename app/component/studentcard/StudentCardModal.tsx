@@ -228,16 +228,16 @@ export default function StudentCardModal({
                     </div>
                   </div>
 
-                  <div className="flex-1 rounded-tr-[28px] bg-blue-900/70 px-3 pb-2 pt-2">
+                  <div className="flex-1  bg-blue-900/70 px-3 pb-2 pt-">
                     <div className="h-full rounded-[18px] bg-white/95 px-2.5 pb-2 pt-2 shadow-inner">
-                      <h2 className="text-center text-[9px] font-bold uppercase tracking-wide text-blue-800">
+                      <h2 className="text-center text-[11px] font-bold uppercase tracking-wide text-blue-800">
                         {student.sex === 'M' || student.sex === 'Masculin' || student.sex === 'masculin'
                           ? 'Carte de l\'étudiant'
                           : 'Carte de l\'étudiante'}
                       </h2>
 
                       <div className="mt-2 flex flex-col items-center gap-1">
-                        <div className="h-26 w-24 overflow-hidden rounded-md border-2 border-blue-600 bg-slate-100 shadow-sm">
+                        <div className="h-28 w-28 overflow-hidden rounded-md border-2 border-blue-600 bg-slate-100 shadow-sm">
                           {student.photo_url ? (
                             <img
                               src={getSafeImageSrc(student.photo_url, DEFAULT_AVATAR)}
@@ -251,26 +251,25 @@ export default function StudentCardModal({
                           )}
                         </div>
 
-                        <div className="flex-1 flex-wrap border border-blue-200 w-full space-y-1 text-[12px] text-gray-700">
-                          <div className="flex wrap items-center justify-between gap-1 border-b border-blue-100 px-1 py-0.5">
+                        <div className="flex-1 flex-wrap  w-full space-y-1 text-[12px] text-gray-700">
                             <Row label="Nom" value={student.last_name} />
                           <Row label="Prénom" value={student.first_name} />
-                            </div>
-                            <div className="flex wrap items-center justify-between gap-1 border-b border-blue-100 px-1 py-0.5">
-                            <Row label="Fac" value={student.faculty} />
+                            
+                            <div className=" items-center justify-between ">
+                            <Row label="Faculté" value={student.faculty} />
                           <Row label="Code" value={student.student_code} />
                             </div>
-                            <div className="flex wrap items-center justify-between gap-1 border-b border-blue-100 px-1 py-0.5">
+                            <div className="flex wrap items-center justify-between">
                             <Row label="Niveau" value={studentStatus.year_study} />
                           <Row label="GS" value={student.gs ?? gs} />
                             </div>
                         </div>
                       </div>
 
-                      <div className="mt-2 flex items-center justify-between border-t border-blue-100 pt-1 text-[8px] font-semibold text-blue-800">
+                      {/* <div className="mt-2 flex items-center justify-between border-t border-blue-100 pt-1 text-[8px] font-semibold text-blue-800">
                         <span>Année Academique</span>
                         <span>{academicYear || studentStatus.academic_year}</span>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </div>
@@ -293,7 +292,7 @@ export default function StudentCardModal({
                       <div className="mx-auto mt-1 h-0.5 w-12 rounded bg-cyan-500" />
                     </div>
 
-                    <p className="text-[6.5px] leading-snug text-slate-600">
+                    <p className="text-[8px] leading-snug text-slate-600">
                       Cette carte est la propriété de l&apos;Université d&apos;Études
                       Internationales (UDEI). En cas de perte, merci de la retourner à
                       l&apos;administration.
@@ -303,10 +302,15 @@ export default function StudentCardModal({
                       <QRCodeSVG value={student.id.toString()} size={54} fgColor="#0f2f68" />
                     </div>
 
-                    <p className="text-center text-[6.5px] leading-snug text-slate-600"> 
+                    <p className="text-center text-[8px] leading-snug text-slate-600"> 
                       #5 Village Zao, Maïs Gâté 13 (Bloc Gérald bataille) Port-au-Prince HAITI
                       
                     </p>
+
+                    <div className="mt-2 flex items-center justify-between border-t border-blue-100 pt-1 text-[12px] font-semibold text-blue-800">
+                        <span>Année Academique</span>
+                        <span>{academicYear || studentStatus.academic_year}</span>
+                      </div>
 
                     <div className="flex items-end justify-between gap-2 border-t border-blue-100 pt-2">
                       <img
@@ -328,7 +332,7 @@ export default function StudentCardModal({
                         ) : (
                           <div className="h-7 w-[70px] border-b border-slate-400" />
                         )}
-                        <p className="mt-0.5 text-[6px] font-semibold text-blue-900">
+                        <p className="mt-0.5 text-[8px] font-semibold text-blue-900">
                           Signature autorisée
                         </p>
                       </div>

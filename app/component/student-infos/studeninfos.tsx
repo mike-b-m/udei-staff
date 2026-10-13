@@ -1267,12 +1267,14 @@ function StudentDisplayContent({
         )}
 
       {/*id card generator */}
-      <button
-        onClick={() => setCardOpen(true)}
-        className="rounded-lg bg-green-600 px-4 py-2 text-white font-semibold hover:bg-green-700"
-      >
-        Voir la carte
-      </button>
+      {canEdit && (
+        <button
+          onClick={() => setCardOpen(true)}
+          className="rounded-lg bg-green-600 px-4 py-2 text-white font-semibold hover:bg-green-700"
+        >
+          Voir la carte
+        </button>
+      )}
          {cardOpen && (
         <StudentCardModal
           student={student}
@@ -1285,7 +1287,7 @@ function StudentDisplayContent({
       )}
         {/* Years and Sessions */}
         <div className='flex flex-wrap gap-2'>
-          {yearexam.map(j => sessionexam.map(s =>
+         {canEdit && (yearexam.map(j => sessionexam.map(s =>
             <button
               key={`${j}-${s}`}
               onClick={() => setOpen(open === `${j}-${s}` ? '' : `${j}-${s}`)}
@@ -1293,7 +1295,7 @@ function StudentDisplayContent({
             >
               Année {j} - Session {s}
             </button>
-          ))}
+          )))}
         </div>
       </div>
 

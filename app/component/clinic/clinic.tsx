@@ -256,6 +256,7 @@ export function ClinicPayment() {
   const [discountInput, setDiscountInput] = useState("");
   const [display, setDisplay] = useState(false);
   const [cashier, setCashier] = useState("");
+  const [addYear, setAddYear] = useState(0);
 
   useEffect(() => {
     const fetchPaymentOptions = async () => {
@@ -430,7 +431,7 @@ const { data: { user } } = await supabase.auth.getUser()
 
     const { data, error } = await supabase.rpc("insert_clinic_invoice", {
       p_student_name: studentName,
-      p_year: Number(selectedYear),
+      p_year: Number(selectedYear)+Number(addYear),
       p_total_price: totalAfterDiscount,
       p_discount: discountAmount,
       p_line_items: invoiceRows,
@@ -577,7 +578,26 @@ const { data: { user } } = await supabase.auth.getUser()
           </select>
         </label>
       </div>
-
+        {/* add x year  */}
+        {/* Réduction fixe appliquée au sous-total des prestations. */}
+      <section className="grid gap-3 rounded-md border border-gray-200 bg-gray-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <label className="block space-y-1 text-sm font-medium text-gray-700">
+          Ajouter x Années 
+          <input
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2"
+            type="number"
+            min="0"
+            max={6}
+            step="1"
+            inputMode="decimal"
+            value={addYear}
+            onChange={(event) => {
+              setAddYear(Number(event.target.value));
+            }}
+            placeholder="0"
+          />
+        </label>
+      </section>
       {/* Réduction fixe appliquée au sous-total des prestations. */}
       <section className="grid gap-3 rounded-md border border-gray-200 bg-gray-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <label className="block space-y-1 text-sm font-medium text-gray-700">
