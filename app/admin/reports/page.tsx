@@ -24,6 +24,7 @@ interface PaymentReportRow {
   studentName: string
   faculty: string
   insertedBy: string
+  method?: string | null
 }
 
 type ReportPeriod = 'day' | 'week' | 'month'
@@ -73,7 +74,7 @@ export default function ReportsPage() {
   const fetchReportData = useCallback(async () => {
     const [studentsRes, paymentsRes, spendRes, statusRes] = await Promise.all([
       supabase.from('student').select('id, first_name, last_name, faculty'),
-      supabase.from('payment_history').select('id, created_at, amount, balance, student_id, insert_by, level').order('created_at', { ascending: false }),
+      supabase.from('payment_history').select('id, created_at, amount, balance, student_id, insert_by, level,method').order('created_at', { ascending: false }),
       supabase.from('spent_in_company').select('amount'),
       supabase.from('student_status').select('student_id, year_study'),
     ])
@@ -222,7 +223,8 @@ export default function ReportsPage() {
       { label: 'Niveau', x: margin + 114, width: 18 },
       { label: 'Montant paye', x: margin + 132, width: 30 },
       { label: 'Solde apres', x: margin + 162, width: 30 },
-      { label: 'Enregistre par', x: margin + 192, width: 69 },
+      { label: 'Mode de payment', x: margin + 192, width: 69 },
+      { label: 'Enregistré par', x: margin + 192, width: 69 },
     ]
     let y = 84
     const drawTableHeader = () => {
@@ -253,9 +255,10 @@ export default function ReportsPage() {
         payment.level == null ? '-' : String(payment.level),
         `$${(Number(payment.amount) || 0).toLocaleString()} HT`,
         `$${(Number(payment.balance) || 0).toLocaleString()} HT`,
+        payment.method,
         payment.insertedBy,
       ]
-      values.forEach((value, index) => {
+      values.forEach((value:any, index) => {
         const column = columns[index]
         const lines = pdf.splitTextToSize(value, column.width - 2) as string[]
         pdf.text(lines[0] || '', column.x + 1, y)
@@ -279,12 +282,12 @@ export default function ReportsPage() {
       const x = index * 28 + 8
       return `<g><rect x="${x}" y="${150 - barHeight}" width="16" height="${barHeight}" fill="#059669" rx="2"/><text x="${x + 8}" y="168" text-anchor="middle">${escapeHtml(new Date(`${item.date}T00:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }))}</text></g>`
     }).join('')
-    const tableRows = periodPayments.map(payment => `<tr><td>${escapeHtml(new Date(payment.created_at).toLocaleString('fr-FR'))}</td><td>${escapeHtml(payment.studentName)}</td><td>${escapeHtml(payment.faculty)}</td><td>${escapeHtml(payment.level ?? '-')}</td><td class="number">$${(Number(payment.amount) || 0).toLocaleString()} HT</td><td class="number">$${(Number(payment.balance) || 0).toLocaleString()} HT</td><td>${escapeHtml(payment.insertedBy)}</td></tr>`).join('')
+    const tableRows = periodPayments.map(payment => `<tr><td>${escapeHtml(new Date(payment.created_at).toLocaleString('fr-FR'))}</td><td>${escapeHtml(payment.studentName)}</td><td>${escapeHtml(payment.faculty)}</td><td>${escapeHtml(payment.level ?? '-')}</td><td class="number">$${(Number(payment.amount) || 0).toLocaleString()} HT</td><td class="number">$${(Number(payment.balance) || 0).toLocaleString()} HT</td><td>${escapeHtml(payment.method)}</td><td>${escapeHtml(payment.insertedBy)}</td></tr>`).join('')
     const printWindow = window.open('', '_blank', 'width=1100,height=800')
     if (!printWindow) return
     printWindow.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(reportTitle)}</title><style>
       *{box-sizing:border-box}body{font:12px Arial,sans-serif;color:#1f2937;margin:24px}h1{font-size:22px;margin:0 0 8px}p{margin:4px 0}.summary{display:flex;gap:24px;margin:16px 0}.chart{width:100%;overflow:hidden;margin:16px 0 26px}.chart svg{display:block;max-width:100%;height:auto}.chart text{font:9px Arial,sans-serif;fill:#4b5563}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#065f46;color:#fff;text-align:left}th,td{border:1px solid #d1d5db;padding:7px}.number{text-align:right;white-space:nowrap}tbody tr:nth-child(even){background:#f9fafb}@page{size:landscape;margin:12mm}@media print{body{margin:0}.chart{break-inside:avoid}thead{display:table-header-group}tr{break-inside:avoid}}
-      </style></head><body><h1>Rapport des paiements</h1><p><strong>Période :</strong> ${escapeHtml(periodLabel)} | ${escapeHtml(periodDateLabel)}</p><p><strong>Faculté :</strong> ${escapeHtml(reportFaculty)}</p><div class="summary"><p><strong>Total payé :</strong> $${periodTotal.toLocaleString()} HT</p><p><strong>Transactions :</strong> ${periodPayments.length}</p></div><div class="chart"><svg viewBox="0 0 ${chartWidth} 180" role="img" aria-label="Paiements par jour"><line x1="0" y1="150" x2="${chartWidth}" y2="150" stroke="#d1d5db"/>${bars}</svg></div><table><thead><tr><th>Date</th><th>Étudiant</th><th>Faculté</th><th>Niveau / Année</th><th>Montant payé</th><th>Solde après paiement</th><th>Enregistré par</th></tr></thead><tbody>${tableRows || '<tr><td colspan="7">Aucun paiement pour cette sélection</td></tr>'}</tbody></table><script>window.addEventListener('load',()=>window.print())</script></body></html>`)
+      </style></head><body><h1>Rapport des paiements</h1><p><strong>Période :</strong> ${escapeHtml(periodLabel)} | ${escapeHtml(periodDateLabel)}</p><p><strong>Faculté :</strong> ${escapeHtml(reportFaculty)}</p><div class="summary"><p><strong>Total payé :</strong> $${periodTotal.toLocaleString()} HT</p><p><strong>Transactions :</strong> ${periodPayments.length}</p></div><div class="chart"><svg viewBox="0 0 ${chartWidth} 180" role="img" aria-label="Paiements par jour"><line x1="0" y1="150" x2="${chartWidth}" y2="150" stroke="#d1d5db"/>${bars}</svg></div><table><thead><tr><th>Date</th><th>Étudiant</th><th>Faculté</th><th>Niveau / Année</th><th>Montant payé</th><th>Solde après paiement</th><th>Mode de payment</th><th>Enregistré par</th></tr></thead><tbody>${tableRows || '<tr><td colspan="7">Aucun paiement pour cette sélection</td></tr>'}</tbody></table><script>window.addEventListener('load',()=>window.print())</script></body></html>`)
     printWindow.document.close()
   }
 
@@ -299,7 +302,7 @@ export default function ReportsPage() {
       ['Faculté', selectedFaculty || 'Toutes les facultés'],
       ['Total payé', periodTotal],
       [],
-      ['Date', 'Étudiant', 'Faculté', 'Niveau / Année', 'Montant payé', 'Solde après paiement', 'Enregistré par'],
+      ['Date', 'Étudiant', 'Faculté', 'Niveau / Année', 'Montant payé', 'Solde après paiement','Mode de paiement', 'Enregistré par'],
       ...periodPayments.map(payment => [
         new Date(payment.created_at).toLocaleString('fr-FR'),
         payment.studentName,
@@ -307,6 +310,7 @@ export default function ReportsPage() {
         payment.level ?? '-',
         Number(payment.amount) || 0,
         Number(payment.balance) || 0,
+        payment.method,
         payment.insertedBy,
       ]),
     ]
@@ -451,6 +455,7 @@ export default function ReportsPage() {
                 <th className="px-5 py-3 text-center font-semibold">Niveau / Année</th>
                 <th className="px-5 py-3 text-right font-semibold">Montant payé</th>
                 <th className="px-5 py-3 text-right font-semibold">Solde après paiement</th>
+                <th className="px-5 py-3 font-semibold">Mode de Paiement</th>
                 <th className="px-5 py-3 font-semibold">Enregistré par</th>
               </tr>
             </thead>
@@ -463,7 +468,8 @@ export default function ReportsPage() {
                   <td className="px-5 py-3 text-center text-gray-700">{payment.level ?? '-'}</td>
                   <td className="whitespace-nowrap px-5 py-3 text-right font-semibold text-emerald-700">${(Number(payment.amount) || 0).toLocaleString()} HT</td>
                   <td className="whitespace-nowrap px-5 py-3 text-right text-gray-700">${(Number(payment.balance) || 0).toLocaleString()} HT</td>
-                  <td className="px-5 py-3 text-gray-700">{payment.insertedBy}</td>
+                  <td className="px-5 py-3 text-gray-700">{payment.method}</td>
+                   <td className="px-5 py-3 text-gray-700">{payment.insertedBy}</td>
                 </tr>
               ))}
               {periodPayments.length === 0 && (

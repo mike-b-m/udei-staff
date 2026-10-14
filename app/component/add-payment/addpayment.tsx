@@ -27,6 +27,7 @@ interface PaymentRecord {
   date: Date | string
   amount: number | string
   balance: number | string
+  method?: string
 }
 
 const printTable = (
@@ -170,6 +171,7 @@ const printTable = (
             <tr>
             <td>Montant</td> 
              <td>Balance</td>
+             <td>Mode de Paiement</td>
             <td>Date</td>
             </tr>
           </thead>
@@ -177,7 +179,8 @@ const printTable = (
             ${data?.payment_history?.map((payment: PaymentRecord) =>`
               <tr>
                 <td> ${formatCurrency(payment.amount)} ${CURRENCY}</td>
-                  <td> ${formatCurrency(payment.balance)}  ${CURRENCY}</td>
+                <td> ${formatCurrency(payment.balance)}  ${CURRENCY}</td>
+                <td> ${payment.method}  </td>
                   <td>  ${new Date(payment.date).toLocaleDateString('fr-FR')}</td>
               </tr>
    `).join('')}
@@ -348,6 +351,7 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
   const [studentdiscount, setStudentdiscount] = useState<number>(0)
   const [priceIncrease, setPriceIncrease] = useState<number>(0)
   const [showPriceIncreaseConfirm, setShowPriceIncreaseConfirm] = useState(false)
+  const [methode, setMethode] = useState<string>("Espèces")
   const numBalance = toNumber(balance)
   const numPrice = toNumber(price)
   const newPrice = roundCurrency(numPrice + priceIncrease)
@@ -356,14 +360,12 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
   const validatePayment = useCallback((): boolean => {
     const newErrors: { [key: string]: string } = {}
 
-    if (!amount || amount <= 0) {
-      newErrors.amount = "Le montant doit être supérieur à 0"
-    }
-    if (amount > numBalance) {
-      newErrors.amount = "Le montant ne peut pas dépasser le solde"
-    }
     if (!Number.isFinite(amount)) {
       newErrors.amount = "Le montant saisi est invalide"
+    } else if (amount <= 0) {
+      newErrors.amount = "Veuillez saisir un montant supérieur à 0"
+    } else if (amount > numBalance) {
+      newErrors.amount = "Le montant ne peut pas dépasser le solde"
     }
 
     setErrors(newErrors)
@@ -387,7 +389,8 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
       const newRecord: PaymentRecord = {
         date,
         amount,
-        balance: remainingBalance
+        balance: remainingBalance,
+        method: methode
       }
 
       const updatedHistory = history ? [...history, newRecord] : [newRecord]
@@ -410,7 +413,8 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
           amount,
           balance: remainingBalance,
           student_id: student_id,
-          level: level
+          level: level,
+          method: methode,
         })
 
       if (historyError) {
@@ -549,12 +553,14 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
           <div className="relative">
             <input
               type="number"
-              value={amount}
+              value={amount || ''}
               onChange={(e) => {
                 setAmount(parseFloat(e.target.value) || 0)
                 if (errors.amount) setErrors({})
               }}
-              min={0}
+              required
+              aria-invalid={Boolean(errors.amount)}
+              min={0.01}
               max={numBalance}
               step="0.01"
               className={`w-full px-4 py-3 rounded-lg border-2 text-lg font-semibold focus:outline-none focus:ring-2 transition-all ${
@@ -568,8 +574,21 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
               {CURRENCY}
             </span>
           </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-700 mb-4">moyen de paiement </h3>
+            <select
+              value={methode}
+              onChange={(e) => setMethode(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border-2 text-lg font-semibold focus:outline-none focus:ring-2 transition-all 'border-gray-300 bg-white hover:border-gray-400 focus:border-green-500 focus:ring-green-500/50'"
+              disabled={loading}
+            >
+            <option value=''>selectionne</option>
+              <option value='espèces'>Espèces</option>
+              <option value='carte'>virement bancaire </option>
+            </select>
+          </div>
           {errors.amount && (
-            <p className="text-red-600 text-sm font-medium mt-2 flex items-center gap-1">
+            <p role="alert" className="text-red-600 text-sm font-medium mt-2 flex items-center gap-1">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
@@ -710,6 +729,7 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
             </div>
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={() => setShowConfirm(false)}
                 disabled={loading}
                 className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all disabled:opacity-50"
@@ -717,6 +737,7 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
                 Annuler
               </button>
               <button
+                type="button"
                 onClick={handlePayment}
                 disabled={loading}
                 className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
@@ -741,8 +762,12 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
           </div>
         ) : (
           <button
-            onClick={() => setShowConfirm(true)}
-            disabled={!amount || amount <= 0}
+            type="button"
+            onClick={() => {
+              if (!validatePayment()) return
+              setShowConfirm(true)
+            }}
+            disabled={loading}
             className="w-full px-4 py-3 bg-linear-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2562,7 +2587,7 @@ export function Payments() {
 
             <div className="divide-y divide-gray-200">
               {currentPayment.payment_history.map((payment: PaymentRecord, index: number) => (
-                <div key={index} className={`px-4 sm:px-6 py-4 grid grid-cols-1 min-[420px]:grid-cols-3 gap-3 sm:gap-4 items-start sm:items-center ${ROW_COLORS[index % ROW_COLORS.length]}`}>
+                <div key={index} className={`px-4 sm:px-6 py-4 grid grid-cols-1 min-[420px]:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center ${ROW_COLORS[index % ROW_COLORS.length]}`}>
                   <div>
                     <p className="text-sm text-gray-600 font-medium">Montant</p>
                     <p className="text-lg font-bold text-amber-600">{formatCurrency(payment.amount)} {CURRENCY}</p>
@@ -2570,6 +2595,10 @@ export function Payments() {
                   <div>
                     <p className="text-sm text-gray-600 font-medium">Solde après</p>
                     <p className="text-lg font-bold text-blue-600">{formatCurrency(payment.balance)} {CURRENCY}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">moyen de paiement</p>
+                    <p className="text-sm font-semibold text-gray-800">{payment.method || '—'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 font-medium">Date</p>
