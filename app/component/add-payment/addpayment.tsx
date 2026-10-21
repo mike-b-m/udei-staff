@@ -2553,11 +2553,11 @@ export function Payments() {
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
-            <div className="bg-white rounded-lg border-2 border-orange-200 shadow-md p-4 sm:p-6">
+            {/* <div className="bg-white rounded-lg border-2 border-orange-200 shadow-md p-4 sm:p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Réduction</p>
               <p className="text-2xl sm:text-3xl font-bold text-orange-600 mt-2">{formatCurrency(toNumber(currentPayment.discount))}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
-            </div>
+            </div> */}
 
             <div className="bg-white rounded-lg border-2 border-blue-200 shadow-md p-4 sm:p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Solde actuel</p>
