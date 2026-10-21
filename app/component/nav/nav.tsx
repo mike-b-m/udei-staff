@@ -70,7 +70,7 @@ const NAV_ITEMS = [
     href: '/admin/reports',
     label: 'Rapports',
     icon: 'reports',
-    roles: ['admin']
+    roles: ['admin','administration']
   },
   {
     href: '/admin/homework',

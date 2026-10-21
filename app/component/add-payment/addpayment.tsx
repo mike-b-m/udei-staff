@@ -1287,6 +1287,18 @@ export function Student_pay() {
   const [studentYearMap, setStudentYearMap] = useState<{ [key: number]: number }>({})
   const [facultyPriceMap, setFacultyPriceMap] = useState<Record<string, FacultyPriceExtended>>({})
   const [exporting, setExporting] = useState(false)
+  const [searchName, setSearchName] = useState('')
+  const [studentActiveMap, setStudentActiveMap] = useState<Record<number, boolean>>({})
+const [statusView, setStatusView] = useState<'active' | 'inactive' | 'all'>('active')
+
+// A student with no status row is treated as active
+const isStudentActive = (id: number) => studentActiveMap[id] !== false
+  const normalizeText = (value: string | null | undefined) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip accents
+    .toLocaleLowerCase()
+    .trim()
 
   useEffect(() => {
     let isCurrent = true
@@ -1304,7 +1316,7 @@ export function Student_pay() {
         // Fetch student year (niveau) data for filters
         const { data: statusData, error: statusError } = await supabase
           .from('student_status')
-          .select('id, student_id, year_study')
+          .select('id, student_id, year_study, is_active')
           .order('id', { ascending: false })
         if (statusError) throw statusError
 
@@ -1328,13 +1340,20 @@ export function Student_pay() {
         setFaculties([...new Set(studentsList.map((student) => student.faculty).filter((faculty): faculty is string => Boolean(faculty)))])
 
         const yearMap: Record<number, number> = {}
-        for (const status of statusData ?? []) {
-          if (status.student_id !== null && yearMap[status.student_id] === undefined) {
-            yearMap[status.student_id] = toNumber(status.year_study)
-          }
-        }
-        setStudentYearMap(yearMap)
-        setYearOptions([...new Set(Object.values(yearMap).filter((year) => year > 0))].sort((a, b) => a - b))
+const activeMap: Record<number, boolean> = {}
+for (const status of statusData ?? []) {
+  const sid = status.student_id
+  if (sid === null) continue
+  const active = Boolean(status.is_active)
+  // keep the latest row, but an active row always wins over an inactive one
+  if (activeMap[sid] === undefined || (active && !activeMap[sid])) {
+    activeMap[sid] = active
+    yearMap[sid] = toNumber(status.year_study)
+  }
+}
+setStudentActiveMap(activeMap)
+setStudentYearMap(yearMap)
+setYearOptions([...new Set(Object.values(yearMap).filter((year) => year > 0))].sort((a, b) => a - b))
 
         const paymentMap: Record<number, StudentPayment> = {}
         for (const payment of paymentDataRes ?? []) {
@@ -1368,6 +1387,11 @@ export function Student_pay() {
   useEffect(() => {
     // Apply filters to the student list whenever filter values or source data change
     let filtered = students
+    if (statusView === 'active') {
+  filtered = filtered.filter(s => isStudentActive(s.id))
+} else if (statusView === 'inactive') {
+  filtered = filtered.filter(s => !isStudentActive(s.id))
+}
 
     if (selectedFaculty) {
       filtered = filtered.filter(s => s.faculty === selectedFaculty)
@@ -1389,8 +1413,19 @@ export function Student_pay() {
       })
     }
 
+    const searchTerms = normalizeText(searchName).split(/\s+/).filter(Boolean)
+if (searchTerms.length > 0) {
+  filtered = filtered.filter((student) => {
+    const haystack = normalizeText(
+      `${student.last_name} ${student.first_name} ${student.student_code ?? ''}`
+    )
+    // every typed word must appear somewhere in the name (any order)
+    return searchTerms.every((term) => haystack.includes(term))
+  })
+}
+
     setFilteredStudents(filtered)
-  }, [students, selectedFaculty, selectedYear, balanceFilter, paymentData, studentYearMap])
+  }, [students, selectedFaculty, selectedYear, balanceFilter, paymentData, studentYearMap, searchName])
 
   // Calculate versement amounts for a student
   const calculateVersements = (student: User) => {
@@ -1532,7 +1567,8 @@ export function Student_pay() {
 
     return facultySummary
   }
-
+  // Print and exports only include active students
+const exportStudents = filteredStudents.filter(s => isStudentActive(s.id))
   // Export handlers
   const handleExportCSV = async () => {
     try {
@@ -1616,90 +1652,116 @@ export function Student_pay() {
     }
   }
 
-  const handlePrint = () => {
-    try {
-      const printWindow = window.open('', '', 'height=900,width=1200')
-      if (!printWindow) return
+const handlePrint = () => {
+  try {
+    const printWindow = window.open('', '', 'height=900,width=1200')
+    if (!printWindow) return
 
-      const html = `
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-          <meta charset="UTF-8">
-          <title>Liste des Paiements</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; padding: 20px; background: white; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #0077B6; padding-bottom: 15px; }
-            .header h1 { font-size: 24px; color: #0077B6; margin-bottom: 10px; }
-            .filter-info { font-size: 13px; color: #666; text-align: center; margin-top: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            thead { background-color: #0077B6; color: white; }
-            th { padding: 12px; text-align: left; font-weight: 600; border: 1px solid #ddd; }
-            td { padding: 10px; border: 1px solid #ddd; }
-            tbody tr:nth-child(odd) { background-color: #f9f9f9; }
-            .text-right { text-align: right; }
-            .text-center { text-align: center; }
-            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
-            @media print { body { margin: 0; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Liste des Paiements</h1>
-            <div class="filter-info">
-              Date: ${new Date().toLocaleDateString('fr-FR')} | 
-              ${selectedFaculty ? `Faculté: ${selectedFaculty} | ` : ''}
-              ${selectedYear ? `Année: ${selectedYear} | ` : ''}
-              Total: ${filteredStudents.length} étudiant(s)
-            </div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Nom Étudiant</th>
-                <th class="text-center">Faculté</th>
-                <th class="text-center">Année</th>
-                <th class="text-right">Total Année</th>
-                <th class="text-right">Versement 1</th>
-                <th class="text-right">Versement 2</th>
-                <th class="text-right">Versement 3</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredStudents
-                .map(student => {
-                  const vers = calculateVersements(student)
-                  return `
-                <tr>
-                  <td><strong>${student.last_name} ${student.first_name}</strong></td>
-                  <td class="text-center">${student.faculty || '-'}</td>
-                  <td class="text-center">Année ${studentYearMap[student.id] || '-'}</td>
-                  <td class="text-right">${formatCurrency(vers.netPrice)}</td>
-                  <td class="text-right">${formatCurrency(vers.v1Total)}</td>
-                  <td class="text-right">${formatCurrency(vers.v2Total)}</td>
-                  <td class="text-right">${formatCurrency(vers.v3Total)}</td>
-                </tr>
-              `
-                })
-                .join('')}
-            </tbody>
-          </table>
-          <div class="footer">
-            <p>Document généré le ${new Date().toLocaleString('fr-FR')}</p>
-            <p>UDEI - Système de Gestion Administratif Universitaire</p>
-          </div>
-        </body>
-        </html>
-      `
+    const logoUrl = `${window.location.origin}/image/h.png`
 
-      printWindow.document.write(html)
-      printWindow.document.close()
-      setTimeout(() => printWindow.print(), 250)
-    } catch (error) {
-      console.error('Error printing:', error)
+    const rowsHtml = exportStudents
+      .map(student => {
+        const vers = calculateVersements(student)
+        return `
+          <tr>
+            <td><strong>${student.last_name} ${student.first_name}</strong></td>
+            <td class="text-center">${student.faculty || '-'}</td>
+            <td class="text-center">Année ${studentYearMap[student.id] || '-'}</td>
+            <td class="text-right">${formatCurrency(vers.netPrice)}</td>
+            <td class="text-right">${formatCurrency(vers.v1Total)}</td>
+            <td class="text-right">${formatCurrency(vers.v2Total)}</td>
+            <td class="text-right">${formatCurrency(vers.v3Total)}</td>
+          </tr>
+        `
+      })
+      .join('')
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <title>Liste des Paiements</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 20px; background: white; }
+          .logo-section { width: 100%; }
+          .logo { width: 100%; height: auto; }
+          .info { margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 55%; }
+          .header { text-align: center; margin-bottom: 30px; padding-bottom: 15px; }
+          .header h1 { font-size: 24px; color: #0077B6; margin-bottom: 10px; }
+          .filter-info { font-size: 13px; color: #666; text-align: center; margin-top: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          thead { background-color: #0077B6; color: white; }
+          th { padding: 12px; text-align: left; font-weight: 600; border: 1px solid #ddd; }
+          td { padding: 10px; border: 1px solid #ddd; }
+          tbody tr:nth-child(odd) { background-color: #f9f9f9; }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+          @media print { body { margin: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="logo-section">
+          <img src="${logoUrl}" alt="UDEI Logo" class="logo">
+        </div>
+        <div class="info" style="justify-content: center; align-items: center; border-bottom: 1px solid #ddd;">
+          <div>#5 Village Zao, Maïs Gâté 13 (Bloc Gérald bataille) Port-au-Prince HAITI</div>
+          <div class="text-center">+(509) 40 03 4090 / +(509) 48809772</div>
+        </div>
+
+        <div class="header">
+          <h1>Liste des Paiements</h1>
+          <div class="filter-info">
+            Date: ${new Date().toLocaleDateString('fr-FR')} |
+            Statut: Actifs |
+            ${selectedFaculty ? `Faculté: ${selectedFaculty} | ` : ''}
+            ${selectedYear ? `Année: ${selectedYear} | ` : ''}
+            Total: ${exportStudents.length} étudiant(s)
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Nom Étudiant</th>
+              <th class="text-center">Faculté</th>
+              <th class="text-center">Année</th>
+              <th class="text-right">Total Année</th>
+              <th class="text-right">Versement 1</th>
+              <th class="text-right">Versement 2</th>
+              <th class="text-right">Versement 3</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <p>Document généré le ${new Date().toLocaleString('fr-FR')}</p>
+          <p>UDEI - Système de Gestion Administratif Universitaire</p>
+        </div>
+      </body>
+      </html>
+    `
+
+    printWindow.document.write(html)
+    printWindow.document.close()
+
+    const img = printWindow.document.querySelector('img')
+    const doPrint = () => printWindow.print()
+    if (img && !img.complete) {
+      img.onload = doPrint
+      img.onerror = doPrint
+    } else {
+      setTimeout(doPrint, 250)
     }
+  } catch (error) {
+    console.error('Error printing:', error)
   }
+}
 
   // Loading state while student and filter data are being fetched
   if (loading) {
@@ -1784,7 +1846,43 @@ export function Student_pay() {
         </button>
       </div>
 
-      {/* Filter Controls */}
+      {/* Search name*/}
+      <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200 space-y-4">
+        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          Recherche
+        </h3>
+        
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            placeholder="Rechercher par nom, prénom ou code..."
+            aria-label="Rechercher un étudiant par son nom ou prénom"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            className="w-full sm:flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="button"
+            onClick={() => setSearchName('')}
+            disabled={!searchName}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-all disabled:opacity-50"
+          >
+            Effacer la recherche
+          </button>
+        </div>
+
+        {searchName.trim() && (
+          <p className="text-sm text-gray-600" role="status">
+            {filteredStudents.length} étudiant{filteredStudents.length > 1 ? 's' : ''} trouvé{filteredStudents.length > 1 ? 's' : ''}
+          </p>
+        )}
+      </div>
+
+        { /* Filter Controls */}
+
       <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200 space-y-4">
         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1794,6 +1892,29 @@ export function Student_pay() {
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+  <span className="text-sm font-medium text-gray-700">Statut :</span>
+  {([
+    ['active', 'Actifs'],
+    ['inactive', 'Inactifs'], 
+    ['all', 'Tous'],
+  ] as const).map(([value, label]) => (
+    <button
+      key={value}
+      type="button"
+      onClick={() => setStatusView(value)}
+      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+        statusView === value
+          ? value === 'inactive'
+            ? 'bg-red-600 text-white'
+            : 'bg-blue-600 text-white'
+          : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+      }`}
+    >
+      {label}
+    </button>
+  ))}
+</div>
           {/* Faculty Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Faculté</label>
@@ -1859,7 +1980,11 @@ export function Student_pay() {
           <svg className="w-12 h-12 text-yellow-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10a4 4 0 018 0" />
           </svg>
-          <p className="text-yellow-800 font-medium">Aucun étudiant ne correspond aux filtres</p>
+          <p className="text-yellow-800 font-medium">
+            {searchName.trim()
+              ? 'Aucun étudiant ne correspond à cette recherche'
+              : 'Aucun étudiant ne correspond aux filtres'}
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
