@@ -497,7 +497,7 @@ export default function Exam() {
   const totalExams = filteredExams.length
   const passCount = filteredExams.filter(e => {
     const score = e.repri_note ?? e.note ?? 0
-    const passGrade = e.pass_grade || 50
+    const passGrade = e.pass_grade || 65
     return (score as number) >= passGrade
   }).length
   const failCount = totalExams - passCount

@@ -89,15 +89,82 @@ const getClinicLogoDataUrl = async (): Promise<string | null> => {
   }
 };
 
+type PendingAction =
+  | { kind: "create"; name: string; price: number }
+  | { kind: "update"; service: ClinicServiceRecord; name: string; price: number }
+  | { kind: "delete"; service: ClinicServiceRecord };
+
+type EditingState = { service: ClinicServiceRecord; name: string; price: string; error: string };
+
+// Turns Supabase/Postgres errors into messages a user can understand.
+const describeError = (error: { message: string; code?: string }) => {
+  switch (error.code) {
+    case "23503":
+      return "This service is used elsewhere (invoices, visits…) and cannot be deleted.";
+    case "23505":
+      return "A service with this name already exists.";
+    case "42501":
+      return "You do not have permission to do this.";
+    default:
+      return /fetch|network/i.test(error.message)
+        ? "Network problem. Check your connection and try again."
+        : error.message;
+  }
+};
+
+// Generic modal shell: backdrop, Escape to close, click outside to close.
+function Modal({
+  title,
+  onClose,
+  locked,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  locked?: boolean;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !locked) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, locked]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !locked) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl"
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // Formulaire d’ajout des prestations proposées par la clinique.
 export default function ClinicService() {
   const [serviceName, setServiceName] = useState("");
   const [price, setPrice] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [savedServices, setSavedServices] = useState<ClinicServiceRecord[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [servicesError, setServicesError] = useState("");
+
+  const [editing, setEditing] = useState<EditingState | null>(null);
+  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Recharge la liste pour afficher les données persistées dans Supabase.
   const refreshSavedServices = async () => {
@@ -141,30 +208,195 @@ export default function ClinicService() {
     };
   }, []);
 
-  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
+  // Auto-dismiss the toast.
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const validate = (name: string, rawPrice: string): { ok: true; price: number } | { ok: false; error: string } => {
+    if (!name.trim()) return { ok: false, error: "Service name is required." };
+    const value = Number(rawPrice);
+    if (rawPrice.trim() === "" || !Number.isFinite(value)) return { ok: false, error: "Enter a valid price." };
+    if (value < 0) return { ok: false, error: "The price cannot be negative." };
+    return { ok: true, price: value };
+  };
+
+  // Step 1 (add): validate, then ask for confirmation.
+  const handleSave = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
 
-    setIsSaving(true);
-    const { error } = await supabase.from("clinic_service").insert({
-      service_name: serviceName.trim(),
-      price: Number(price),
-    });
-    setIsSaving(false);
+    const result = validate(serviceName, price);
+    if (!result.ok) {
+      setMessage(result.error);
+      return;
+    }
+    setActionError("");
+    setPending({ kind: "create", name: serviceName.trim(), price: result.price });
+  };
 
-    if (error) {
-      setMessage(`Impossible d’enregistrer le service : ${error.message}`);
+  // Step 1 (edit): validate, then ask for confirmation.
+  const handleEditSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editing) return;
+
+    const result = validate(editing.name, editing.price);
+    if (!result.ok) {
+      setEditing({ ...editing, error: result.error });
       return;
     }
 
-    setServiceName("");
-    setPrice("");
-    setMessage("Service enregistré.");
+    const unchanged =
+      editing.name.trim() === editing.service.service_name &&
+      result.price === Number(editing.service.price);
+    if (unchanged) {
+      setEditing({ ...editing, error: "No changes to save." });
+      return;
+    }
+
+    setActionError("");
+    setPending({ kind: "update", service: editing.service, name: editing.name.trim(), price: result.price });
+  };
+
+  // Step 2: the user confirmed, run the action.
+  const runPending = async () => {
+    if (!pending) return;
+    setIsProcessing(true);
+    setActionError("");
+
+    let error: { message: string; code?: string } | null = null;
+
+    try {
+      if (pending.kind === "create") {
+        const res = await supabase
+          .from("clinic_service")
+          .insert({ service_name: pending.name, price: pending.price });
+        error = res.error;
+      } else if (pending.kind === "update") {
+        const res = await supabase
+          .from("clinic_service")
+          .update({ service_name: pending.name, price: pending.price })
+          .eq("id", pending.service.id)
+          .select("id");
+        error = res.error;
+        // RLS can block an update without returning an error.
+        if (!error && (res.data?.length ?? 0) === 0) {
+          error = { message: "The service was not updated. It may have been deleted or you lack permission." };
+        }
+      } else {
+        const res = await supabase
+          .from("clinic_service")
+          .delete()
+          .eq("id", pending.service.id)
+          .select("id");
+        error = res.error;
+        if (!error && (res.data?.length ?? 0) === 0) {
+          error = { message: "The service was not deleted. It may already be gone or you lack permission." };
+        }
+      }
+    } catch (e) {
+      error = { message: e instanceof Error ? e.message : "Unexpected error." };
+    }
+
+    setIsProcessing(false);
+
+    if (error) {
+      setActionError(describeError(error));
+      return; // keep the popup open so the user can retry or cancel
+    }
+
+    const successText =
+      pending.kind === "create" ? "Service saved." : pending.kind === "update" ? "Service updated." : "Service deleted.";
+
+    if (pending.kind === "create") {
+      setServiceName("");
+      setPrice("");
+      setMessage("");
+    }
+    if (pending.kind === "update") setEditing(null);
+
+    setPending(null);
+    setToast({ type: "success", text: successText });
     await refreshSavedServices();
   };
 
+  const closeConfirm = () => {
+    if (isProcessing) return;
+    setPending(null);
+    setActionError("");
+  };
+
+  const confirmContent = () => {
+    if (!pending) return null;
+
+    if (pending.kind === "delete") {
+      return {
+        title: "Delete this service?",
+        body: (
+          <>
+            <span className="font-semibold">{pending.service.service_name}</span> will be permanently removed. This
+            cannot be undone.
+          </>
+        ),
+        button: "Delete",
+        danger: true,
+      };
+    }
+
+    if (pending.kind === "update") {
+      return {
+        title: "Save these changes?",
+        body: (
+          <ul className="space-y-1 text-sm">
+            <li>
+              Name: <span className="text-gray-500 line-through">{pending.service.service_name}</span>{" "}
+              <span className="font-semibold">{pending.name}</span>
+            </li>
+            <li>
+              Price:{" "}
+              <span className="text-gray-500 line-through">
+                {formatClinicAmount(Number(pending.service.price) || 0)}
+              </span>{" "}
+              <span className="font-semibold">{formatClinicAmount(pending.price)}</span>
+            </li>
+          </ul>
+        ),
+        button: "Save changes",
+        danger: false,
+      };
+    }
+
+    return {
+      title: "Save this service?",
+      body: (
+        <>
+          <span className="font-semibold">{pending.name}</span> at{" "}
+          <span className="font-semibold">{formatClinicAmount(pending.price)}</span> HT will be added.
+        </>
+      ),
+      button: "Save service",
+      danger: false,
+    };
+  };
+
+  const confirm = confirmContent();
+
   return (
     <div className="w-full max-w-3xl space-y-5">
+      {/* Toast */}
+      {toast && (
+        <div
+          role="status"
+          className={`fixed right-4 top-4 z-[60] rounded-md px-4 py-3 text-sm font-medium text-white shadow-lg ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.text}
+        </div>
+      )}
+
       <form onSubmit={handleSave} className="w-full max-w-xl space-y-5 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
         <label className="block space-y-1 text-sm font-medium text-gray-700">
           Nom du service
@@ -193,11 +425,11 @@ export default function ClinicService() {
         <button
           className="min-h-11 rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
           type="submit"
-          disabled={isSaving}
+          disabled={isProcessing}
         >
-          {isSaving ? "Enregistrement…" : "Enregistrer le service"}
+          Enregistrer le service
         </button>
-        {message && <p role="status" className="text-sm text-gray-700">{message}</p>}
+        {message && <p role="alert" className="text-sm text-red-700">{message}</p>}
       </form>
 
       {/* Liste des prestations déjà enregistrées avec leur tarif actuel. */}
@@ -226,17 +458,126 @@ export default function ClinicService() {
         ) : (
           <ul className="divide-y divide-gray-100">
             {savedServices.map((service) => (
-              <li key={service.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <li key={service.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="wrap-break-word font-medium text-gray-900">{service.service_name}</p>
                   <p className="mt-1 text-sm text-gray-500">{service.is_principal ? "Service principal" : "Autre service"}</p>
                 </div>
-                <p className="shrink-0 font-semibold text-gray-900">{formatClinicAmount(Number(service.price) || 0)} HT</p>
+                <div className="flex shrink-0 items-center gap-3">
+                  <p className="font-semibold text-gray-900">{formatClinicAmount(Number(service.price) || 0)} HT</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditing({
+                        service,
+                        name: service.service_name,
+                        price: String(service.price ?? ""),
+                        error: "",
+                      })
+                    }
+                    disabled={isProcessing}
+                    className="min-h-11 rounded-md border border-gray-500 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionError("");
+                      setPending({ kind: "delete", service });
+                    }}
+                    disabled={isProcessing}
+                    className="min-h-11 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </section>
+
+      {/* Edit popup (hidden while the confirmation is showing, values are kept if the user cancels) */}
+      {editing && !pending && (
+        <Modal title="Edit service" onClose={() => setEditing(null)}>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Edit service</h3>
+            <label className="block space-y-1 text-sm font-medium text-gray-700">
+              Nom du service
+              <input
+                className="w-full rounded-md border border-gray-300 px-3 py-2 font-normal"
+                type="text"
+                value={editing.name}
+                onChange={(e) => setEditing({ ...editing, name: e.target.value, error: "" })}
+                autoFocus
+              />
+            </label>
+            <label className="block space-y-1 text-sm font-medium text-gray-700">
+              Tarif
+              <input
+                className="w-full rounded-md border border-gray-300 px-3 py-2 font-normal"
+                type="number"
+                min="0"
+                step="0.01"
+                value={editing.price}
+                onChange={(e) => setEditing({ ...editing, price: e.target.value, error: "" })}
+              />
+            </label>
+            {editing.error && <p role="alert" className="text-sm text-red-700">{editing.error}</p>}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                className="min-h-11 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="min-h-11 rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Confirmation popup (add, edit, delete) */}
+      {pending && confirm && (
+        <Modal title={confirm.title} onClose={closeConfirm} locked={isProcessing}>
+          <h3 className="text-lg font-semibold text-gray-900">{confirm.title}</h3>
+          <div className="mt-2 text-sm text-gray-700">{confirm.body}</div>
+
+          {actionError && (
+            <p role="alert" className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {actionError}
+            </p>
+          )}
+
+          <div className="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeConfirm}
+              disabled={isProcessing}
+              className="min-h-11 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void runPending()}
+              disabled={isProcessing}
+              className={`min-h-11 rounded-md px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60 ${
+                confirm.danger ? "bg-red-600 hover:bg-red-700" : "bg-blue-700 hover:bg-blue-800"
+              }`}
+            >
+              {isProcessing ? "Please wait…" : actionError ? "Try again" : confirm.button}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

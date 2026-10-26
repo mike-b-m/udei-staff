@@ -7,7 +7,7 @@ interface FacultyPrice {
   faculty: string
   price: number
 }
-
+ 
 export function useFaculties() {
   const [faculties, setFaculties] = useState<FacultyPrice[]>([])
   const [loading, setLoading] = useState(true)

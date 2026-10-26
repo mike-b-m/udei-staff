@@ -5,7 +5,7 @@ export interface OnlineExam {
   title: string
   description: string | null
   faculty: string
-  year_study: number
+  year_study: number  
   matiere: string
   session: number
   duration_minutes: number
