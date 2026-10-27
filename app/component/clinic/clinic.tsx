@@ -1,6 +1,6 @@
 "use client"
 import { supabase } from "../db"
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
 
 type ClinicReportPeriod = "day" | "week" | "month" | "year";
@@ -68,6 +68,13 @@ const getClinicPeriodBounds = (dateValue: string, period: ClinicReportPeriod) =>
 
   return { start, end };
 };
+
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip accents
+    .toLocaleLowerCase()
+    .trim();
 
 const formatClinicAmount = (amount: number) =>
   new Intl.NumberFormat("fr-HT", { maximumFractionDigits: 2 }).format(amount);
@@ -598,6 +605,7 @@ export function ClinicPayment() {
   const [display, setDisplay] = useState(false);
   const [cashier, setCashier] = useState("");
   const [addYear, setAddYear] = useState(0);
+const [studentSearch, setStudentSearch] = useState("");
 
   useEffect(() => {
     const fetchPaymentOptions = async () => {
@@ -713,7 +721,24 @@ const { data: { user } } = await supabase.auth.getUser()
       isCurrent = false;
     };
   }, [selectedFaculty, selectedYear]);
+  // Students matching the search box (every typed word must appear in the name, any order)
+const visibleStudents = useMemo(() => {
+  const terms = normalizeText(studentSearch).split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return students;
+  return students.filter((student) => {
+    const haystack = normalizeText(`${student.last_name ?? ""} ${student.first_name ?? ""}`);
+    return terms.every((term) => haystack.includes(term));
+  });
+}, [students, studentSearch]);
 
+// Keep the selected student valid: if it is filtered out, select the first match (or none)
+useEffect(() => {
+  setSelectedStudentId((current) =>
+    visibleStudents.some((student) => student.id === current)
+      ? current
+      : visibleStudents[0]?.id ?? ""
+  );
+}, [visibleStudents]);
   const selectedStudent = students.find((student) => student.id === selectedStudentId) ?? null;
   const studentName = selectedStudent
     ? `${selectedStudent.last_name?.toUpperCase() ?? ""} ${selectedStudent.first_name ?? ""}`.trim()
@@ -870,7 +895,38 @@ const { data: { user } } = await supabase.auth.getUser()
 
       {/* Filtres pour limiter les étudiants selon leur faculté et leur année d’études. */}
       <div className="grid gap-4 rounded-md border border-gray-200 bg-gray-50 p-4 md:grid-cols-3">
-        <label className="space-y-1 text-sm font-medium text-gray-700">
+        <div className="space-y-1 md:col-span-3">
+  <label htmlFor="clinic-student-search" className="text-sm font-medium text-gray-700">
+    Rechercher un étudiant
+  </label>
+  <div className="flex gap-2">
+    <input
+      id="clinic-student-search"
+      type="text"
+      value={studentSearch}
+      onChange={(event) => {
+        setStudentSearch(event.target.value);
+        setSavedReceipt(null);
+      }}
+      placeholder="Nom ou prénom..."
+      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2"
+    />
+    <button
+      type="button"
+      onClick={() => setStudentSearch("")}
+      disabled={!studentSearch}
+      className="rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 disabled:opacity-50"
+    >
+      Effacer
+    </button>
+  </div>
+  {studentSearch.trim() && (
+    <p className="text-xs text-gray-500" role="status">
+      {visibleStudents.length} étudiant{visibleStudents.length > 1 ? "s" : ""} trouvé{visibleStudents.length > 1 ? "s" : ""}
+    </p>
+  )}
+</div>
+<label className="space-y-1 text-sm font-medium text-gray-700">
           Faculté
           <select
             className="w-full rounded-md border border-gray-300 bg-white px-3 py-2"
@@ -902,21 +958,27 @@ const { data: { user } } = await supabase.auth.getUser()
         <label className="space-y-1 text-sm font-medium text-gray-700">
           Étudiant
           <select
-            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2"
-            value={selectedStudentId}
-            disabled={isLoadingStudents || students.length === 0}
-            onChange={(event) => {
-              setSelectedStudentId(event.target.value);
-              setSavedReceipt(null);
-            }}
-          >
-            <option value="">{isLoadingStudents ? "Chargement des étudiants…" : "Sélectionner un étudiant"}</option>
-            {students.map((student) => (
-              <option key={student.id} value={student.id}>
-                {student.last_name} {student.first_name}
-              </option>
-            ))}
-          </select>
+  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2"
+  value={selectedStudentId}
+  disabled={isLoadingStudents || visibleStudents.length === 0}
+  onChange={(event) => {
+    setSelectedStudentId(event.target.value);
+    setSavedReceipt(null);
+  }}
+>
+  <option value="">
+    {isLoadingStudents
+      ? "Chargement des étudiants…"
+      : visibleStudents.length === 0
+        ? "Aucun étudiant trouvé"
+        : "Sélectionner un étudiant"}
+  </option>
+  {visibleStudents.map((student) => (
+    <option key={student.id} value={student.id}>
+      {student.last_name} {student.first_name}
+    </option>
+  ))}
+</select>
         </label>
       </div>
         {/* add x year  */}

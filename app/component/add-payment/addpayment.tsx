@@ -154,14 +154,14 @@ const printTable = (
         <div class="text-center">+(509) 40 03 4090 / +(509) 48809772 </div>
         </div>
         <div class="info">
-        <div style="font-size: 140%"><strong>Nom:</strong> ${user.last_name}</div>
-        <div style="font-size: 140%"><strong>Prénom:</strong> ${user.first_name}</div>
-        <div style="font-size: 100%"><strong>Code Étudiant:</strong> ${user.student_code}</div>
-          <div><strong>Faculté:</strong> ${faculty}</div>
-          <div><strong>Année:</strong> ${year}</div>
-          <div><strong>Prix:</strong> ${formatCurrency(data?.price - data?.discount)} ${CURRENCY}</div>
+        <div style="font-size: 140%"><strong>Nom:</strong> ${user.last_name ?? ''}</div>
+        <div style="font-size: 140%"><strong>Prénom:</strong> ${user.first_name ?? ''}</div>
+        <div style="font-size: 100%"><strong>Code Étudiant:</strong> ${user.student_code ?? ''}</div>
+          <div><strong>Faculté:</strong> ${faculty ?? ''}</div>
+          <div><strong>Année:</strong> ${year ?? ''}</div>
+          <div><strong>Prix:</strong> ${formatCurrency(toNumber(data?.price ?? 0) - toNumber(data?.discount ?? 0))} ${CURRENCY}</div>
 
-          <div><strong>Balance:</strong> ${formatCurrency(data?.balance)} ${CURRENCY}</div>
+          <div><strong>Balance:</strong> ${formatCurrency(toNumber(data?.balance ?? 0))} ${CURRENCY}</div>
           <div><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</div>
         </div>
 
@@ -256,26 +256,28 @@ interface Faculty {
 
 interface User {
   id: number
-  first_name: string
-  last_name: string
-  faculty: string 
-  student_code: string
+  first_name: string | null
+  last_name: string | null
+  faculty: string | null
+  student_code: string | null
+  is_active?: boolean | null
 }
 
 interface StudentPayment {
   id: number
-  student_id: number
+  student_id: number | null
   payment_history?: PaymentRecord[]
   amount?: number
-  balance: number
-  discount: number
-  faculty?: string
-  price: number
-  remise?: number
-  v_1?: boolean
-  v_2?: boolean
-  v_3?: boolean  
+  balance: number | null
+  discount: number | null
+  faculty?: string | null
+  price: number | null
+  remise?: number | null
+  v_1?: boolean | null
+  v_2?: boolean | null
+  v_3?: boolean | null
   level?: number | string | null
+  is_active?: boolean | null
 }
 
 interface StudentIdProp {
@@ -1267,7 +1269,28 @@ export function StudentBal({ id }: StudentIdProp) {
   )
 }
 
-// ============ STUDENTS LIST ============
+// Supabase returns max 1000 rows per request: read page by page until everything is loaded.
+async function fetchAllRows<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const pageSize = 1000
+  const all: T[] = []
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await build(from, from + pageSize - 1)
+    if (error) throw new Error(error.message)
+    all.push(...((data ?? []) as T[]))
+    if (!data || data.length < pageSize) break
+  }
+  return all
+}
+
+const escapeHtml = (value: string | number | null | undefined) =>
+  String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[c] ?? c)
+
+type StatusRow = { id: number; student_id: number | null; year_study: number | string | null; is_active: boolean | null }
+type PaymentRow = { id: number; student_id: number | null; balance: number | null; discount: number | null; price: number | null }// ============ STUDENTS LIST ============
 export function Student_pay() {
   // Student list state
   const [students, setStudents] = useState<User[]>([])
@@ -1291,8 +1314,44 @@ export function Student_pay() {
   const [studentActiveMap, setStudentActiveMap] = useState<Record<number, boolean>>({})
 const [statusView, setStatusView] = useState<'active' | 'inactive' | 'all'>('active')
 
+const [togglingId, setTogglingId] = useState<number | null>(null)
+const [toast, setToast] = useState<Toast | null>(null)
+
 // A student with no status row is treated as active
 const isStudentActive = (id: number) => studentActiveMap[id] !== false
+
+const toggleStudentActive = async (studentId: number) => {
+  const next = !isStudentActive(studentId)
+  setTogglingId(studentId)
+  try {
+    // Update the most recent status row of this student
+    const { data: latest, error: findError } = await supabase
+      .from('student_status')
+      .select('id')
+      .eq('student_id', studentId)
+      .order('id', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (findError) throw findError
+    if (!latest) throw new Error("Aucun statut n’existe pour cet étudiant.")
+
+    const { data: updated, error } = await supabase
+      .from('student_status')
+      .update({ is_active: next })
+      .eq('id', latest.id)
+      .select('id')
+    if (error) throw error
+    if (!updated?.length) throw new Error("La modification n’a pas été enregistrée (permission refusée ?).")
+
+    setStudentActiveMap(prev => ({ ...prev, [studentId]: next }))
+    setToast({ id: Date.now().toString(), type: 'success', message: next ? 'Étudiant activé.' : 'Étudiant désactivé.' })
+  } catch (err) {
+    setToast({ id: Date.now().toString(), type: 'error', message: err instanceof Error ? err.message : 'Erreur lors du changement de statut.' })
+  } finally {
+    setTogglingId(null)
+  }
+}// A student with no status row is treated as active
+//const isStudentActive = (id: number) => studentActiveMap[id] !== false
   const normalizeText = (value: string | null | undefined) =>
   (value ?? '')
     .normalize('NFD')
@@ -1300,89 +1359,79 @@ const isStudentActive = (id: number) => studentActiveMap[id] !== false
     .toLocaleLowerCase()
     .trim()
 
-  useEffect(() => {
-    let isCurrent = true
+useEffect(() => {
+  let isCurrent = true
 
-    const fetchStudentsAndData = async () => {
-      try {
-        // Fetch students
-        const { data: studentData, error: studentError } = await supabase
-          .from('student')
-          .select('last_name, first_name, id, faculty, student_code')
-          .order('last_name', { ascending: true })
+  const load = async () => {
+    try {
+      const [studentsList, statusData, paymentRows] = await Promise.all([
+        fetchAllRows<User>((from, to) =>
+          supabase.from('student')
+            .select('last_name, first_name, id, faculty, student_code')
+            .order('last_name', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to)),
+        fetchAllRows<StatusRow>((from, to) =>
+          supabase.from('student_status')
+            .select('id, student_id, year_study, is_active')
+            .order('id', { ascending: false })
+            .range(from, to)),
+        fetchAllRows<PaymentRow>((from, to) =>
+          supabase.from('student_payment')
+            .select('id, student_id, balance, discount, price,')
+            .order('id', { ascending: false })
+            .range(from, to)),
+      ])
 
-        if (studentError) throw studentError
+      const { data: facultyData, error: facultyError } = await supabase
+        .from('faculty_price')
+        .select('id, faculty, price, v_1, v_2, v_3, symbol')
+      if (facultyError) throw facultyError
 
-        // Fetch student year (niveau) data for filters
-        const { data: statusData, error: statusError } = await supabase
-          .from('student_status')
-          .select('id, student_id, year_study, is_active')
-          .order('id', { ascending: false })
-        if (statusError) throw statusError
+      if (!isCurrent) return
 
-        // Fetch payment data for all students
-        const { data: paymentDataRes, error: paymentError } = await supabase
-          .from('student_payment')
-          .select('id, student_id, balance, discount, price')
-          .order('id', { ascending: false })
-        if (paymentError) throw paymentError
+      setStudents(studentsList)
+      setFaculties([...new Set(studentsList.map(s => s.faculty).filter((f): f is string => Boolean(f)))].sort())
 
-        // Fetch faculty price data with versement amounts
-        const { data: facultyData, error: facultyError } = await supabase
-          .from('faculty_price')
-          .select('id, faculty, price, v_1, v_2, v_3, symbol')
-        if (facultyError) throw facultyError
-
-        if (!isCurrent) return
-
-        const studentsList = studentData ?? []
-        setStudents(studentsList)
-        setFaculties([...new Set(studentsList.map((student) => student.faculty).filter((faculty): faculty is string => Boolean(faculty)))])
-
-        const yearMap: Record<number, number> = {}
-const activeMap: Record<number, boolean> = {}
-for (const status of statusData ?? []) {
-  const sid = status.student_id
-  if (sid === null) continue
-  const active = Boolean(status.is_active)
-  // keep the latest row, but an active row always wins over an inactive one
-  if (activeMap[sid] === undefined || (active && !activeMap[sid])) {
-    activeMap[sid] = active
-    yearMap[sid] = toNumber(status.year_study)
-  }
-}
-setStudentActiveMap(activeMap)
-setStudentYearMap(yearMap)
-setYearOptions([...new Set(Object.values(yearMap).filter((year) => year > 0))].sort((a, b) => a - b))
-
-        const paymentMap: Record<number, StudentPayment> = {}
-        for (const payment of paymentDataRes ?? []) {
-          if (paymentMap[payment.student_id] === undefined) {
-            paymentMap[payment.student_id] = payment
-          }
-        }
-        setPaymentData(paymentMap)
-
-        const facultyMap: Record<string, FacultyPriceExtended> = {}
-        for (const faculty of facultyData ?? []) {
-          facultyMap[faculty.faculty] = faculty
-        }
-        setFacultyPriceMap(facultyMap)
-        setDataLoadError("")
-      } catch (err) {
-        if (isCurrent) {
-          setDataLoadError(err instanceof Error ? err.message : 'Impossible de charger les données des paiements.')
-        }
-      } finally {
-        if (isCurrent) setLoading(false)
+      // Latest status row per student decides year and active state
+      const yearMap: Record<number, number> = {}
+      const activeMap: Record<number, boolean> = {}
+      for (const status of statusData) {
+        const sid = status.student_id
+        if (sid === null || activeMap[sid] !== undefined) continue
+        activeMap[sid] = status.is_active !== false
+        yearMap[sid] = toNumber(status.year_study)
       }
-    }
+      setStudentActiveMap(activeMap)
+      setStudentYearMap(yearMap)
+      setYearOptions([...new Set(Object.values(yearMap).filter(y => y > 0))].sort((a, b) => a - b))
 
-    void fetchStudentsAndData()
-    return () => {
-      isCurrent = false
+      const paymentMap: Record<number, StudentPayment> = {}
+      for (const payment of paymentRows) {
+        if (payment.student_id === null || paymentMap[payment.student_id] !== undefined) continue
+        paymentMap[payment.student_id] = {
+          ...payment,
+          balance: payment.balance ?? 0,
+          discount: payment.discount ?? 0,
+          price: payment.price ?? 0,
+        }
+      }
+      setPaymentData(paymentMap)
+
+      const facultyMap: Record<string, FacultyPriceExtended> = {}
+      for (const faculty of facultyData ?? []) facultyMap[faculty.faculty] = faculty
+      setFacultyPriceMap(facultyMap)
+      setDataLoadError("")
+    } catch (err) {
+      if (isCurrent) setDataLoadError(err instanceof Error ? err.message : 'Impossible de charger les données des paiements.')
+    } finally {
+      if (isCurrent) setLoading(false)
     }
-  }, [])
+  }
+
+  void load()
+  return () => { isCurrent = false }
+}, [])
 
   useEffect(() => {
     // Apply filters to the student list whenever filter values or source data change
@@ -1429,7 +1478,8 @@ if (searchTerms.length > 0) {
 
   // Calculate versement amounts for a student
   const calculateVersements = (student: User) => {
-    const facultyPrice = facultyPriceMap[student.faculty]
+    const facultyName = student.faculty ?? ''
+    const facultyPrice = facultyPriceMap[facultyName]
     if (!facultyPrice) {
       return { 
         v1Remaining: 0, 
@@ -1447,9 +1497,9 @@ if (searchTerms.length > 0) {
 
     const payment = paymentData[student.id]
     const price = Math.max(0, toNumber(payment?.price ?? facultyPrice.price))
-    const discount = Math.max(0, Math.min(price, toNumber(payment?.discount)))
+    const discount = Math.max(0, Math.min(price, toNumber(payment?.discount ?? 0)))
     const netPrice = price - discount
-    const balance = payment ? Math.max(0, toNumber(payment.balance)) : netPrice
+    const balance = payment ? Math.max(0, toNumber(payment.balance ?? 0)) : netPrice
     const paid = Math.max(0, netPrice - balance)
     
     const installmentTotals = applyDiscountToInstallments(adjustInstallmentTotals(
@@ -1533,13 +1583,12 @@ if (searchTerms.length > 0) {
 
     // Group students by faculty and calculate totals
     filteredStudents.forEach(student => {
-      const faculty = student.faculty || 'Non spécifié'
+      const facultyName = student.faculty || 'Non spécifié'
       const vers = calculateVersements(student)
       const payment = paymentData[student.id]
-      const discount = toNumber(payment?.discount || 0)
-
-      if (!facultySummary[faculty]) {
-        facultySummary[faculty] = {
+      const discount = toNumber(payment?.discount ?? 0)
+      if (!facultySummary[facultyName]) {
+        facultySummary[facultyName] = {
           studentCount: 0,
           v1Total: 0,
           v1Balance: 0,
@@ -1553,16 +1602,16 @@ if (searchTerms.length > 0) {
         }
       }
 
-      facultySummary[faculty].studentCount += 1
-      facultySummary[faculty].v1Total += vers.v1Total
-      facultySummary[faculty].v1Balance += vers.v1Remaining
-      facultySummary[faculty].v2Total += vers.v2Total
-      facultySummary[faculty].v2Balance += vers.v2Remaining
-      facultySummary[faculty].v3Total += vers.v3Total
-      facultySummary[faculty].v3Balance += vers.v3Remaining
-      facultySummary[faculty].totalPrice += vers.netPrice
-      facultySummary[faculty].totalPaid += vers.paid
-      facultySummary[faculty].totalDiscount += discount
+      facultySummary[facultyName].studentCount += 1
+      facultySummary[facultyName].v1Total += vers.v1Total
+      facultySummary[facultyName].v1Balance += vers.v1Remaining
+      facultySummary[facultyName].v2Total += vers.v2Total
+      facultySummary[facultyName].v2Balance += vers.v2Remaining
+      facultySummary[facultyName].v3Total += vers.v3Total
+      facultySummary[facultyName].v3Balance += vers.v3Remaining
+      facultySummary[facultyName].totalPrice += vers.netPrice
+      facultySummary[facultyName].totalPaid += vers.paid
+      facultySummary[facultyName].totalDiscount += discount
     })
 
     return facultySummary
@@ -1664,8 +1713,8 @@ const handlePrint = () => {
         const vers = calculateVersements(student)
         return `
           <tr>
-            <td><strong>${student.last_name} ${student.first_name}</strong></td>
-            <td class="text-center">${student.faculty || '-'}</td>
+          <td><strong>${escapeHtml(student.last_name)} ${escapeHtml(student.first_name)}</strong></td>
+<td class="text-center">${escapeHtml(student.faculty) || '-'}</td>
             <td class="text-center">Année ${studentYearMap[student.id] || '-'}</td>
             <td class="text-right">${formatCurrency(vers.netPrice)}</td>
             <td class="text-right">${formatCurrency(vers.v1Total)}</td>
@@ -1797,6 +1846,7 @@ const handlePrint = () => {
 
   return (
     <div className="space-y-4 p-6">
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
       <div className="flex items-center gap-2 mb-6">
         <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-2a6 6 0 0112 0v2zm0 0h6v-2a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -1962,15 +2012,16 @@ const handlePrint = () => {
           {/* Clear Filters */}
           <div className="flex items-end">
             <button
-              onClick={() => {
-                setSelectedFaculty('')
-                setSelectedYear('')
-                setBalanceFilter('all')
-              }}
-              className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-all"
-            >
-              Réinitialiser les filtres
-            </button>
+  onClick={() => {
+    setSelectedFaculty('')
+    setSelectedYear('')
+    setBalanceFilter('all')
+    setStatusView('active')
+  }}
+  className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-all"
+>
+  Réinitialiser les filtres
+</button>
           </div>
         </div>
       </div>
@@ -2019,6 +2070,7 @@ const handlePrint = () => {
                     <td className="px-6 py-4">
                       <p className="font-semibold text-gray-900">
                         {student.last_name} {student.first_name}
+                        {student?.is_active && <span className="ml-2 text-xs font-semibold text-red-600">Inactif</span>}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Code: {student.student_code}</p>
                     </td>
@@ -2063,6 +2115,16 @@ const handlePrint = () => {
                         </svg>
                         Détails
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => void toggleStudentActive(student.id)}
+                        disabled={togglingId === student.id}
+                        className={`ml-2 px-3 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50 ${
+                          student?.is_active ? 'bg-red-100 hover:bg-red-200 text-red-700' : 'bg-green-100 hover:bg-green-200 text-green-700'
+                        }`}
+                      >
+                        {togglingId === student.id ? '...' : student?.is_active ? 'Désactiver' : 'Activer'}
+                      </button>
                     </td>
                   </tr>
                 )
@@ -2377,7 +2439,7 @@ export function Payments() {
         if (paymentError) throw paymentError
         if (studentError) throw studentError
 
-        const currentPayment = paymentData?.[0]
+        const currentPayment = paymentData?.[0] ?? null
         const [versementResult, statusResult, userResult] = await Promise.all([
           currentPayment?.faculty
             ? supabase.from('faculty_price').select('v_1, v_2').eq('faculty', currentPayment.faculty).maybeSingle()
@@ -2549,7 +2611,7 @@ export function Payments() {
           <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-white rounded-lg border-2 border-green-200 shadow-md p-4 sm:p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Prix/An</p>
-              <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-2">{formatCurrency(currentPayment.price - (currentPayment.discount || 0))}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-2">{formatCurrency(toNumber(currentPayment.price ?? 0) - toNumber(currentPayment.discount ?? 0))}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
@@ -2561,7 +2623,7 @@ export function Payments() {
 
             <div className="bg-white rounded-lg border-2 border-blue-200 shadow-md p-4 sm:p-6">
               <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Solde actuel</p>
-              <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-2">{currentPayment.price===currentPayment.balance ? formatCurrency(currentPayment.balance-currentPayment?.discount) : formatCurrency(currentPayment.balance)}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-2">{formatCurrency(currentPayment.balance ?? 0)}</p>
               <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
             </div>
 
@@ -2661,9 +2723,9 @@ export function Payments() {
           <div className="h-25">
             <Confirm
               id={currentPayment.id}
-              v_1={currentPayment.v_1 || false}
-              v_2={currentPayment.v_2 || false}
-              v_3={currentPayment.v_3 || false}
+              v_1={Boolean(currentPayment.v_1)}
+              v_2={Boolean(currentPayment.v_2)}
+              v_3={Boolean(currentPayment.v_3)}
               onSuccess={refreshPayments}
             />
           </div>
@@ -2685,15 +2747,15 @@ export function Payments() {
             <Pay
               id={currentPayment.id}
               student_id={Number(studentId)}
-              price={currentPayment.price}
-              discount={currentPayment.discount || 0}
-              balance={currentPayment.balance}
+              price={toNumber(currentPayment.price ?? 0)}
+              discount={toNumber(currentPayment.discount ?? 0)}
+              balance={toNumber(currentPayment.balance ?? 0)}
               history={currentPayment.payment_history || []}
               onSuccess={refreshPayments}
-              v_1={versement?.v_1}
-              v_2={versement?.v_2}
-              remise={currentPayment?.discount || 0}
-              level={Number(currentPayment?.level)}
+              v_1={toNumber(versement?.v_1 ?? 0)}
+              v_2={toNumber(versement?.v_2 ?? 0)}
+              remise={toNumber(currentPayment?.discount ?? 0)}
+              level={Number(currentPayment?.level ?? 0) || null}
             />
           </div>
         )}
