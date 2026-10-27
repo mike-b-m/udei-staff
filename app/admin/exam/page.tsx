@@ -375,6 +375,57 @@ function AcademicYearRosterTab() {
   )
 }
 
+const DEFAULT_PASS_GRADE = 65
+const RETAKE_THRESHOLD = 40
+
+type ResultKey = 'success' | 'fail' | 'retake' | 'none'
+
+// Réussi: score >= pass_grade | À refaire: 40 <= score < pass_grade | Échec: score < 40
+function getExamResult(exam: ExamRecord): { key: ResultKey; label: string } {
+  const raw = exam.repri_note ?? exam.note
+  if (raw === null || raw === undefined) return { key: 'none', label: '—' }
+  const score = Number(raw)
+  const passGrade = exam.pass_grade || DEFAULT_PASS_GRADE
+  if (score >= passGrade) return { key: 'success', label: 'Réussi' }
+  if (score < RETAKE_THRESHOLD) return { key: 'fail', label: 'Échec' }
+  return { key: 'retake', label: 'À refaire' }
+}
+
+const RESULT_STYLES: Record<ResultKey, string> = {
+  success: 'bg-green-100 text-green-700',
+  fail: 'bg-red-100 text-red-700',
+  retake: 'bg-orange-100 text-orange-700',
+  none: 'bg-gray-100 text-gray-500',
+}
+// "1", 1, "1ère année", "Année 1" -> 1 ; anything without a digit -> null
+const toStudyYear = (value: unknown): number | null => {
+  const match = String(value ?? '').match(/\d+/)
+  return match ? Number(match[0]) : null
+}
+// Supabase returns max 1000 rows per request, so read page by page until everything is loaded.
+async function fetchAllRows<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const pageSize = 1000
+  const all: T[] = []
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await build(from, from + pageSize - 1)
+    if (error) throw new Error(error.message)
+    all.push(...(data ?? []))
+    if (!data || data.length < pageSize) break
+  }
+  return all
+}
+// Letterhead for printed/PDF documents (inline styles so printHTML's own CSS can't override them)
+const printHeaderHTML = () => `
+  <div style="width:100%;">
+    <img src="${window.location.origin}/image/h.png" alt="UDEI Logo" style="width:100%;height:auto;display:block;margin:0;">
+  </div>
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;font-size:55%;margin-bottom:15px;padding-bottom:6px;border-bottom:1px solid #ddd;">
+    <div>#5 Village Zao, Maïs Gâté 13 (Bloc Gérald bataille) Port-au-Prince HAITI</div>
+    <div style="text-align:center;">+(509) 40 03 4090 / +(509) 48809772</div>
+  </div>
+`
 export default function Exam() {
   const { facultyNames } = useFaculties()
   const [exams, setExams] = useState<ExamRecord[]>([])
@@ -388,6 +439,7 @@ export default function Exam() {
   const [filterSession, setFilterSession] = useState('')
   const [filterYear, setFilterYear] = useState('')
   const [filterAcademicYear, setFilterAcademicYear] = useState('')
+  const [filterResult, setFilterResult] = useState<'' | 'success' | 'fail' | 'retake'>('')
 
   // Edit mode
   const [editId, setEditId] = useState<number | null>(null)
@@ -398,63 +450,47 @@ export default function Exam() {
   }, [])
 
   const fetchData = async () => {
-    setLoading(true)
-    try {
-      // Fetch from exam_1 table with proper ordering
-      const { data: examData, error: examError } = await supabase
-        .from('exam_1')
-        .select(`
-          id,
-          created_at,
-          session,
-          year,
-          matiere,
-          note,
-          repri_note,
-          faculty,
-          student_id,
-          academic_year,
-          student_code,
-          credit,
-          pass_grade
-        `)
-        .order('year', { ascending: false })
-        .order('session', { ascending: false })
+  setLoading(true)
+  try {
 
-      // Fetch student data to get first_name and last_name for sorting
-      const { data: studentData } = await supabase
+    const examData = await fetchAllRows<any>((from, to) =>
+      supabase
+        .from('exam_1')
+        .select('id, created_at, session, year, matiere, note, repri_note, faculty, student_id, academic_year, student_code, credit, pass_grade')
+        .order('id', { ascending: true }) // stable order is required for paging
+        .range(from, to)
+    )
+
+    const studentData = await fetchAllRows<any>((from, to) =>
+      supabase
         .from('student')
         .select('id, first_name, last_name, student_code, faculty')
+        .order('id', { ascending: true })
+        .range(from, to)
+    )
 
-      if (examData) {
-        // Merge exam data with student info and sort by last_name
-        const mergedExams = examData.map(exam => ({
-          ...exam,
-          student: studentData?.find(s => s.id === exam.student_id)
-        })) as ExamRecord[]
+    const studentById = new Map(studentData.map(s => [s.id, s]))
+    const mergedExams = examData.map(exam => ({
+      ...exam,
+      student: studentById.get(exam.student_id),
+    })) as ExamRecord[]
 
-        mergedExams.sort((a, b) => {
-          const lastNameA = a.student?.last_name || ''
-          const lastNameB = b.student?.last_name || ''
-          return lastNameA.localeCompare(lastNameB)
-        })
+    mergedExams.sort((a, b) =>
+      (a.student?.last_name || '').localeCompare(b.student?.last_name || '')
+    )
+    setExams(mergedExams)
 
-        setExams(mergedExams)
-      }
-
-      if (examError) console.error('Error fetching exams:', examError)
-
-      // Fetch courses
-      const { data: courseData } = await supabase
-        .from('course_program')
-        .select('*')
-        .order('faculty')
-
-      if (courseData) setCourses(courseData as unknown as Course[])
-    } finally {
-      setLoading(false)
-    }
+    const { data: courseData } = await supabase
+      .from('course_program')
+      .select('*')
+      .order('faculty')
+    if (courseData) setCourses(courseData as unknown as Course[])
+  } catch (err) {
+    console.error('Error fetching exams:', err)
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleEdit = (exam: ExamRecord) => {
     setEditId(exam.id)
@@ -484,33 +520,103 @@ export default function Exam() {
     }
   }
 
-  const filteredExams = exams.filter(e => {
-    if (filterFaculty && e.faculty !== filterFaculty) return false
-    if (filterCourse && e.matiere !== filterCourse) return false
-    if (filterSession && e.session !== parseInt(filterSession)) return false
-    if (filterYear && Number(e.year) !== Number(filterYear)) return false
-    if (filterAcademicYear && e.academic_year !== filterAcademicYear) return false
-    return true
+ const filteredExams = exams.filter(e => {
+  if (filterFaculty && e.faculty !== filterFaculty) return false
+  if (filterCourse && e.matiere !== filterCourse) return false
+  if (filterSession && Number(e.session) !== Number(filterSession)) return false
+if (filterYear && toStudyYear(e.year) !== Number(filterYear)) return false
+  if (filterAcademicYear && e.academic_year !== filterAcademicYear) return false
+  if (filterResult && getExamResult(e).key !== filterResult) return false
+  return true
+})
+
+// Stats
+const results = filteredExams.map(getExamResult)
+const totalExams = filteredExams.length
+const passCount = results.filter(r => r.key === 'success').length
+const failCount = results.filter(r => r.key === 'fail').length
+const retakeCount = results.filter(r => r.key === 'retake').length
+const gradedCount = passCount + failCount + retakeCount
+const passRate = gradedCount > 0 ? Math.round((passCount / gradedCount) * 100) : 0
+
+// Matière options follow the selected faculty
+const courseOptions = [...new Set(
+  exams
+    .filter(e => !filterFaculty || e.faculty === filterFaculty)
+    .map(e => e.matiere)
+    .filter(Boolean)
+)].sort((a, b) => a.localeCompare(b))
+
+const uniqueYears = [...new Set(
+  exams.map(e => toStudyYear(e.year)).filter((y): y is number => y !== null)
+)].sort((a, b) => a - b)
+const uniqueAcademicYears = [...new Set(exams.map(e => e.academic_year).filter(Boolean))].sort((a, b) => b.localeCompare(a))
+
+const resetFilters = () => {
+  setFilterFaculty(''); setFilterCourse(''); setFilterSession('')
+  setFilterYear(''); setFilterAcademicYear(''); setFilterResult('')
+}
+
+// ---------- Export (uses the filtered list) ----------
+const exportHeaders = ['Étudiant', 'Matière', 'Note', 'Reprise', 'Résultat']
+const studentLabel = (e: ExamRecord) =>
+  `${e.student?.last_name ?? ''} ${e.student?.first_name ?? ''}`.trim() || e.student_code || '—'
+
+const buildExportRows = () =>
+  filteredExams.map(e => {
+    const r = getExamResult(e)
+    return [
+      studentLabel(e),
+      e.matiere || '',
+      e.note?.toString() ?? '',
+      e.repri_note?.toString() ?? '',
+      r.key === 'none' ? '' : r.label,
+    ]
   })
 
-  // Stats - using pass_grade from table
-  const totalExams = filteredExams.length
-  const passCount = filteredExams.filter(e => {
-    const score = e.repri_note ?? e.note ?? 0
-    const passGrade = e.pass_grade || 65
-    return (score as number) >= passGrade
-  }).length
-  const failCount = totalExams - passCount
-  const passRate = totalExams > 0 ? Math.round((passCount / totalExams) * 100) : 0
+const exportFileSuffix = [filterFaculty, filterCourse, filterAcademicYear, filterResult]
+  .filter(Boolean).join('_').replace(/[^a-zA-Z0-9_-]/g, '_') || 'toutes'
 
-  const filteredCourses = filterFaculty
-    ? courses.filter(c => c.faculty === filterFaculty)
-    : courses
+const handleExportExcel = () => {
+  if (filteredExams.length === 0) return
+  exportToCSV(exportHeaders, buildExportRows(), `notes_${exportFileSuffix}`)
+}
 
-  const uniqueYears = [...new Set([1, 2, 3, 4, 5, 6, ...exams.map(e => Number(e.year)).filter(Number.isFinite)])]
-    .sort((a, b) => a - b)
-  const uniqueAcademicYears = [...new Set(exams.map(e => e.academic_year).filter(Boolean))].sort((a, b) => b.localeCompare(a))
+const handlePrintPDF = () => {
+  if (filteredExams.length === 0) return
+  const resultColors: Record<ResultKey, string> = {
+    success: '#15803d', fail: '#b91c1c', retake: '#c2410c', none: '#6b7280',
+  }
+  const filtersText = [
+    filterFaculty && `Faculté: ${filterFaculty}`,
+    filterCourse && `Matière: ${filterCourse}`,
+    filterSession && `Session: ${filterSession}`,
+    filterYear && `Année: ${filterYear}`,
+    filterAcademicYear && `Année académique: ${filterAcademicYear}`,
+    filterResult && `Résultat: ${{ success: 'Réussi', fail: 'Échec', retake: 'À refaire' }[filterResult]}`,
+  ].filter(Boolean).join(' | ')
 
+  const rowsHtml = filteredExams.map(e => {
+    const r = getExamResult(e)
+    return `<tr>
+      <td>${escapeHTML(studentLabel(e))}</td>
+      <td>${escapeHTML(e.matiere)}</td>
+      <td style="text-align:center">${escapeHTML(e.note)}</td>
+      <td style="text-align:center">${escapeHTML(e.repri_note)}</td>
+      <td style="text-align:center;font-weight:bold;color:${resultColors[r.key]}">${r.key === 'none' ? '' : escapeHTML(r.label)}</td>
+    </tr>`
+  }).join('')
+
+  const body = `
+  ${printHeaderHTML()}
+  <h2 style="text-align:center">Notes des étudiants</h2>
+  <p style="text-align:center;font-size:12px;color:#666">${escapeHTML(filtersText || 'Tous les résultats')} — ${filteredExams.length} ligne(s)</p>
+  <table>
+    <thead><tr>${exportHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>`
+  printHTML('Notes des étudiants', body)
+}
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96 py-12">
@@ -558,93 +664,110 @@ export default function Exam() {
       ) : (
       <>
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-md p-5">
-          <p className="text-sm text-gray-500 font-semibold">Total Examens</p>
-          <p className="text-2xl font-bold text-gray-900">{totalExams}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-md p-5">
-          <p className="text-sm text-gray-500 font-semibold">Réussite</p>
-          <p className="text-2xl font-bold text-green-600">{passCount}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-md p-5">
-          <p className="text-sm text-gray-500 font-semibold">Échec</p>
-          <p className="text-2xl font-bold text-red-600">{failCount}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-md p-5">
-          <p className="text-sm text-gray-500 font-semibold">Taux de Réussite</p>
-          <p className="text-2xl font-bold text-blue-600">{passRate}%</p>
-        </div>
-      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+  <div className="bg-white rounded-xl shadow-md p-5">
+    <p className="text-sm text-gray-500 font-semibold">Total Examens</p>
+    <p className="text-2xl font-bold text-gray-900">{totalExams}</p>
+  </div>
+  <div className="bg-white rounded-xl shadow-md p-5">
+    <p className="text-sm text-gray-500 font-semibold">Réussi</p>
+    <p className="text-2xl font-bold text-green-600">{passCount}</p>
+  </div>
+  <div className="bg-white rounded-xl shadow-md p-5">
+    <p className="text-sm text-gray-500 font-semibold">Échec</p>
+    <p className="text-2xl font-bold text-red-600">{failCount}</p>
+  </div>
+  <div className="bg-white rounded-xl shadow-md p-5">
+    <p className="text-sm text-gray-500 font-semibold">À refaire</p>
+    <p className="text-2xl font-bold text-orange-600">{retakeCount}</p>
+  </div>
+  <div className="bg-white rounded-xl shadow-md p-5">
+    <p className="text-sm text-gray-500 font-semibold">Taux de Réussite</p>
+    <p className="text-2xl font-bold text-blue-600">{passRate}%</p>
+  </div>
+</div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-md p-4 md:p-6 mb-6">
-        <h3 className="font-semibold text-gray-900 mb-4">Filtres</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Faculté</label>
-            <select
-              value={filterFaculty}
-              onChange={e => { setFilterFaculty(e.target.value); setFilterCourse('') }}
-              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
-            >
-              <option value="">Toutes les facultés</option>
-              {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
+  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <h3 className="font-semibold text-gray-900">Filtres</h3>
+    <div className="flex flex-wrap gap-2">
+      <button onClick={resetFilters}
+        className="px-3 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium">
+        Réinitialiser
+      </button>
+      <button onClick={handleExportExcel} disabled={filteredExams.length === 0}
+        className="px-3 py-2 rounded-lg bg-green-700 text-white text-sm font-medium disabled:opacity-50">
+        Excel / CSV
+      </button>
+      <button onClick={handlePrintPDF} disabled={filteredExams.length === 0}
+        className="px-3 py-2 rounded-lg bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
+        PDF / Imprimer
+      </button>
+    </div>
+  </div>
 
-          <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Matière</label>
-            <select
-              value={filterCourse}
-              onChange={e => setFilterCourse(e.target.value)}
-              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
-            >
-              <option value="">Toutes les matières</option>
-              {[...new Set(exams.map(e => e.matiere).filter(Boolean))].map((course: any) => (
-                <option key={course} value={course}>{course}</option>
-              ))}
-            </select>
-          </div>
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+    <div>
+      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Faculté</label>
+      <select value={filterFaculty}
+        onChange={e => { setFilterFaculty(e.target.value); setFilterCourse('') }}
+        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
+        <option value="">Toutes les facultés</option>
+        {facultyNames.map(f => <option key={f} value={f}>{f}</option>)}
+      </select>
+    </div>
 
-          <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Session</label>
-            <select
-              value={filterSession}
-              onChange={e => setFilterSession(e.target.value)}
-              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
-            >
-              <option value="">Toutes les sessions</option>
-              <option value="1">Session 1</option>
-              <option value="2">Session 2</option>
-            </select>
-          </div>
+    <div>
+      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Matière</label>
+      <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)}
+        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
+        <option value="">Toutes les matières</option>
+        {courseOptions.map(c => <option key={c} value={c}>{c}</option>)}
+      </select>
+    </div>
 
-          <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Année</label>
-            <select
-              value={filterYear}
-              onChange={e => setFilterYear(e.target.value)}
-              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
-            >
-              <option value="">Toutes les années</option>
-              {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
+    <div>
+      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Session</label>
+      <select value={filterSession} onChange={e => setFilterSession(e.target.value)}
+        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
+        <option value="">Toutes les sessions</option>
+        <option value="1">Session 1</option>
+        <option value="2">Session 2</option>
+      </select>
+    </div>
 
-          <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Année</label>
-            <select
-              value={filterAcademicYear}
-              onChange={e => setFilterAcademicYear(e.target.value)}
-              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
-            >
-              <option value="">Année Académique</option>
-              {uniqueAcademicYears.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
+    <div>
+      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Année d&apos;étude</label>
+      <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
+        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
+        <option value="">Toutes les années</option>
+        {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
+      </select>
+    </div>
+
+    <div>
+      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Année académique</label>
+      <select value={filterAcademicYear} onChange={e => setFilterAcademicYear(e.target.value)}
+        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
+        <option value="">Toutes les années académiques</option>
+        {uniqueAcademicYears.map(y => <option key={y} value={y}>{y}</option>)}
+      </select>
+    </div>
+
+    <div>
+      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">Résultat</label>
+      <select value={filterResult}
+        onChange={e => setFilterResult(e.target.value as '' | 'success' | 'fail' | 'retake')}
+        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
+        <option value="">Tous les résultats</option>
+        <option value="success">Réussi</option>
+        <option value="fail">Échec</option>
+        <option value="retake">À refaire</option>
+      </select>
+    </div>
+  </div>
+</div>
 
       {/* Exams Table */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -674,9 +797,7 @@ export default function Exam() {
                 </tr>
               ) : (
                 filteredExams.map((exam: any) => {
-                  const finalScore = exam.repri_note ?? exam.note ?? 0
-                  const passGrade = exam.pass_grade || 50
-                  const isPassed = (finalScore as number) >= passGrade
+                  const result = getExamResult(exam)
                   const isEditing = editId === exam.id
 
                   return (
@@ -740,14 +861,10 @@ export default function Exam() {
 
                       {/* Result/Status */}
                       <td className="px-3 md:px-6 py-4 text-center hidden md:table-cell">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                          isPassed 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {isPassed ? '✓ Réussi' : '✗ Échoué'}
-                        </span>
-                      </td>
+  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${RESULT_STYLES[result.key]}`}>
+    {result.label}
+  </span>
+</td>
 
                       {/* Actions */}
                       <td className="px-3 md:px-6 py-4 text-center">
