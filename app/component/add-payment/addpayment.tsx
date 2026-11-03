@@ -1378,7 +1378,7 @@ useEffect(() => {
             .range(from, to)),
         fetchAllRows<PaymentRow>((from, to) =>
           supabase.from('student_payment')
-            .select('id, student_id, balance, discount, price,')
+            .select('id, student_id, balance, discount, price')
             .order('id', { ascending: false })
             .range(from, to)),
       ])

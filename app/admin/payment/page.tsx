@@ -1,6 +1,6 @@
 'use client'
 import { Price, Payments, Student_pay, QrcodeScan } from "@/app/component/add-payment/addpayment"
-import { Suspense, useState, useMemo, useEffect } from "react"
+import { Suspense, useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 
 // ============ ICON COMPONENTS ============
@@ -149,78 +149,87 @@ function TabContent({ activeTab }: { activeTab: string }) {
 }
 
 // ============ MAIN PAGE ============
-export default function PaymentPage() {
+function PaymentPageContent() {
   const [activeTab, setActiveTab] = useState('price')
-  
-    const searchParams = useSearchParams()
-    const studentId = searchParams.get('id')
-    useEffect(() => {
-      if (studentId) {setActiveTab('payments')}
-    }, [studentId])
+  const searchParams = useSearchParams()
+  const studentId = searchParams.get('id')
+  const currentTab = studentId ? 'payments' : activeTab
 
   const activeTabData = useMemo(
-    () => TABS.find(tab => tab.id === activeTab),
-    [activeTab]
+    () => TABS.find(tab => tab.id === currentTab),
+    [currentTab]
   )
 
+  const handleTabChange = (tabId: string) => {
+    if (!studentId) {
+      setActiveTab(tabId)
+    }
+  }
+
   return (
-    <Suspense fallback={<LoadingSkeleton />}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
-        {/* Premium Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 shadow-2xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                {/* Icon Bg */}
-                <div className={`
-                  p-3 rounded-xl shadow-lg
-                  ${activeTabData?.bgColor} 
-                  backdrop-blur-sm
-                  border border-opacity-20 border-white
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+      {/* Premium Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 shadow-2xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              {/* Icon Bg */}
+              <div className={`
+                p-3 rounded-xl shadow-lg
+                ${activeTabData?.bgColor} 
+                backdrop-blur-sm
+                border border-opacity-20 border-white
+              `}>
+                <span className={`
+                  text-2xl sm:text-3xl inline-block
+                  ${activeTabData?.iconColor}
                 `}>
-                  <span className={`
-                    text-2xl sm:text-3xl inline-block
-                    ${activeTabData?.iconColor}
-                  `}>
-                    {activeTabData?.icon}
+                  {activeTabData?.icon}
+                </span>
+              </div>
+
+              {/* Content */}
+              <div className="text-white">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">
+                    {activeTabData?.label}
+                  </h1>
+                  <span className="px-3 py-1 text-xs font-semibold bg-white bg-opacity-10 rounded-full text-white border border-white border-opacity-20">
+                    PRO
                   </span>
                 </div>
-                
-                {/* Content */}
-                <div className="text-white">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">
-                      {activeTabData?.label}
-                    </h1>
-                    <span className="px-3 py-1 text-xs font-semibold bg-white bg-opacity-10 rounded-full text-white border border-white border-opacity-20">
-                      PRO
-                    </span>
-                  </div>
-                  <p className="text-slate-300 mt-2 text-sm font-medium">
-                    {activeTabData?.description}l
-                  </p>
-                </div>
+                <p className="text-slate-300 mt-2 text-sm font-medium">
+                  {activeTabData?.description}
+                </p>
               </div>
-              
-              {/* Status Badge */}
-              <div className="text-left sm:text-right">
-                <div className="inline-flex items-center gap-2 text-emerald-400 bg-emerald-500 bg-opacity-10 px-4 py-2 rounded-lg border border-emerald-500 border-opacity-30">
-                  {Icons.checkCircle}
-                  <span className="text-sm font-semibold">Actif</span>
-                </div>
+            </div>
+
+            {/* Status Badge */}
+            <div className="text-left sm:text-right">
+              <div className="inline-flex items-center gap-2 text-emerald-400 bg-emerald-500 bg-opacity-10 px-4 py-2 rounded-lg border border-emerald-500 border-opacity-30">
+                {Icons.checkCircle}
+                <span className="text-sm font-semibold">Actif</span>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Tab Navigation */}
-        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-
-        {/* Tab Content */}
-        <div className="max-w-7xl mx-auto min-w-0">
-          <TabContent activeTab={activeTab} />
-        </div>
       </div>
+
+      {/* Tab Navigation */}
+      <TabNavigation activeTab={currentTab} onTabChange={handleTabChange} />
+
+      {/* Tab Content */}
+      <div className="max-w-7xl mx-auto min-w-0">
+        <TabContent activeTab={currentTab} />
+      </div>
+    </div>
+  )
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <PaymentPageContent />
     </Suspense>
   )
 }
