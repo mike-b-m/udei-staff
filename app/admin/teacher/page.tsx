@@ -329,6 +329,7 @@ export default function Teacher() {
                                                         name={''}
                                                         matiere={faculty}
                                                         id={exa.student_id}
+                                                        passgrade={program.find((course) => course.courses === faculty)?.pass_grade ?? null}
                                                     />
                                                 </div>
                                             ))}

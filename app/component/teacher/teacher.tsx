@@ -10,6 +10,9 @@ interface TeacherInputProps {
     year: number | string | null
     id: number 
     faculty: string | null
+}
+
+interface TeacherInputWithPassgradeProps extends TeacherInputProps {
     passgrade: number | string | null
 }
 
@@ -230,7 +233,7 @@ function RepriseButton({
     )
 }
 //----- insert intra ---------
-export default function TeacherInput({session, name, matiere, id, year, faculty,passgrade }: TeacherInputProps) {
+export default function TeacherInput({session, name, matiere, id, year, faculty,passgrade }: TeacherInputWithPassgradeProps) {
     const [note, setNote] = useState<number>(0)
     const [intra,setIntra] = useState<number>(0)
     const [final,setFinal] = useState<number>(0)
