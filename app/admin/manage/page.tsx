@@ -19,6 +19,7 @@ interface ProfAssignment {
     matiere: string
     year_study: number
     session: number
+    pass_grade: number
     professor?: { full_name: string; email: string }
 }
 
@@ -43,7 +44,7 @@ export default function ManageProfPage() {
     const [activeTab, setActiveTab] = useState<'profs' | 'assign' | 'lectures'>('profs')
 
     // Assignment form
-    const [assignForm, setAssignForm] = useState({ prof_id: '', faculty: '', matiere: '', year_study: '1', session: '1' })
+    const [assignForm, setAssignForm] = useState({ prof_id: '', faculty: '', matiere: '', year_study: '1', session: '1', pass_grade: '1' })
     // Lecture form
     const [lectureForm, setLectureForm] = useState({ title: '', faculty: '', matiere: '', type: 'lecture' as const })
     const [lectureFile, setLectureFile] = useState<File | null>(null)
@@ -57,9 +58,9 @@ export default function ManageProfPage() {
 
     useEffect(() => {
         if (assignForm.faculty) {
-            loadCourses(assignForm.faculty, parseInt(assignForm.year_study))
+            loadCourses(assignForm.faculty, parseInt(assignForm.year_study),parseInt(assignForm.session))
         }
-    }, [assignForm.faculty, assignForm.year_study])
+    }, [assignForm.faculty, assignForm.year_study,assignForm.session])
 
     const fetchData = async () => {
         setLoading(true)
@@ -74,8 +75,8 @@ export default function ManageProfPage() {
         setLoading(false)
     }
 
-    const loadCourses = async (faculty: string, year: number) => {
-        const { data } = await supabase.from('course_program').select('courses').eq('faculty', faculty).eq('year', year)
+    const loadCourses = async (faculty: string, year: number, session: number) => {
+        const { data } = await supabase.from('course_program').select('courses,pass_grade').eq('faculty', faculty).eq('year', year).eq('session', session)
         setCourses(data || [])
     }
 
@@ -91,12 +92,13 @@ export default function ManageProfPage() {
             faculty: assignForm.faculty,
             matiere: assignForm.matiere,
             year_study: parseInt(assignForm.year_study),
-            session: parseInt(assignForm.session)
+            session: parseInt(assignForm.session),
+            pass_grade:parseInt(assignForm.pass_grade)
         })
         if (insertError) setError(insertError.message)
         else {
             setMessage('Assignation créée')
-            setAssignForm({ prof_id: '', faculty: '', matiere: '', year_study: '1', session: '1' })
+            setAssignForm({ prof_id: '', faculty: '', matiere: '', year_study: '1', session: '1', pass_grade: '1' })
             fetchData()
         }
         setSaving(false)
@@ -235,6 +237,7 @@ export default function ManageProfPage() {
                                                     <th className="py-3 px-4 text-left font-semibold">Professeur</th>
                                                     <th className="py-3 px-4 text-left font-semibold">Faculté</th>
                                                     <th className="py-3 px-4 text-left font-semibold">Matière</th>
+                                                    <th className="py-3 px-4 text-left font-semibold">note de passage</th>
                                                     <th className="py-3 px-4 text-left font-semibold">Année</th>
                                                     <th className="py-3 px-4 text-left font-semibold">Session</th>
                                                     <th className="py-3 px-4 text-left font-semibold">Action</th>
@@ -246,6 +249,7 @@ export default function ManageProfPage() {
                                                         <td className="py-3 px-4 font-medium">{professors.filter(p => p.id === a.prof_id).map(p => p.full_name)}</td>
                                                         <td className="py-3 px-4">{a.faculty}</td>
                                                         <td className="py-3 px-4">{a.matiere}</td>
+                                                        <td className="py-3 px-4">{a.pass_grade ? a.pass_grade : '-'}</td>
                                                         <td className="py-3 px-4">{a.year_study}</td>
                                                         <td className="py-3 px-4">{a.session}</td>
                                                         <td className="py-3 px-4">
@@ -293,7 +297,9 @@ export default function ManageProfPage() {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Matière *</label>
-                                        <select value={assignForm.matiere} onChange={e => setAssignForm({ ...assignForm, matiere: e.target.value })}
+                                        <select value={assignForm.matiere} onChange={e => 
+                                        setAssignForm({ ...assignForm, matiere: e.target.value,
+                                             pass_grade: courses.find(c => c.courses === e.target.value)?.pass_grade || '1' })}
                                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                                             <option value="">-- Sélectionner --</option>
                                             {courses.map((c, i) => <option key={i} value={c.courses}>{c.courses}</option>)}
@@ -305,6 +311,18 @@ export default function ManageProfPage() {
                                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                                             <option value="1">Session 1</option>
                                             <option value="2">Session 2</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <div>
+                                            {courses.map((c, i) => <div key={i}>{c.passgrade}</div>)}
+                                            {assignForm.pass_grade}
+                                        </div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pass Grade</label>
+                                        <select value={assignForm.pass_grade} onChange={e => setAssignForm({ ...assignForm, pass_grade: assignForm.pass_grade})}
+                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                                            <option value="70">70</option>
+                                            <option value="65">65</option>
                                         </select>
                                     </div>
                                 </div>

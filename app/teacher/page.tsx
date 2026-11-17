@@ -99,6 +99,7 @@ export default function Teacher() {
 
     const uniqueYears = [...new Set(facultyNames.map(e => e.year_study).filter(Boolean))].sort((a, b) => b - a)
      const uniquefaculties = [...new Set(facultyNames.map(e => e.faculty).filter(Boolean))].sort((a, b) => b - a)
+     const matiere = [...new Set(program.map(e => e.matiere).filter(Boolean))].sort((a, b) => b - a)
     return (
         <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 md:p-8">
             <div className="max-w-7xl mx-auto">
@@ -121,8 +122,10 @@ export default function Teacher() {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             >
                                 <option value="">Sélectionner une matière</option>
-                                {program?.map((pro:any,i) => (
-                                    <option key={i} value={pro.matiere}>{role !== 'prof' ? `${pro.courses}` : `${pro.matiere}`}</option>
+                                {matiere.map((m) => (
+                                    <option key={m} value={m}>
+                                        {m}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -269,6 +272,7 @@ export default function Teacher() {
                                                         name={''}
                                                         matiere={faculty}
                                                         id={exa.student_id}
+                                                        passgrade={program.find(p => p.matiere === faculty)?.pass_grade || 0}
                                                     />
                                                 </div>
                                             ))}

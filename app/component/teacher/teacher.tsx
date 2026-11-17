@@ -10,6 +10,7 @@ interface TeacherInputProps {
     year: number | string | null
     id: number 
     faculty: string | null
+    passgrade: number | string | null
 }
 
 interface RepriseInputProps {
@@ -229,7 +230,7 @@ function RepriseButton({
     )
 }
 //----- insert intra ---------
-export default function TeacherInput({session, name, matiere, id, year, faculty, }: TeacherInputProps) {
+export default function TeacherInput({session, name, matiere, id, year, faculty,passgrade }: TeacherInputProps) {
     const [note, setNote] = useState<number>(0)
     const [intra,setIntra] = useState<number>(0)
     const [final,setFinal] = useState<number>(0)
@@ -298,7 +299,7 @@ export default function TeacherInput({session, name, matiere, id, year, faculty,
             if (!data) {
                 if (matiere) {
                     const { error: status_error } = await supabase.from('exam')
-                        .insert([{ intra,note, matiere, session, year,final, faculty, student_id: id }])
+                        .insert([{ intra,note, matiere, session, year,final, faculty, student_id: id,pass_grade: Number(passgrade) }])
                         .select('*')
                         .eq('student_id', id);
                     

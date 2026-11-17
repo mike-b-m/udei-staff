@@ -1321,7 +1321,14 @@ const [toast, setToast] = useState<Toast | null>(null)
 const isStudentActive = (id: number) => studentActiveMap[id] !== false
 
 const toggleStudentActive = async (studentId: number) => {
-  const next = !isStudentActive(studentId)
+  const student = students.find((item) => item.id === studentId)
+  const studentName = `${student?.first_name ?? ''} ${student?.last_name ?? ''}`.trim() || 'cet étudiant'
+  const currentlyActive = isStudentActive(studentId)
+  if (currentlyActive && !window.confirm(
+    `Désactiver ${studentName} ? Cette action ne supprimera pas son dossier, mais il ne figurera plus parmi les étudiants actifs.`
+  )) return
+
+  const next = !currentlyActive
   setTogglingId(studentId)
   try {
     // Update the most recent status row of this student
@@ -1333,25 +1340,30 @@ const toggleStudentActive = async (studentId: number) => {
       .limit(1)
       .maybeSingle()
     if (findError) throw findError
-    if (!latest) throw new Error("Aucun statut n’existe pour cet étudiant.")
 
-    const { data: updated, error } = await supabase
-      .from('student_status')
-      .update({ is_active: next })
-      .eq('id', latest.id)
-      .select('id')
+    const { data: updated, error } = latest
+      ? await supabase
+          .from('student_status')
+          .update({ is_active: next })
+          .eq('id', latest.id)
+          .select('id')
+      : await supabase
+          .from('student_status')
+          .insert({ student_id: studentId, is_active: next })
+          .select('id')
     if (error) throw error
     if (!updated?.length) throw new Error("La modification n’a pas été enregistrée (permission refusée ?).")
 
     setStudentActiveMap(prev => ({ ...prev, [studentId]: next }))
-    setToast({ id: Date.now().toString(), type: 'success', message: next ? 'Étudiant activé.' : 'Étudiant désactivé.' })
+    setStudents(prev => prev.map(item => item.id === studentId ? { ...item, is_active: next } : item))
+    setFilteredStudents(prev => prev.map(item => item.id === studentId ? { ...item, is_active: next } : item))
+    setToast({ id: Date.now().toString(), type: 'success', message: `${studentName} ${next ? 'a été activé' : 'a été désactivé'} avec succès.` })
   } catch (err) {
-    setToast({ id: Date.now().toString(), type: 'error', message: err instanceof Error ? err.message : 'Erreur lors du changement de statut.' })
+    setToast({ id: Date.now().toString(), type: 'error', message: err instanceof Error ? `Impossible de modifier le statut de ${studentName} : ${err.message}` : 'Erreur lors du changement de statut.' })
   } finally {
     setTogglingId(null)
   }
-}// A student with no status row is treated as active
-//const isStudentActive = (id: number) => studentActiveMap[id] !== false
+}
   const normalizeText = (value: string | null | undefined) =>
   (value ?? '')
     .normalize('NFD')
@@ -1437,10 +1449,10 @@ useEffect(() => {
     // Apply filters to the student list whenever filter values or source data change
     let filtered = students
     if (statusView === 'active') {
-  filtered = filtered.filter(s => isStudentActive(s.id))
-} else if (statusView === 'inactive') {
-  filtered = filtered.filter(s => !isStudentActive(s.id))
-}
+      filtered = filtered.filter(s => studentActiveMap[s.id] !== false)
+    } else if (statusView === 'inactive') {
+      filtered = filtered.filter(s => studentActiveMap[s.id] === false)
+    }
 
     if (selectedFaculty) {
       filtered = filtered.filter(s => s.faculty === selectedFaculty)
@@ -1474,7 +1486,7 @@ if (searchTerms.length > 0) {
 }
 
     setFilteredStudents(filtered)
-  }, [students, selectedFaculty, selectedYear, balanceFilter, paymentData, studentYearMap, searchName])
+  }, [students, statusView, selectedFaculty, selectedYear, balanceFilter, paymentData, studentYearMap, searchName, studentActiveMap])
 
   // Calculate versement amounts for a student
   const calculateVersements = (student: User) => {
@@ -1941,30 +1953,31 @@ const handlePrint = () => {
           Filtres
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-  <span className="text-sm font-medium text-gray-700">Statut :</span>
-  {([
-    ['active', 'Actifs'],
-    ['inactive', 'Inactifs'], 
-    ['all', 'Tous'],
-  ] as const).map(([value, label]) => (
-    <button
-      key={value}
-      type="button"
-      onClick={() => setStatusView(value)}
-      className={`px-4 py-2 rounded-lg font-medium transition-all ${
-        statusView === value
-          ? value === 'inactive'
-            ? 'bg-red-600 text-white'
-            : 'bg-blue-600 text-white'
-          : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-      }`}
-    >
-      {label}
-    </button>
-  ))}
-</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
+          <div className="flex flex-wrap items-center gap-2 xl:col-span-2" role="group" aria-label="Filtrer par statut">
+            <span className="text-sm font-medium text-gray-700">Statut :</span>
+            {([
+              ['active', 'Actifs'],
+              ['inactive', 'Inactifs'],
+              ['all', 'Tous'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={statusView === value}
+                onClick={() => setStatusView(value)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                  statusView === value
+                    ? value === 'inactive'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-blue-600 text-white'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {/* Faculty Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Faculté</label>
@@ -2017,6 +2030,7 @@ const handlePrint = () => {
     setSelectedYear('')
     setBalanceFilter('all')
     setStatusView('active')
+    setSearchName('')
   }}
   className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-all"
 >
@@ -2061,6 +2075,7 @@ const handlePrint = () => {
                 const v1Status = getVersementStatus(vers.v1Remaining, vers.v1Total)
                 const v2Status = getVersementStatus(vers.v2Remaining, vers.v2Total)
                 const v3Status = getVersementStatus(vers.v3Remaining, vers.v3Total)
+                const studentIsActive = isStudentActive(student.id)
                 
                 return (
                   <tr
@@ -2070,7 +2085,7 @@ const handlePrint = () => {
                     <td className="px-6 py-4">
                       <p className="font-semibold text-gray-900">
                         {student.last_name} {student.first_name}
-                        {student?.is_active && <span className="ml-2 text-xs font-semibold text-red-600">Inactif</span>}
+                        {!studentIsActive && <span className="ml-2 text-xs font-semibold text-red-600">Inactif</span>}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Code: {student.student_code}</p>
                     </td>
@@ -2119,11 +2134,12 @@ const handlePrint = () => {
                         type="button"
                         onClick={() => void toggleStudentActive(student.id)}
                         disabled={togglingId === student.id}
+                        aria-label={`${studentIsActive ? 'Désactiver' : 'Activer'} ${student.first_name ?? ''} ${student.last_name ?? ''}`.trim()}
                         className={`ml-2 px-3 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50 ${
-                          student?.is_active ? 'bg-red-100 hover:bg-red-200 text-red-700' : 'bg-green-100 hover:bg-green-200 text-green-700'
+                          studentIsActive ? 'bg-red-100 hover:bg-red-200 text-red-700' : 'bg-green-100 hover:bg-green-200 text-green-700'
                         }`}
                       >
-                        {togglingId === student.id ? '...' : student?.is_active ? 'Désactiver' : 'Activer'}
+                        {togglingId === student.id ? 'Enregistrement...' : studentIsActive ? 'Désactiver' : 'Activer'}
                       </button>
                     </td>
                   </tr>
@@ -2452,7 +2468,7 @@ export function Payments() {
             .limit(1)
             .maybeSingle(),
           supabase.auth.getUser(),
-        ])
+        ]) 
 
         if (versementResult.error) throw versementResult.error
         if (statusResult.error) throw statusResult.error
