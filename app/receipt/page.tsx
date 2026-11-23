@@ -135,17 +135,7 @@ function ReceiptContent() {
         if (userResult.error) throw userResult.error
         if (!studentResult.data) throw new Error('Étudiant introuvable.')
 
-        let cashierName: string | null = null
-        const user = userResult.data.user
-        if (user) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', user.id)
-            .maybeSingle()
-          if (profileError) throw profileError
-          cashierName = profile?.full_name ?? user.email ?? null
-        }
+        
 
         if (!isCurrent) return
 
@@ -156,7 +146,7 @@ function ReceiptContent() {
         setStudent(studentResult.data as StudentInfo)
         setPayment(currentPayment)
         setYear((statusResult.data as StatusRow | null)?.year_study ?? currentPayment?.level ?? null)
-        setCashier(cashierName)
+        
       } catch (error) {
         if (isCurrent) {
           setStudent(null)
