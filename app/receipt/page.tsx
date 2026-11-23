@@ -36,8 +36,11 @@ interface StudentInfo {
   student_code: string | null
 }
 
-interface StatusRow {
-  year_study: number | string | null
+interface PublicReceiptData {
+  student: StudentInfo | null
+  payment: StudentPayment | null
+  year: number | string | null
+  history: PaymentRecord[]
 }
 
 const CURRENCY = 'HT'
@@ -72,7 +75,6 @@ function ReceiptContent() {
   const [payment, setPayment] = useState<StudentPayment | null>(null)
   const [history, setHistory] = useState<PaymentRecord[]>([])
   const [year, setYear] = useState<number | string | null>(null)
-  const [cashier, setCashier] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [retryKey, setRetryKey] = useState(0)
@@ -80,12 +82,13 @@ function ReceiptContent() {
   useEffect(() => {
     let isCurrent = true
 
-    if (!studentId) {
+    const parsedStudentId = Number(studentId)
+    if (!studentId || !Number.isSafeInteger(parsedStudentId) || parsedStudentId <= 0) {
       setStudent(null)
       setPayment(null)
       setHistory([])
       setLoading(false)
-      setLoadError('Aucun identifiant étudiant n’a été fourni.')
+      setLoadError('Aucun identifiant étudiant valide n’a été fourni.')
       return () => { isCurrent = false }
     }
 
@@ -94,58 +97,23 @@ function ReceiptContent() {
       setLoadError('')
 
       try {
-        const [
-          paymentResult,
-          studentResult,
-          statusResult,
-          historyResult,
-          userResult,
-        ] = await Promise.all([
-          supabase
-            .from('student_payment')
-            .select('id, student_id, payment_history, balance, discount, faculty, price, level, v_1, v_2, v_3')
-            .eq('student_id', studentId)
-            .order('id', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          supabase
-            .from('student')
-            .select('id, last_name, first_name, faculty, student_code')
-            .eq('id', studentId)
-            .maybeSingle(),
-          supabase
-            .from('student_status')
-            .select('year_study')
-            .eq('student_id', studentId)
-            .order('id', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          supabase
-            .from('payment_history')
-            .select('created_at, amount, balance, method, insert_by')
-            .eq('student_id', studentId)
-            .order('created_at', { ascending: false }),
-          supabase.auth.getUser(),
-        ])
-
-        if (paymentResult.error) throw paymentResult.error
-        if (studentResult.error) throw studentResult.error
-        if (statusResult.error) throw statusResult.error
-        if (historyResult.error) throw historyResult.error
-        if (userResult.error) throw userResult.error
-        if (!studentResult.data) throw new Error('Étudiant introuvable.')
-
-        
+        const { data, error } = await supabase.rpc('get_public_student_receipt', {
+          p_student_id: parsedStudentId,
+        })
+        if (error) throw error
+        if (!data) throw new Error('Étudiant introuvable.')
 
         if (!isCurrent) return
 
-        const currentPayment = paymentResult.data as StudentPayment | null
+        const receiptData = data as PublicReceiptData
+        if (!receiptData.student) throw new Error('Étudiant introuvable.')
+
+        const currentPayment = receiptData.payment
         const jsonHistory = currentPayment?.payment_history ?? []
-        const tableHistory = (historyResult.data ?? []) as PaymentRecord[]
-        setHistory(jsonHistory.length > 0 ? jsonHistory : tableHistory)
-        setStudent(studentResult.data as StudentInfo)
+        setHistory(jsonHistory.length > 0 ? jsonHistory : receiptData.history ?? [])
+        setStudent(receiptData.student)
         setPayment(currentPayment)
-        setYear((statusResult.data as StatusRow | null)?.year_study ?? currentPayment?.level ?? null)
+        setYear(receiptData.year ?? currentPayment?.level ?? null)
         
       } catch (error) {
         if (isCurrent) {
@@ -339,7 +307,7 @@ function ReceiptContent() {
 
           <footer className="mt-8 border-t border-dashed border-slate-300 pt-5 text-xs text-slate-500">
             <p>N.B. : le montant payé n’est pas remboursable en aucun cas.</p>
-            <p className="mt-2 text-right font-semibold text-slate-700">Émis par : {cashier || '-'}</p>
+            <p className="mt-2 text-right font-semibold text-slate-700">Émis par : UDEI</p>
           </footer>
         </div>
       </article>
