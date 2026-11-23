@@ -2,8 +2,10 @@
 import { supabase } from "../db"
 import { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
+import { renderToStaticMarkup } from 'react-dom/server'
+import { QRCodeSVG } from 'qrcode.react';
 
-type ClinicReportPeriod = "day" | "week" | "month" | "year";
+type ClinicReportPeriod = "day" | "week" | "month" | "year" | "custom";
 
 type ClinicReceipt = {
   id: number;
@@ -28,6 +30,7 @@ type ClinicStudent = {
   first_name: string | null;
   last_name: string | null;
   faculty: string | null;
+  year_study: number | null;
 };
 
 type ClinicServiceRecord = {
@@ -50,7 +53,7 @@ const localDateInputValue = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getClinicPeriodBounds = (dateValue: string, period: ClinicReportPeriod) => {
+const getClinicPeriodBounds = (dateValue: string, period: Exclude<ClinicReportPeriod, "custom">) => {
   const [year, month, day] = dateValue.split("-").map(Number);
   const start = new Date(year, month - 1, day);
 
@@ -124,11 +127,13 @@ function Modal({
   title,
   onClose,
   locked,
+  wide,
   children,
 }: {
   title: string;
   onClose: () => void;
   locked?: boolean;
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   useEffect(() => {
@@ -150,7 +155,7 @@ function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl"
+        className={`max-h-[90vh] w-full overflow-y-auto rounded-lg bg-white p-5 shadow-xl ${wide ? "max-w-2xl" : "max-w-md"}`}
       >
         {children}
       </div>
@@ -660,8 +665,10 @@ const { data: { user } } = await supabase.auth.getUser()
 
     const fetchStudents = async () => {
       setIsLoadingStudents(true);
-      let statusQuery = supabase.from("student_status").select("student_id, year_study");
-      if (selectedYear) statusQuery = statusQuery.eq("year_study", Number(selectedYear));
+      const statusQuery = supabase
+        .from("student_status")
+        .select("student_id, year_study")
+        .order("year_study", { ascending: false });
 
       const { data: statusRows, error: statusError } = await statusQuery;
       if (statusError) {
@@ -687,6 +694,7 @@ const { data: { user } } = await supabase.auth.getUser()
       const { data: studentRows, error: studentsError } = await supabase
         .from("student")
         .select("id, first_name, last_name, faculty")
+        .order("last_name", { ascending: true })
         .in("id", studentIds);
 
       if (!isCurrent) return;
@@ -698,20 +706,28 @@ const { data: { user } } = await supabase.auth.getUser()
         return;
       }
 
-      const filteredStudents = (studentRows ?? [])
-        .filter((student) => !selectedFaculty || student.faculty === selectedFaculty)
-        .map((student) => ({
-          id: String(student.id),
-          first_name: student.first_name,
-          last_name: student.last_name,
-          faculty: student.faculty,
-        }));
+      const yearByStudent = new Map<string, number>();
+      for (const row of statusRows ?? []) {
+        const studentId = row.student_id === null ? null : String(row.student_id);
+        const year = row.year_study === null ? Number.NaN : Number(row.year_study);
+        if (studentId && Number.isFinite(year) && !yearByStudent.has(studentId)) {
+          yearByStudent.set(studentId, year);
+        }
+      }
 
-      setStudents(filteredStudents);
+      const loadedStudents = (studentRows ?? []).map((student) => ({
+        id: String(student.id),
+        first_name: student.first_name,
+        last_name: student.last_name,
+        faculty: student.faculty,
+        year_study: yearByStudent.get(String(student.id)) ?? null,
+      }));
+
+      setStudents(loadedStudents);
       setSelectedStudentId((current) =>
-        current && filteredStudents.some((student) => student.id === current)
+        current && loadedStudents.some((student) => student.id === current)
           ? current
-          : filteredStudents[0]?.id ?? ""
+          : ""
       );
       setIsLoadingStudents(false);
     };
@@ -720,29 +736,42 @@ const { data: { user } } = await supabase.auth.getUser()
     return () => {
       isCurrent = false;
     };
-  }, [selectedFaculty, selectedYear]);
+  }, []);
   // Students matching the search box (every typed word must appear in the name, any order)
-const visibleStudents = useMemo(() => {
-  const terms = normalizeText(studentSearch).split(/\s+/).filter(Boolean);
-  if (terms.length === 0) return students;
-  return students.filter((student) => {
-    const haystack = normalizeText(`${student.last_name ?? ""} ${student.first_name ?? ""}`);
-    return terms.every((term) => haystack.includes(term));
-  });
-}, [students, studentSearch]);
+  const searchMatches = useMemo(() => {
+    const terms = normalizeText(studentSearch).split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return students;
+    return students.filter((student) => {
+      const haystack = normalizeText(`${student.last_name ?? ""} ${student.first_name ?? ""}`);
+      return terms.every((term) => haystack.includes(term));
+    });
+  }, [students, studentSearch]);
 
-// Keep the selected student valid: if it is filtered out, select the first match (or none)
-useEffect(() => {
-  setSelectedStudentId((current) =>
-    visibleStudents.some((student) => student.id === current)
-      ? current
-      : visibleStudents[0]?.id ?? ""
+  const visibleStudents = useMemo(
+    () => searchMatches.filter((student) =>
+      (!selectedFaculty || student.faculty === selectedFaculty) &&
+      (!selectedYear || String(student.year_study ?? "") === selectedYear)
+    ),
+    [searchMatches, selectedFaculty, selectedYear]
   );
-}, [visibleStudents]);
+
   const selectedStudent = students.find((student) => student.id === selectedStudentId) ?? null;
   const studentName = selectedStudent
     ? `${selectedStudent.last_name?.toUpperCase() ?? ""} ${selectedStudent.first_name ?? ""}`.trim()
     : "";
+
+  const closeSavedReceipt = () => {
+    setSavedReceipt(null);
+    setStudentSearch("");
+    setSelectedFaculty("");
+    setSelectedYear("");
+    setSelectedStudentId("");
+    setPayment((current) => current.map((item) => ({ ...item, quantity: 0 })));
+    setDiscountInput("");
+    setAddYear(0);
+    setDisplay(false);
+    setMessage("");
+  };
 
   const updateQuantity = (serviceName: string, quantity: number) => {
     const safeQuantity = Math.max(0, Number(quantity) || 0);
@@ -875,7 +904,10 @@ useEffect(() => {
         </div>
         <div class="text-center">+(509) 40 03 4090 / +(509) 48809772 </div>
         </div>
-        <header><h1>Reçu clinique</h1><div>Reçu n° ${receipt.id}</div></header><div class="meta"><div><strong>Étudiant :</strong> ${escapeHtml(receipt.student_name ?? "Non renseigné")}</div><div><strong>Année d’études :</strong> ${escapeHtml(receipt.year ?? "-")}</div><div><strong>Date :</strong> ${escapeHtml(new Date(receipt.created_at).toLocaleString("fr-HT"))}</div></div><table><thead><tr><th>Prestation</th><th class="number">Quantité</th><th class="number">Montant</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div><span>Sous-total</span><span>$ ${formatClinicAmount(subtotal)} HT</span></div><div><span>Réduction</span><span>− $ ${formatClinicAmount(Number(receipt.discount) || 0)} HT</span></div><div class="grand-total"><span>Total à payer</span><span>$ ${formatClinicAmount(Number(receipt.total_price) || 0)} HT</span></div></div><div class="footer"><strong>NB</strong> : le montant n’est remboursable en aucun cas.</div><div class="footer">Émis par :<strong> ${escapeHtml(cashier)}</strong></div><script>window.addEventListener('load',()=>window.print())</script></body></html>`);
+        <header><h1>Reçu clinique</h1><div>Reçu n° ${receipt.id}</div></header><div class="meta"><div><strong>Étudiant :</strong> ${escapeHtml(receipt.student_name ?? "Non renseigné")}</div><div><strong>Année d’études :</strong> ${escapeHtml(receipt.year ?? "-")}</div><div><strong>Date :</strong> ${escapeHtml(new Date(receipt.created_at).toLocaleString("fr-HT"))}</div></div><table><thead><tr><th>Prestation</th><th class="number">Quantité</th><th class="number">Montant</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div><span>Sous-total</span><span>$ ${formatClinicAmount(subtotal)} HT</span></div><div><span>Réduction</span><span>− $ ${formatClinicAmount(Number(receipt.discount) || 0)} HT</span></div><div class="grand-total"><span>Total à payer</span><span>$ ${formatClinicAmount(Number(receipt.total_price) || 0)} HT</span></div></div><div class="footer"><strong>NB</strong> : le montant n’est remboursable en aucun cas.</div>
+        <div style="display:flex;justify-content:center;align-items:center">
+                  ${renderToStaticMarkup(<QRCodeSVG value={`https://staff.udeihaiti.com/receipt/clinic?id=${receipt.id}`} size={54} fgColor="#0f2f68" />)}
+                </div><div class="footer">Émis par :<strong> ${escapeHtml(cashier)}</strong></div><script>window.addEventListener('load',()=>window.print())</script></body></html>`);
     printWindow.document.close();
   };
 
@@ -904,8 +936,25 @@ useEffect(() => {
       id="clinic-student-search"
       type="text"
       value={studentSearch}
+      disabled={isLoadingStudents}
       onChange={(event) => {
-        setStudentSearch(event.target.value);
+        const searchValue = event.target.value;
+        const terms = normalizeText(searchValue).split(/\s+/).filter(Boolean);
+        const matchingStudent = terms.length === 0
+          ? null
+          : students.find((student) => {
+              const name = normalizeText(`${student.last_name ?? ""} ${student.first_name ?? ""}`);
+              return terms.every((term) => name.includes(term));
+            });
+
+        setStudentSearch(searchValue);
+        if (searchValue.trim()) {
+          setSelectedStudentId(matchingStudent?.id ?? "");
+          if (matchingStudent) {
+            setSelectedFaculty(matchingStudent.faculty ?? "");
+            setSelectedYear(matchingStudent.year_study === null ? "" : String(matchingStudent.year_study));
+          }
+        }
         setSavedReceipt(null);
       }}
       placeholder="Nom ou prénom..."
@@ -932,9 +981,13 @@ useEffect(() => {
             className="w-full rounded-md border border-gray-300 bg-white px-3 py-2"
             value={selectedFaculty}
             onChange={(event) => {
-              setSelectedFaculty(event.target.value);
-              setSavedReceipt(null);
-            }}
+                const faculty = event.target.value;
+                setSelectedFaculty(faculty);
+                if (selectedStudent && faculty && selectedStudent.faculty !== faculty) {
+                  setSelectedStudentId("");
+                }
+                setSavedReceipt(null);
+              }}
           >
             <option value="">Toutes les facultés</option>
             {faculties.map((faculty) => <option key={faculty} value={faculty}>{faculty}</option>)}
@@ -947,7 +1000,11 @@ useEffect(() => {
             className="w-full rounded-md border border-gray-300 bg-white px-3 py-2"
             value={selectedYear}
             onChange={(event) => {
-              setSelectedYear(event.target.value);
+              const year = event.target.value;
+              setSelectedYear(year);
+              if (selectedStudent && year && String(selectedStudent.year_study ?? "") !== year) {
+                setSelectedStudentId("");
+              }
               setSavedReceipt(null);
             }}
           >
@@ -1106,46 +1163,61 @@ useEffect(() => {
       {message && <p className="text-sm text-gray-700">{message}</p>}
 
       {savedReceipt && (
-        <section className="space-y-4 rounded-md border border-emerald-200 bg-emerald-50/40 p-4" aria-label="Reçu clinique enregistré">
-          <header className="flex flex-wrap items-start justify-between gap-3 border-b border-emerald-200 pb-3">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800">Reçu enregistré n° {savedReceipt.receipt.id}</h3>
-              <p className="text-sm text-gray-600">Enregistré le {new Date(savedReceipt.receipt.created_at).toLocaleString("fr-HT")}</p>
-            </div>
-            <button
-              type="button"
-              onClick={printSavedReceipt}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Imprimer / enregistrer en PDF
-            </button>
-          </header>
-          <div className="grid gap-2 text-sm text-gray-700 sm:grid-cols-3">
-            <p><strong>Étudiant :</strong> {savedReceipt.receipt.student_name || "Non renseigné"}</p>
-            <p><strong>Année d’études :</strong> {savedReceipt.receipt.year ?? "-"}</p>
-            <p><strong>Identifiant du reçu :</strong> {savedReceipt.receipt.id}</p>
-          </div>
-          <div className="divide-y divide-gray-200">
-            {savedReceipt.lines.map((line) => (
-              <div key={line.id} className="flex items-center justify-between gap-4 py-2 text-sm">
-                <span>{line.service_name || "Prestation"} · Qté {line.quantity}</span>
-                <span className="whitespace-nowrap font-medium">{formatClinicAmount(Number(line.price) || 0)} HT</span>
+        <Modal
+          title={`Reçu clinique enregistré n° ${savedReceipt.receipt.id}`}
+          onClose={closeSavedReceipt}
+          wide
+        >
+          <section className="space-y-4" aria-label="Reçu clinique enregistré">
+            <header className="flex flex-wrap items-start justify-between gap-3 border-b border-emerald-200 pb-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Reçu enregistré n° {savedReceipt.receipt.id}</h3>
+                <p className="text-sm text-gray-600">Enregistré le {new Date(savedReceipt.receipt.created_at).toLocaleString("fr-HT")}</p>
               </div>
-            ))}
-          </div>
-          <div className="flex justify-between border-t border-emerald-200 pt-3 font-semibold text-gray-900">
-            <span>Sous-total</span>
-            <span>$ {formatClinicAmount((Number(savedReceipt.receipt.total_price) || 0) + (Number(savedReceipt.receipt.discount) || 0))} HT</span>
-          </div>
-          <div className="flex justify-between text-sm text-gray-700">
-            <span>Réduction</span>
-            <span>− $ {formatClinicAmount(Number(savedReceipt.receipt.discount) || 0)} HT</span>
-          </div>
-          <div className="flex justify-between border-t border-emerald-200 pt-3 font-semibold text-gray-900">
-            <span>Total enregistré</span>
-            <span>$ {formatClinicAmount(Number(savedReceipt.receipt.total_price) || 0)} HT</span>
-          </div>
-        </section>
+              <button
+                type="button"
+                onClick={printSavedReceipt}
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Imprimer / enregistrer en PDF
+              </button>
+            </header>
+            <div className="grid gap-2 text-sm text-gray-700 sm:grid-cols-3">
+              <p><strong>Étudiant :</strong> {savedReceipt.receipt.student_name || "Non renseigné"}</p>
+              <p><strong>Année d’études :</strong> {savedReceipt.receipt.year ?? "-"}</p>
+              <p><strong>Identifiant du reçu :</strong> {savedReceipt.receipt.id}</p>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {savedReceipt.lines.map((line) => (
+                <div key={line.id} className="flex items-center justify-between gap-4 py-2 text-sm">
+                  <span>{line.service_name || "Prestation"} · Qté {line.quantity}</span>
+                  <span className="whitespace-nowrap font-medium">{formatClinicAmount(Number(line.price) || 0)} HT</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between border-t border-emerald-200 pt-3 font-semibold text-gray-900">
+              <span>Sous-total</span>
+              <span>$ {formatClinicAmount((Number(savedReceipt.receipt.total_price) || 0) + (Number(savedReceipt.receipt.discount) || 0))} HT</span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-700">
+              <span>Réduction</span>
+              <span>− $ {formatClinicAmount(Number(savedReceipt.receipt.discount) || 0)} HT</span>
+            </div>
+            <div className="flex justify-between border-t border-emerald-200 pt-3 font-semibold text-gray-900">
+              <span>Total enregistré</span>
+              <span>$ {formatClinicAmount(Number(savedReceipt.receipt.total_price) || 0)} HT</span>
+            </div>
+            <div className="flex justify-end border-t border-gray-200 pt-4">
+              <button
+                type="button"
+                onClick={closeSavedReceipt}
+                className="min-h-11 rounded-md bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800"
+              >
+                Fermer
+              </button>
+            </div>
+          </section>
+        </Modal>
       )}
     </div>
   );
@@ -1154,20 +1226,41 @@ useEffect(() => {
 export function ClinicRapport(){
   const [period, setPeriod] = useState<ClinicReportPeriod>("day");
   const [selectedDate, setSelectedDate] = useState(() => localDateInputValue(new Date()));
+  const [rangeStartDate, setRangeStartDate] = useState(() => localDateInputValue(new Date()));
+  const [rangeEndDate, setRangeEndDate] = useState(() => localDateInputValue(new Date()));
   const [receipts, setReceipts] = useState<ClinicReceipt[]>([]);
   const [paymentLines, setPaymentLines] = useState<ClinicPaymentLine[]>([]);
   const [cashierNames, setCashierNames] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const isValidRange = Boolean(rangeStartDate && rangeEndDate && rangeStartDate <= rangeEndDate);
+
   useEffect(() => {
     let isCurrent = true;
 
     const fetchReport = async () => {
+      if (period === "custom" && !isValidRange) {
+        setIsLoading(false);
+        setReceipts([]);
+        setPaymentLines([]);
+        setErrorMessage(rangeStartDate && rangeEndDate ? "La date de début doit précéder ou correspondre à la date de fin." : "Sélectionnez une date de début et une date de fin.");
+        return;
+      }
+
       setIsLoading(true);
       setErrorMessage("");
 
-      const { start, end } = getClinicPeriodBounds(selectedDate, period);
+      let start: Date;
+      let end: Date;
+      if (period === "custom") {
+        start = new Date(`${rangeStartDate}T00:00:00`);
+        end = new Date(`${rangeEndDate}T00:00:00`);
+        end.setDate(end.getDate() + 1);
+      } else {
+        ({ start, end } = getClinicPeriodBounds(selectedDate, period));
+      }
+
       const { data: receiptData, error: receiptError } = await supabase
         .from("clinic_receipt")
         .select("id, created_at, student_name, year, total_price, insert_by, discount")
@@ -1226,14 +1319,22 @@ export function ClinicRapport(){
     return () => {
       isCurrent = false;
     };
-  }, [period, selectedDate]);
+  }, [period, selectedDate, rangeStartDate, rangeEndDate, isValidRange]);
 
   const totalRevenue = receipts.reduce((sum, receipt) => sum + (Number(receipt.total_price) || 0), 0);
   const totalDiscounts = receipts.reduce((sum, receipt) => sum + (Number(receipt.discount) || 0), 0);
   const lineTotal = (line: ClinicPaymentLine) => Number(line.price || 0);
-  const periodLabel = period === "day" ? "Journée" : period === "week" ? "Semaine" : period === "month" ? "Mois" : "Année";
-  const { start: reportStart, end: reportEnd } = getClinicPeriodBounds(selectedDate, period);
-  const reportPeriodText = `${reportStart.toLocaleDateString("fr-HT")} au ${new Date(reportEnd.getTime() - 1).toLocaleDateString("fr-HT")}`;
+  const periodLabel = period === "day" ? "Journée" : period === "week" ? "Semaine" : period === "month" ? "Mois" : period === "year" ? "Année" : "Intervalle personnalisé";
+  const reportStart = period === "custom"
+    ? new Date(`${rangeStartDate || localDateInputValue(new Date())}T00:00:00`)
+    : getClinicPeriodBounds(selectedDate, period).start;
+  const reportEnd = period === "custom"
+    ? new Date(`${rangeEndDate || rangeStartDate || localDateInputValue(new Date())}T00:00:00`)
+    : getClinicPeriodBounds(selectedDate, period).end;
+  const reportPeriodText = `${reportStart.toLocaleDateString("fr-HT")} au ${period === "custom" ? reportEnd.toLocaleDateString("fr-HT") : new Date(reportEnd.getTime() - 1).toLocaleDateString("fr-HT")}`;
+  const reportFilePeriod = period === "custom"
+    ? `${rangeStartDate || "debut"}-${rangeEndDate || "fin"}`
+    : selectedDate;
   const reportRows = receipts.map((receipt) => {
     const items = paymentLines.filter((line) => line.receipt_id === receipt.id);
     return {
@@ -1279,7 +1380,7 @@ export function ClinicRapport(){
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `rapport-clinique-${period}-${selectedDate}.xls`;
+    link.download = `rapport-clinique-${period}-${reportFilePeriod}.xls`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -1342,7 +1443,7 @@ export function ClinicRapport(){
       pdf.line(12, y - 2, pageWidth - 12, y - 2);
     });
 
-    pdf.save(`rapport-clinique-${period}-${selectedDate}.pdf`);
+    pdf.save(`rapport-clinique-${period}-${reportFilePeriod}.pdf`);
   };
 
   // Page d’impression autonome du rapport, avec logo et synthèse de la période.
@@ -1376,9 +1477,32 @@ export function ClinicRapport(){
               <option value="week">Semaine</option>
               <option value="month">Mois</option>
               <option value="year">Année</option>
+              <option value="custom">Intervalle de dates</option>
             </select>
           </label>
-          {period === "year" ? (
+          {period === "custom" ? (
+            <>
+              <label className="space-y-1 text-sm font-medium text-gray-700">
+                Du
+                <input
+                  className="block min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2 sm:w-auto"
+                  type="date"
+                  value={rangeStartDate}
+                  onChange={(event) => setRangeStartDate(event.target.value)}
+                />
+              </label>
+              <label className="space-y-1 text-sm font-medium text-gray-700">
+                Au
+                <input
+                  className="block min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2 sm:w-auto"
+                  type="date"
+                  value={rangeEndDate}
+                  min={rangeStartDate || undefined}
+                  onChange={(event) => setRangeEndDate(event.target.value)}
+                />
+              </label>
+            </>
+          ) : period === "year" ? (
             <label className="space-y-1 text-sm font-medium text-gray-700">
               Année du rapport
               <select
@@ -1515,6 +1639,389 @@ export function ClinicRapport(){
             </tbody>
           </table>
         </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+type ClinicServiceSummary = {
+  serviceName: string;
+  quantity: number;
+  amount: number;
+};
+
+export function NumberCase() {
+  const [studentNames, setStudentNames] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState("");
+  const [receipts, setReceipts] = useState<ClinicReceipt[]>([]);
+  const [paymentLines, setPaymentLines] = useState<ClinicPaymentLine[]>([]);
+  const [isLoadingNames, setIsLoadingNames] = useState(true);
+  const [isLoadingReceipts, setIsLoadingReceipts] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    const fetchStudentNames = async () => {
+      setIsLoadingNames(true);
+      setErrorMessage("");
+
+      const names = new Set<string>();
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase
+          .from("clinic_receipt")
+          .select("student_name")
+          .not("student_name", "is", null)
+          .order("student_name", { ascending: true })
+          .range(offset, offset + 999);
+
+        if (!isCurrent) return;
+        if (error) {
+          setErrorMessage(`Impossible de charger les noms des étudiants : ${error.message}`);
+          setIsLoadingNames(false);
+          return;
+        }
+
+        for (const row of data ?? []) {
+          if (row.student_name?.trim()) names.add(row.student_name);
+        }
+        if ((data ?? []).length < 1000) break;
+      }
+      setStudentNames([...names]);
+      setIsLoadingNames(false);
+    };
+
+    void fetchStudentNames();
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    const fetchStudentReceipts = async () => {
+      if (!selectedStudent) {
+        setReceipts([]);
+        setPaymentLines([]);
+        setIsLoadingReceipts(false);
+        return;
+      }
+
+      setIsLoadingReceipts(true);
+      setErrorMessage("");
+
+      const receiptRows: ClinicReceipt[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase
+          .from("clinic_receipt")
+          .select("id, created_at, student_name, year, total_price, insert_by, discount")
+          .eq("student_name", selectedStudent)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + 999);
+
+        if (!isCurrent) return;
+        if (error) {
+          setReceipts([]);
+          setPaymentLines([]);
+          setErrorMessage(`Impossible de charger les reçus de l’étudiant : ${error.message}`);
+          setIsLoadingReceipts(false);
+          return;
+        }
+
+        receiptRows.push(...((data ?? []) as ClinicReceipt[]));
+        if ((data ?? []).length < 1000) break;
+      }
+
+      const receiptIds = receiptRows.map((receipt) => receipt.id);
+      const lineRows: ClinicPaymentLine[] = [];
+      for (let index = 0; index < receiptIds.length; index += 100) {
+        const receiptIdBatch = receiptIds.slice(index, index + 100);
+        for (let offset = 0; ; offset += 1000) {
+          const { data, error } = await supabase
+            .from("clinic_pay")
+            .select("id, receipt_id, service_name, quantity, price")
+            .in("receipt_id", receiptIdBatch)
+            .order("id", { ascending: true })
+            .range(offset, offset + 999);
+
+          if (!isCurrent) return;
+          if (error) {
+            setReceipts(receiptRows);
+            setPaymentLines([]);
+            setErrorMessage(`Impossible de charger les prestations : ${error.message}`);
+            setIsLoadingReceipts(false);
+            return;
+          }
+
+          lineRows.push(...((data ?? []) as ClinicPaymentLine[]));
+          if ((data ?? []).length < 1000) break;
+        }
+      }
+      setReceipts(receiptRows);
+      setPaymentLines(lineRows);
+      setIsLoadingReceipts(false);
+    };
+
+    void fetchStudentReceipts();
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedStudent]);
+
+  const filteredNames = useMemo(() => {
+    const normalizedSearch = normalizeText(search);
+    return studentNames.filter((name) => normalizeText(name).includes(normalizedSearch));
+  }, [studentNames, search]);
+
+  const serviceSummaries = useMemo(() => {
+    const summaries = new Map<string, ClinicServiceSummary>();
+
+    for (const line of paymentLines) {
+      const serviceName = line.service_name?.trim() || "Prestation non renseignée";
+      const serviceKey = normalizeText(serviceName).replace(/\s+/g, " ");
+      const summary = summaries.get(serviceKey) ?? { serviceName, quantity: 0, amount: 0 };
+      summary.quantity += Number(line.quantity) || 0;
+      summary.amount += Number(line.price) || 0;
+      summaries.set(serviceKey, summary);
+    }
+
+    return [...summaries.values()].sort((first, second) =>
+      first.serviceName.localeCompare(second.serviceName, "fr")
+    );
+  }, [paymentLines]);
+
+  const escapeExportValue = (value: string | number) =>
+    String(value).replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&apos;",
+    })[character] ?? character);
+
+  const exportStudentExcel = () => {
+    const rows: Array<Array<string | number>> = [
+      ["Étudiant", selectedStudent],
+      ["Nombre de reçus", receipts.length],
+      ["Total net", receipts.reduce((total, receipt) => total + (Number(receipt.total_price) || 0), 0)],
+      [],
+      ["Prestation", "Quantité totale", "Montant total (HT)"],
+      ...serviceSummaries.map((summary) => [summary.serviceName, summary.quantity, summary.amount]),
+      [],
+      ["Détail des reçus"],
+      ["Date", "Reçu", "Année", "Prestation", "Quantité", "Montant (HT)"],
+      ...receipts.flatMap((receipt) => {
+        const receiptLines = paymentLines.filter((line) => line.receipt_id === receipt.id);
+        return receiptLines.length
+          ? receiptLines.map((line) => [
+              new Date(receipt.created_at).toLocaleString("fr-HT"),
+              receipt.id,
+              receipt.year ?? "-",
+              line.service_name || "Prestation non renseignée",
+              Number(line.quantity) || 0,
+              Number(line.price) || 0,
+            ])
+          : [[
+              new Date(receipt.created_at).toLocaleString("fr-HT"),
+              receipt.id,
+              receipt.year ?? "-",
+              "Aucune prestation détaillée",
+              0,
+              0,
+            ]];
+      }),
+    ];
+    const xmlRows = rows.map((row) => `<Row>${row.map((value) => {
+      if (value === undefined || value === null || value === "") return "<Cell/>";
+      const numeric = typeof value === "number";
+      return `<Cell><Data ss:Type="${numeric ? "Number" : "String"}">${escapeExportValue(value)}</Data></Cell>`;
+    }).join("")}</Row>`).join("");
+    const workbook = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Reçus étudiant"><Table>${xmlRows}</Table></Worksheet></Workbook>`;
+    const blob = new Blob([workbook], { type: "application/vnd.ms-excel;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reçus-clinique-${selectedStudent.replace(/[<>:"/\\|?*]/g, "-")}.xls`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const printStudentReport = () => {
+    const printWindow = window.open("", "_blank", "width=1000,height=800");
+    if (!printWindow) {
+      setErrorMessage("Autorisez les fenêtres contextuelles pour imprimer ce rapport.");
+      return;
+    }
+
+    const summaryRows = serviceSummaries.map((summary) =>
+      `<tr><td>${escapeExportValue(summary.serviceName)}</td><td class="number">${formatClinicAmount(summary.quantity)}</td><td class="number">${formatClinicAmount(summary.amount)} HT</td></tr>`
+    ).join("");
+    const receiptRows = receipts.flatMap((receipt) => {
+      const receiptLines = paymentLines.filter((line) => line.receipt_id === receipt.id);
+      return receiptLines.length
+        ? receiptLines.map((line) => `<tr><td>${new Date(receipt.created_at).toLocaleString("fr-HT")}</td><td>${receipt.id}</td><td>${escapeExportValue(receipt.year ?? "-")}</td><td>${escapeExportValue(line.service_name || "Prestation non renseignée")}</td><td class="number">${formatClinicAmount(Number(line.quantity) || 0)}</td><td class="number">${formatClinicAmount(Number(line.price) || 0)} HT</td></tr>`)
+        : [`<tr><td>${new Date(receipt.created_at).toLocaleString("fr-HT")}</td><td>${receipt.id}</td><td>${escapeExportValue(receipt.year ?? "-")}</td><td colspan="3">Aucune prestation détaillée</td></tr>`];
+    }).join("");
+
+    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Reçus clinique - ${escapeExportValue(selectedStudent)}</title><style>body{font:12px Arial,sans-serif;color:#1f2937;margin:24px}h1{font-size:20px}h2{font-size:15px;margin-top:24px}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#e5e7eb;text-align:left}th,td{border:1px solid #d1d5db;padding:7px}.number{text-align:right}tr{break-inside:avoid}@page{margin:12mm}</style></head><body><h1>Reçus de clinique - ${escapeExportValue(selectedStudent)}</h1><p>Nombre de reçus : ${receipts.length} | Total net : ${formatClinicAmount(receipts.reduce((total, receipt) => total + (Number(receipt.total_price) || 0), 0))} HT</p><h2>Total par prestation</h2><table><thead><tr><th>Prestation</th><th class="number">Quantité totale</th><th class="number">Montant total</th></tr></thead><tbody>${summaryRows || '<tr><td colspan="3">Aucune prestation.</td></tr>'}</tbody></table><h2>Détail des reçus</h2><table><thead><tr><th>Date</th><th>Reçu</th><th>Année</th><th>Prestation</th><th class="number">Quantité</th><th class="number">Montant</th></tr></thead><tbody>${receiptRows || '<tr><td colspan="6">Aucun reçu.</td></tr>'}</tbody></table><script>window.addEventListener('load',()=>window.print())</script></body></html>`);
+    printWindow.document.close();
+  };
+
+  return (
+    <section className="w-full max-w-6xl space-y-5 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+      <header className="border-b border-gray-200 pb-4">
+        <h2 className="text-xl font-semibold text-gray-800">Détail des reçus par étudiant</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Recherchez un étudiant pour consulter ses reçus et le total de ses prestations.
+        </p>
+      </header>
+
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <label className="space-y-1 text-sm font-medium text-gray-700">
+          Rechercher un étudiant
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Saisir le nom de l’étudiant"
+            disabled={isLoadingNames}
+            className="min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2"
+          />
+        </label>
+        <label className="space-y-1 text-sm font-medium text-gray-700">
+          Étudiant
+          <select
+            value={selectedStudent}
+            onChange={(event) => setSelectedStudent(event.target.value)}
+            disabled={isLoadingNames || filteredNames.length === 0}
+            className="min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2"
+          >
+            <option value="">
+              {isLoadingNames
+                ? "Chargement des étudiants…"
+                : filteredNames.length
+                  ? "Sélectionner un étudiant"
+                  : "Aucun étudiant trouvé"}
+            </option>
+            {filteredNames.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </label>
+      </div>
+
+      {errorMessage && <p role="alert" className="text-sm text-red-700">{errorMessage}</p>}
+
+      {!selectedStudent ? (
+        <p className="py-6 text-center text-sm text-gray-500">Sélectionnez un étudiant pour afficher ses reçus.</p>
+      ) : isLoadingReceipts ? (
+        <p className="py-6 text-center text-sm text-gray-500">Chargement des reçus…</p>
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-md bg-gray-50 p-4">
+              <p className="text-sm text-gray-500">Reçus</p>
+              <p className="mt-1 text-2xl font-semibold text-gray-800">{receipts.length}</p>
+            </div>
+            <div className="rounded-md bg-gray-50 p-4">
+              <p className="text-sm text-gray-500">Prestations enregistrées</p>
+              <p className="mt-1 text-2xl font-semibold text-gray-800">{paymentLines.length}</p>
+            </div>
+            <div className="rounded-md bg-gray-50 p-4">
+              <p className="text-sm text-gray-500">Total payé</p>
+              <p className="mt-1 text-2xl font-semibold text-gray-800">
+                $ {formatClinicAmount(receipts.reduce((total, receipt) => total + (Number(receipt.total_price) || 0), 0))} HT
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2" aria-label="Télécharger ou imprimer le rapport étudiant">
+            <button
+              type="button"
+              onClick={printStudentReport}
+              disabled={isLoadingReceipts || receipts.length === 0}
+              className="min-h-11 rounded-md border border-gray-400 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Imprimer
+            </button>
+            <button
+              type="button"
+              onClick={exportStudentExcel}
+              disabled={isLoadingReceipts || receipts.length === 0}
+              className="min-h-11 rounded-md border border-green-700 px-4 py-2 text-sm font-medium text-green-800 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Télécharger Excel
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-gray-800">Total par prestation</h3>
+            {serviceSummaries.length ? (
+              <div className="overflow-x-auto rounded-md border border-gray-200">
+                <table className="w-full min-w-[32rem] text-left text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="px-3 py-3 font-medium">Prestation</th>
+                      <th className="px-3 py-3 text-right font-medium">Quantité totale</th>
+                      <th className="px-3 py-3 text-right font-medium">Montant total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {serviceSummaries.map((summary) => (
+                      <tr key={summary.serviceName} className="border-t border-gray-100 text-gray-700">
+                        <td className="px-3 py-3">{summary.serviceName}</td>
+                        <td className="px-3 py-3 text-right">{formatClinicAmount(summary.quantity)}</td>
+                        <td className="px-3 py-3 text-right font-medium">$ {formatClinicAmount(summary.amount)} HT</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="py-4 text-sm text-gray-500">Aucune prestation détaillée pour cet étudiant.</p>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-gray-800">Tous les reçus</h3>
+            {receipts.length ? (
+              <div className="space-y-3">
+                {receipts.map((receipt) => {
+                  const lines = paymentLines.filter((line) => line.receipt_id === receipt.id);
+                  return (
+                    <article key={receipt.id} className="space-y-3 rounded-md border border-gray-200 p-4">
+                      <header className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 pb-3">
+                        <div>
+                          <h4 className="font-semibold text-gray-800">Reçu n° {receipt.id}</h4>
+                          <p className="text-sm text-gray-500">{new Date(receipt.created_at).toLocaleString("fr-HT")}</p>
+                        </div>
+                        <span className="text-sm text-gray-600">Année {receipt.year ?? "-"}</span>
+                      </header>
+                      {lines.length ? (
+                        <ul className="space-y-2 text-sm">
+                          {lines.map((line) => (
+                            <li key={line.id} className="flex justify-between gap-3 text-gray-700">
+                              <span>{line.service_name || "Prestation"} · Qté {formatClinicAmount(Number(line.quantity) || 0)}</span>
+                              <span className="shrink-0">$ {formatClinicAmount(Number(line.price) || 0)} HT</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-500">Aucune prestation détaillée pour ce reçu.</p>
+                      )}
+                      <div className="flex justify-between border-t border-gray-100 pt-3 text-sm">
+                        <span className="text-gray-500">Réduction : − $ {formatClinicAmount(Number(receipt.discount) || 0)} HT</span>
+                        <strong className="text-gray-800">Total : $ {formatClinicAmount(Number(receipt.total_price) || 0)} HT</strong>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="py-4 text-sm text-gray-500">Aucun reçu trouvé pour cet étudiant.</p>
+            )}
+          </div>
         </>
       )}
     </section>

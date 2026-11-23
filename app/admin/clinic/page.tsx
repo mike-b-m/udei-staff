@@ -1,14 +1,15 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
-import ClinicService, { ClinicPayment, ClinicRapport } from "../../component/clinic/clinic";
+import ClinicService, { ClinicPayment, ClinicRapport, NumberCase } from "../../component/clinic/clinic";
 
-type ClinicSection = "service" | "paiement" | "rapport";
+type ClinicSection = "service" | "paiement" | "rapport" | "numbercase";
 
 const CLINIC_SECTIONS: { id: ClinicSection; label: string }[] = [
   { id: "service", label: "Services" },
   { id: "paiement", label: "Paiement" },
   { id: "rapport", label: "Rapports" },
+  { id: "numbercase", label: "Par étudiant" },
 ];
 
 export default function ClinicPage() {
@@ -19,7 +20,8 @@ export default function ClinicPage() {
   const renderActiveSection = () => {
     if (activeSection === "service") return <ClinicService />;
     if (activeSection === "paiement") return <ClinicPayment />;
-    return <ClinicRapport />;
+    if (activeSection === "rapport") return <ClinicRapport />;
+    return <NumberCase />;
   };
 
   const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
@@ -57,7 +59,7 @@ export default function ClinicPage() {
         </header>
 
         {/* Onglets tactiles avec état accessible pour les lecteurs d’écran. */}
-        <nav role="tablist" aria-label="Sections de la clinique" aria-orientation="horizontal" className="grid grid-cols-3 gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
+        <nav role="tablist" aria-label="Sections de la clinique" aria-orientation="horizontal" className="grid grid-cols-2 gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 sm:grid-cols-4">
           {CLINIC_SECTIONS.map((section, index) => {
             const isActive = activeSection === section.id;
             return (

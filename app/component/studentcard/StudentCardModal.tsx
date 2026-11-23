@@ -299,7 +299,7 @@ export default function StudentCardModal({
                     </p>
 
                     <div className="flex items-center justify-center rounded-lg border border-blue-100 bg-white/80 p-1.5 shadow-sm">
-                      <QRCodeSVG value={student.id.toString()} size={54} fgColor="#0f2f68" />
+                      <QRCodeSVG value={`receipt?id=${student.id}`} size={54} fgColor="#0f2f68" />
                     </div>
 
                     <p className="text-center text-[8px] leading-snug text-slate-600"> 

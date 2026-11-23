@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "../db"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Time from "../time/time"
 import { exportToCSV, printHTML } from "../export/exportUtils"
 import { Scanner } from "@yudiel/react-qr-scanner"
+import { QRCodeSVG } from 'qrcode.react';
+import { renderToStaticMarkup } from 'react-dom/server'
 
 // ============ TYPES ============
 interface PaymentProps {
@@ -189,8 +191,12 @@ const printTable = (
         <div class="info">
           <div><strong>N.B:</strong> le montant n'est pas remboursable en aucun cas </div>
           </div>
+          <div style="display:flex;justify-content:center;align-items:center">
+          ${renderToStaticMarkup(<QRCodeSVG value={`https://staff.udeihaiti.com/receipt?id=${user.id}`} size={54} fgColor="#0f2f68" />)}
+        </div>
           <div class=" info text-end strong" style="justify-content: end;
            align-items: center;"> <strong>Émis par: ${role}</strong></div>
+        
       </body> 
     </html>
   `
@@ -2859,10 +2865,12 @@ export function QrcodeScan() {
   const [scanning, setScanning] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [manualId, setManualId] = useState('')
   const [student, setStudent] = useState<ScannedStudent | null>(null)
   const [payment, setPayment] = useState<ScannedPayment | null>(null)
   const [academicYear, setAcademicYear] = useState('')
   const [versements, setVersements] = useState<ScannedVersement[]>([])
+  const lastScanRef = useRef<string>('')
 
   const resetScan = () => {
     setStudent(null)
@@ -2870,11 +2878,29 @@ export function QrcodeScan() {
     setAcademicYear('')
     setVersements([])
     setError('')
+    setManualId('')
+    lastScanRef.current = ''
     setScanning(true)
   }
 
   const loadStudent = async (rawValue: string) => {
-    const scanresult = Number(rawValue.trim())
+    const trimmedValue = rawValue.trim()
+    let scanresult = Number(trimmedValue)
+
+    if (!Number.isInteger(scanresult) || scanresult <= 0) {
+      try {
+        const parsedUrl = new URL(
+          trimmedValue,
+          typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
+        )
+        const idParam = parsedUrl.searchParams.get('id')
+          ?? parsedUrl.pathname.match(/(?:student|receipt)[^0-9]*(\d+)/i)?.[1]
+        scanresult = Number(idParam)
+      } catch {
+        scanresult = Number.NaN
+      }
+    }
+
     if (!Number.isInteger(scanresult) || scanresult <= 0) {
       setError('Le QR code ne contient pas un identifiant étudiant valide.')
       return
@@ -2951,7 +2977,20 @@ export function QrcodeScan() {
   }
 
   const handleScan = (results: Array<{ rawValue: string }>) => {
-    if (!loading && scanning && results[0]?.rawValue) void loadStudent(results[0].rawValue)
+    const rawValue = results[0]?.rawValue?.trim()
+    if (!loading && scanning && rawValue && rawValue !== lastScanRef.current) {
+      lastScanRef.current = rawValue
+      void loadStudent(rawValue)
+    }
+  }
+
+  const loadFromManualId = () => {
+    const id = manualId.trim()
+    if (!/^\d+$/.test(id) || Number(id) <= 0) {
+      setError('Veuillez saisir un identifiant étudiant valide.')
+      return
+    }
+    void loadStudent(id)
   }
 
   return (
@@ -2965,7 +3004,40 @@ export function QrcodeScan() {
           </div>
           {!scanning && <button type="button" onClick={resetScan} className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-cyan-300">Nouveau scan</button>}
         </div>
-        {scanning && <div className="mx-auto mt-6 max-w-md overflow-hidden rounded-xl border border-slate-700 bg-black"><Scanner onScan={handleScan} onError={() => setError('Autorisez l’accès à la caméra pour scanner un QR code.')} /></div>}
+        {scanning && (
+          <div className="mx-auto mt-6 max-w-md space-y-4">
+            <div className="relative aspect-square overflow-hidden rounded-2xl border-2 border-cyan-400/70 bg-black shadow-lg">
+              <Scanner
+                onScan={handleScan}
+                onError={() => setError('Impossible d’accéder à la caméra. Vérifiez les autorisations ou utilisez la saisie manuelle ci-dessous.')}
+              />
+              <div className="pointer-events-none absolute inset-[12%] rounded-xl border-2 border-white/90 shadow-[0_0_0_999px_rgba(15,23,42,0.35)]" />
+            </div>
+            <div className="flex flex-col gap-2 rounded-xl border border-slate-700 bg-slate-900 p-3 sm:flex-row">
+              <label htmlFor="manual-student-id" className="sr-only">Identifiant étudiant</label>
+              <input
+                id="manual-student-id"
+                type="number"
+                min="1"
+                inputMode="numeric"
+                value={manualId}
+                onChange={(event) => setManualId(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') loadFromManualId()
+                }}
+                placeholder="ID étudiant"
+                className="min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={loadFromManualId}
+                className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+              >
+                Rechercher
+              </button>
+            </div>
+          </div>
+        )}
         {loading && <p className="mt-5 text-center text-sm text-cyan-200">Chargement du dossier...</p>}
         {error && <p className="mt-5 rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
       </div>
