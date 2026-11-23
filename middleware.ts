@@ -42,7 +42,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 1. NOT LOGGED IN → send to login
-  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/result')) {
+  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/result') && !pathname.startsWith('/receipt')) {
     return redirectTo('/login')
   }
 
