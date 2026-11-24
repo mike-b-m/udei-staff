@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 interface ChartData {
   date_time: string | number
   amount: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 interface ChartProgressProps {
@@ -12,16 +12,17 @@ interface ChartProgressProps {
   subtitle?: string
   dataKey?: string
   color?: string
+  currency?: string
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload, currency }: { active?: boolean; payload?: Array<{ payload: ChartData }>; currency: string }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload
     return (
       <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
         <p className="text-gray-700 font-semibold text-sm">{data.date_time}</p>
         <p className="text-indigo-600 font-bold text-sm">
-          HTG {parseFloat(data.amount).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+          {currency} {parseFloat(String(data.amount)).toLocaleString('en-US', { maximumFractionDigits: 2 })}
         </p>
       </div>
     )
@@ -34,7 +35,8 @@ export default function ChartProgress({
   title = 'Progression des Dépenses',
   subtitle = 'Vue mensuelle des dépenses',
   dataKey = 'amount',
-  color = '#6366f1'
+  color = '#6366f1',
+  currency = 'HTG'
 }: ChartProgressProps) {
   // Handle empty data
   if (!data || data.length === 0) {
@@ -52,9 +54,9 @@ export default function ChartProgress({
   }
 
   // Calculate statistics
-  const total = data.reduce((sum, item) => sum + (parseFloat(item[dataKey]) || 0), 0)
+  const total = data.reduce((sum, item) => sum + (Number(item[dataKey]) || 0), 0)
   const average = (total / data.length).toFixed(2)
-  const max = Math.max(...data.map(item => parseFloat(item[dataKey]) || 0)).toFixed(2)
+  const max = Math.max(...data.map(item => Number(item[dataKey]) || 0)).toFixed(2)
 
   return (
     <div className="w-full lg:w-1/2 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300">
@@ -74,19 +76,19 @@ export default function ChartProgress({
         <div className="text-center">
           <p className="text-gray-600 text-xs font-medium uppercase tracking-wider">Total</p>
           <p className="text-lg font-bold text-gray-900 mt-1">
-            {parseFloat(total.toString()).toLocaleString('en-US', { maximumFractionDigits: 0 })} HTG
+            {parseFloat(total.toString()).toLocaleString('en-US', { maximumFractionDigits: 0 })} {currency}
           </p>
         </div>
         <div className="text-center">
           <p className="text-gray-600 text-xs font-medium uppercase tracking-wider">Moyenne</p>
           <p className="text-lg font-bold text-indigo-600 mt-1">
-            {average} HTG
+            {average} {currency}
           </p>
         </div>
         <div className="text-center">
           <p className="text-gray-600 text-xs font-medium uppercase tracking-wider">Max</p>
           <p className="text-lg font-bold text-green-600 mt-1">
-            {max} HTG
+            {max} {currency}
           </p>
         </div>
       </div>
@@ -117,15 +119,15 @@ export default function ChartProgress({
             <YAxis
               stroke="#9ca3af"
               style={{ fontSize: '12px' }}
-              label={{ value: 'HTG', angle: -90, position: 'insideLeft' }}
+              label={{ value: currency, angle: -90, position: 'insideLeft' }}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip currency={currency} />} />
             <Legend wrapperStyle={{ fontSize: '12px', color: '#6b7280' }} />
             <ReferenceLine
               y={parseInt(average)}
               stroke="#f59e0b"
               strokeDasharray="5 5"
-              label={{ value: `Moyenne: ${average} HTG`, position: 'right', fontSize: 11, fill: '#f59e0b' }}
+              label={{ value: `Moyenne: ${average} ${currency}`, position: 'right', fontSize: 11, fill: '#f59e0b' }}
             />
             <Line
               type="monotone"
@@ -138,7 +140,7 @@ export default function ChartProgress({
               fill="url(#colorAmount)"
               isAnimationActive={true}
               animationDuration={800}
-              name="Montant (HTG)"
+              name={`Montant (${currency})`}
             />
           </LineChart>
         </ResponsiveContainer>

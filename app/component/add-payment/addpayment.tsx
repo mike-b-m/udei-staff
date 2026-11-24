@@ -357,12 +357,15 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
   const [toast, setToast] = useState<Toast | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [studentdiscount, setStudentdiscount] = useState<number>(0)
+  const [showDiscountModal, setShowDiscountModal] = useState(false)
   const [priceIncrease, setPriceIncrease] = useState<number>(0)
+  const [showPriceIncreaseModal, setShowPriceIncreaseModal] = useState(false)
   const [showPriceIncreaseConfirm, setShowPriceIncreaseConfirm] = useState(false)
   const [methode, setMethode] = useState<string>("Espèces")
   const numBalance = toNumber(balance)
   const numPrice = toNumber(price)
-  const newPrice = roundCurrency(numPrice + priceIncrease)
+  const numDiscount = toNumber(discount)
+  const newPrice = roundCurrency(numPrice - numDiscount + priceIncrease)
   const remainingBalance = roundCurrency(numBalance - amount)
 
   const validatePayment = useCallback((): boolean => {
@@ -474,7 +477,7 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
       const { error } = await supabase
         .from('student_payment')
         .update({
-          discount: studentdiscount,
+          discount: roundCurrency(numDiscount + studentdiscount),
           balance: roundCurrency(numBalance - studentdiscount)
         })
         .eq('id', id)
@@ -486,6 +489,7 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
         message: `Remise de ${studentdiscount} ${CURRENCY} appliquée avec succès!`
       })
       setStudentdiscount(0)
+      setShowDiscountModal(false)
       setErrors({})
       onSuccess?.()
     } catch (err) {
@@ -500,7 +504,7 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
   }
 
   const handlePriceIncrease = async () => {
-    if (!Number.isFinite(priceIncrease) || priceIncrease <= 0 || !Number.isFinite(newPrice) || newPrice <= numPrice) {
+    if (!Number.isFinite(priceIncrease) || priceIncrease <= 0 || !Number.isFinite(newPrice) || newPrice <= 0) {
       setErrors({ priceIncrease: "Le montant ajouté doit être supérieur à 0" })
       return
     }
@@ -530,6 +534,7 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
       setPriceIncrease(0)
       setStudentdiscount(0)
       setShowPriceIncreaseConfirm(false)
+      setShowPriceIncreaseModal(false)
       setErrors({})
       onSuccess?.()
     } catch (err) {
@@ -623,109 +628,191 @@ export default function Pay({ id,student_id, history, balance,level, discount,re
             <p className="text-xs text-gray-500 mt-1">{CURRENCY}</p>
           </div>
         </div>
-          {/* discount button  */}
-          {!discount ? (<div className="bg-white p-6 outline-none rounded-lg border-2 border-gray-200 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-700 mb-4">Réduction Étudiante</h3>
-            <input
-              type="number"
-              min="0"
-              max={numBalance}
-              step="0.01"
-              value={studentdiscount}
-              onChange={(e) => {
-                setStudentdiscount(Number(e.target.value) || 0)
-                if (errors.discount) setErrors({})
-              }}
-              className="w-full px-4 py-3 rounded-lg border-2 text-lg font-semibold focus:outline-none focus:ring-2 transition-all"
-              placeholder="0.00"
-              disabled={loading}
-            />
-            {errors.discount && <p className="mt-2 text-sm font-medium text-red-600">{errors.discount}</p>}
+          <div className="grid gap-3 sm:grid-cols-2">
             <button
-            type="button"
-            onClick={handlediscount}
-            disabled={loading || discount > 0 || studentdiscount <= 0}
-            className="w-full px-4 py-3 bg-linear-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Effectuer la remise
-          </button>
-          </div>): null}
-
-        <div className="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm">
-          <h3 className="text-lg font-bold text-gray-700 mb-4">Ajouter au prix</h3>
-          <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="price-increase">
-            Montant à ajouter
-          </label>
-          <input
-            id="price-increase"
-            type="number"
-            min="0"
-            step="0.01"
-            value={priceIncrease || ''}
-            onChange={(e) => {
-              setPriceIncrease(Number(e.target.value) || 0)
-              if (errors.priceIncrease) setErrors({})
-            }}
-            className={`w-full px-4 py-3 rounded-lg border-2 text-lg font-semibold focus:outline-none focus:ring-2 transition-all ${
-              errors.priceIncrease ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white'
-            }`}
-            placeholder="0.00"
-            disabled={loading || showPriceIncreaseConfirm}
-          />
-
-          <p className="mt-2 text-sm text-gray-600">
-            Prix actuel : {formatCurrency(numPrice)} {CURRENCY} · Nouveau prix : {formatCurrency(newPrice)} {CURRENCY}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              if (!Number.isFinite(priceIncrease) || priceIncrease <= 0) {
-                setErrors({ priceIncrease: "Le montant ajouté doit être supérieur à 0" })
-                return
-              }
-              setErrors({})
-              setShowPriceIncreaseConfirm(true)
-            }}
-            disabled={loading || showPriceIncreaseConfirm || priceIncrease <= 0 || !Number.isFinite(newPrice) || newPrice <= numPrice}
-            className="mt-4 w-full px-4 py-3 bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Ajouter au prix
-          </button>
-        </div>
-
-        {showPriceIncreaseConfirm && (
-          <div className="space-y-3">
-            <div className="rounded border-l-4 border-amber-400 bg-amber-50 p-4">
-              <p className="text-sm font-semibold text-amber-900">
-                Confirmez l’augmentation du prix de {formatCurrency(priceIncrease)} {CURRENCY} ?
-              </p>
-              <p className="mt-1 text-sm text-amber-800">
-                Le solde sera réinitialisé à {formatCurrency(newPrice)} {CURRENCY}, la remise sera mise à 0, l’historique des paiements sera supprimé et les versements seront réinitialisés.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowPriceIncreaseConfirm(false)}
-                disabled={loading}
-                className="flex-1 rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-all hover:bg-gray-300 disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handlePriceIncrease}
-                disabled={loading}
-                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition-all hover:bg-blue-700 disabled:opacity-50"
-              >
-                {loading ? 'Enregistrement...' : 'Confirmer l’enregistrement'}
-              </button>
-            </div>
+              type="button"
+              onClick={() => {
+                setErrors({})
+                setShowDiscountModal(true)
+              }}
+              disabled={loading}
+              className="min-h-12 rounded-lg border border-green-700 bg-white px-4 py-3 font-semibold text-green-800 transition-colors hover:bg-green-50 disabled:opacity-50"
+            >
+              Ajouter une réduction
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setErrors({})
+                setShowPriceIncreaseModal(true)
+              }}
+              disabled={loading}
+              className="min-h-12 rounded-lg border border-blue-700 bg-white px-4 py-3 font-semibold text-blue-800 transition-colors hover:bg-blue-50 disabled:opacity-50"
+            >
+              Augmenter le prix
+            </button>
           </div>
-        )}
+
+          {showDiscountModal && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !loading) setShowDiscountModal(false)
+              }}
+            >
+              <section role="dialog" aria-modal="true" aria-labelledby="student-discount-title" className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-2xl">
+                <div>
+                  <h3 id="student-discount-title" className="text-lg font-bold text-gray-800">Réduction étudiante</h3>
+                  <p className="mt-1 text-sm text-gray-600">Réduction actuelle : {formatCurrency(numDiscount)} {CURRENCY}</p>
+                </div>
+                <label className="block text-sm font-semibold text-gray-700" htmlFor="student-discount">
+                  Nouvelle réduction
+                  <input
+                    id="student-discount"
+                    type="number"
+                    min="0.01"
+                    max={numBalance}
+                    step="0.01"
+                    value={studentdiscount || ''}
+                    onChange={(event) => {
+                      setStudentdiscount(Number(event.target.value) || 0)
+                      if (errors.discount) setErrors({})
+                    }}
+                    className="mt-2 w-full rounded-lg border-2 border-gray-300 px-4 py-3 text-lg font-semibold focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                    placeholder="0.00"
+                    disabled={loading}
+                  />
+                </label>
+                <p className="text-sm text-gray-600">
+                  Réduction totale : {formatCurrency(roundCurrency(numDiscount + studentdiscount))} {CURRENCY}
+                  {" · "}Nouveau solde : {formatCurrency(roundCurrency(numBalance - studentdiscount))} {CURRENCY}
+                </p>
+                {errors.discount && <p role="alert" className="text-sm font-medium text-red-600">{errors.discount}</p>}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscountModal(false)}
+                    disabled={loading}
+                    className="min-h-11 flex-1 rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-800 hover:bg-gray-300 disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlediscount}
+                    disabled={loading || studentdiscount <= 0}
+                    className="min-h-11 flex-1 rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loading ? 'Enregistrement…' : 'Appliquer'}
+                  </button>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {showPriceIncreaseModal && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !loading) {
+                  setShowPriceIncreaseModal(false)
+                  setShowPriceIncreaseConfirm(false)
+                }
+              }}
+            >
+              <section role="dialog" aria-modal="true" aria-labelledby="price-increase-title" className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-2xl">
+                <div>
+                  <h3 id="price-increase-title" className="text-lg font-bold text-gray-800">
+                    {showPriceIncreaseConfirm ? 'Confirmer l’augmentation' : 'Augmenter le prix'}
+                  </h3>
+                </div>
+                {!showPriceIncreaseConfirm ? (
+                  <>
+                    <label className="block text-sm font-semibold text-gray-700" htmlFor="price-increase">
+                      Montant à ajouter
+                      <input
+                        id="price-increase"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={priceIncrease || ''}
+                        onChange={(event) => {
+                          setPriceIncrease(Number(event.target.value) || 0)
+                          if (errors.priceIncrease) setErrors({})
+                        }}
+                        className={`mt-2 w-full rounded-lg border-2 px-4 py-3 text-lg font-semibold focus:outline-none focus:ring-2 ${
+                          errors.priceIncrease ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-500/30'
+                        }`}
+                        placeholder="0.00"
+                        disabled={loading}
+                      />
+                    </label>
+                    <p className="text-sm text-gray-600">
+                      Prix actuel : {formatCurrency(numPrice)} {CURRENCY} · Réduction actuelle : {formatCurrency(numDiscount)} {CURRENCY}
+                    </p>
+                    <p className="text-sm font-medium text-gray-700">
+                      Nouveau prix et solde : {formatCurrency(newPrice)} {CURRENCY}
+                    </p>
+                    {errors.priceIncrease && <p role="alert" className="text-sm font-medium text-red-600">{errors.priceIncrease}</p>}
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowPriceIncreaseModal(false)}
+                        disabled={loading}
+                        className="min-h-11 flex-1 rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-800 hover:bg-gray-300 disabled:opacity-50"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!Number.isFinite(priceIncrease) || priceIncrease <= 0) {
+                            setErrors({ priceIncrease: "Le montant ajouté doit être supérieur à 0" })
+                            return
+                          }
+                          setErrors({})
+                          setShowPriceIncreaseConfirm(true)
+                        }}
+                        disabled={loading || priceIncrease <= 0}
+                        className="min-h-11 flex-1 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Continuer
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="rounded border-l-4 border-amber-400 bg-amber-50 p-4">
+                      <p className="text-sm font-semibold text-amber-900">
+                        Confirmez l’augmentation de {formatCurrency(priceIncrease)} {CURRENCY} ?
+                      </p>
+                      <p className="mt-1 text-sm text-amber-800">
+                        Le nouveau prix et le solde seront de {formatCurrency(newPrice)} {CURRENCY}. La réduction enregistrée sera intégrée au nouveau prix, l’historique sera réinitialisé et les versements remis à zéro.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowPriceIncreaseConfirm(false)}
+                        disabled={loading}
+                        className="min-h-11 flex-1 rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-800 hover:bg-gray-300 disabled:opacity-50"
+                      >
+                        Retour
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePriceIncrease}
+                        disabled={loading}
+                        className="min-h-11 flex-1 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {loading ? 'Enregistrement…' : 'Confirmer'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </section>
+            </div>
+          )}
 
         {/* Action Buttons */}
         {showConfirm ? (

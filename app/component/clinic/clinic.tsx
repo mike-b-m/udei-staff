@@ -1,9 +1,11 @@
 "use client"
 import { supabase } from "../db"
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QRCodeSVG } from 'qrcode.react';
+import ChartProgress from "../chart components/chartComponent";
+import Time from "../time/time";
 
 type ClinicReportPeriod = "day" | "week" | "month" | "year" | "custom";
 
@@ -98,6 +100,13 @@ const getClinicLogoDataUrl = async (): Promise<string | null> => {
     return null;
   }
 };
+
+const buildClinicExportHeader = (logoSource: string) => `
+  <div class="logo-section"><img src="${logoSource}" alt="UDEI Logo" class="logo"></div>
+  <div class="info">
+    <div>#5 Village Zao, Maïs Gâté 13 (Bloc Gérald Bataille), Port-au-Prince, Haïti</div>
+    <div>+(509) 40 03 4090 / +(509) 48809772</div>
+  </div>`;
 
 type PendingAction =
   | { kind: "create"; name: string; price: number }
@@ -1648,7 +1657,6 @@ export function ClinicRapport(){
 type ClinicServiceSummary = {
   serviceName: string;
   quantity: number;
-  amount: number;
 };
 
 export function NumberCase() {
@@ -1782,9 +1790,8 @@ export function NumberCase() {
     for (const line of paymentLines) {
       const serviceName = line.service_name?.trim() || "Prestation non renseignée";
       const serviceKey = normalizeText(serviceName).replace(/\s+/g, " ");
-      const summary = summaries.get(serviceKey) ?? { serviceName, quantity: 0, amount: 0 };
+      const summary = summaries.get(serviceKey) ?? { serviceName, quantity: 0 };
       summary.quantity += Number(line.quantity) || 0;
-      summary.amount += Number(line.price) || 0;
       summaries.set(serviceKey, summary);
     }
 
@@ -1802,51 +1809,29 @@ export function NumberCase() {
       "'": "&apos;",
     })[character] ?? character);
 
-  const exportStudentExcel = () => {
-    const rows: Array<Array<string | number>> = [
-      ["Étudiant", selectedStudent],
-      ["Nombre de reçus", receipts.length],
-      ["Total net", receipts.reduce((total, receipt) => total + (Number(receipt.total_price) || 0), 0)],
-      [],
-      ["Prestation", "Quantité totale", "Montant total (HT)"],
-      ...serviceSummaries.map((summary) => [summary.serviceName, summary.quantity, summary.amount]),
-      [],
-      ["Détail des reçus"],
-      ["Date", "Reçu", "Année", "Prestation", "Quantité", "Montant (HT)"],
-      ...receipts.flatMap((receipt) => {
-        const receiptLines = paymentLines.filter((line) => line.receipt_id === receipt.id);
-        return receiptLines.length
-          ? receiptLines.map((line) => [
-              new Date(receipt.created_at).toLocaleString("fr-HT"),
-              receipt.id,
-              receipt.year ?? "-",
-              line.service_name || "Prestation non renseignée",
-              Number(line.quantity) || 0,
-              Number(line.price) || 0,
-            ])
-          : [[
-              new Date(receipt.created_at).toLocaleString("fr-HT"),
-              receipt.id,
-              receipt.year ?? "-",
-              "Aucune prestation détaillée",
-              0,
-              0,
-            ]];
-      }),
-    ];
-    const xmlRows = rows.map((row) => `<Row>${row.map((value) => {
-      if (value === undefined || value === null || value === "") return "<Cell/>";
-      const numeric = typeof value === "number";
-      return `<Cell><Data ss:Type="${numeric ? "Number" : "String"}">${escapeExportValue(value)}</Data></Cell>`;
-    }).join("")}</Row>`).join("");
-    const workbook = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Reçus étudiant"><Table>${xmlRows}</Table></Worksheet></Workbook>`;
-    const blob = new Blob([workbook], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const buildSummaryTable = () => `
+    <table>
+      <thead><tr><th>Prestation</th><th class="number">Quantité totale</th></tr></thead>
+      <tbody>${serviceSummaries.map((summary) =>
+        `<tr><td>${escapeExportValue(summary.serviceName)}</td><td class="number">${formatClinicAmount(summary.quantity)}</td></tr>`
+      ).join("") || '<tr><td colspan="2">Aucune prestation.</td></tr>'}</tbody>
+    </table>`;
+
+  const exportStudentExcel = async () => {
+    const logoSource = await getClinicLogoDataUrl() || `${window.location.origin}/image/h.png`;
+    const workbook = `<!doctype html><html><head><meta charset="utf-8"><style>
+      body{font:12px Arial,sans-serif;color:#1f2937}.logo-section{text-align:center;margin-bottom:8px}.logo{width:180px;height:80px;object-fit:contain}
+      .info{text-align:center;border-bottom:1px solid #ddd;padding:8px;margin-bottom:16px}h1{text-align:center;font-size:18px}
+      table{width:100%;border-collapse:collapse}th{background:#e5e7eb;text-align:left}th,td{border:1px solid #d1d5db;padding:8px}.number{text-align:right}
+    </style></head><body>${buildClinicExportHeader(logoSource)}
+    <h1>Total par prestation — ${escapeExportValue(selectedStudent)}</h1>${buildSummaryTable()}</body></html>`;
+    const blob = new Blob(["\\ufeff", workbook], { type: "application/vnd.ms-excel;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = `reçus-clinique-${selectedStudent.replace(/[<>:"/\\|?*]/g, "-")}.xls`;
     link.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const printStudentReport = () => {
@@ -1856,17 +1841,7 @@ export function NumberCase() {
       return;
     }
 
-    const summaryRows = serviceSummaries.map((summary) =>
-      `<tr><td>${escapeExportValue(summary.serviceName)}</td><td class="number">${formatClinicAmount(summary.quantity)}</td><td class="number">${formatClinicAmount(summary.amount)} HT</td></tr>`
-    ).join("");
-    const receiptRows = receipts.flatMap((receipt) => {
-      const receiptLines = paymentLines.filter((line) => line.receipt_id === receipt.id);
-      return receiptLines.length
-        ? receiptLines.map((line) => `<tr><td>${new Date(receipt.created_at).toLocaleString("fr-HT")}</td><td>${receipt.id}</td><td>${escapeExportValue(receipt.year ?? "-")}</td><td>${escapeExportValue(line.service_name || "Prestation non renseignée")}</td><td class="number">${formatClinicAmount(Number(line.quantity) || 0)}</td><td class="number">${formatClinicAmount(Number(line.price) || 0)} HT</td></tr>`)
-        : [`<tr><td>${new Date(receipt.created_at).toLocaleString("fr-HT")}</td><td>${receipt.id}</td><td>${escapeExportValue(receipt.year ?? "-")}</td><td colspan="3">Aucune prestation détaillée</td></tr>`];
-    }).join("");
-
-    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Reçus clinique - ${escapeExportValue(selectedStudent)}</title><style>body{font:12px Arial,sans-serif;color:#1f2937;margin:24px}h1{font-size:20px}h2{font-size:15px;margin-top:24px}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#e5e7eb;text-align:left}th,td{border:1px solid #d1d5db;padding:7px}.number{text-align:right}tr{break-inside:avoid}@page{margin:12mm}</style></head><body><h1>Reçus de clinique - ${escapeExportValue(selectedStudent)}</h1><p>Nombre de reçus : ${receipts.length} | Total net : ${formatClinicAmount(receipts.reduce((total, receipt) => total + (Number(receipt.total_price) || 0), 0))} HT</p><h2>Total par prestation</h2><table><thead><tr><th>Prestation</th><th class="number">Quantité totale</th><th class="number">Montant total</th></tr></thead><tbody>${summaryRows || '<tr><td colspan="3">Aucune prestation.</td></tr>'}</tbody></table><h2>Détail des reçus</h2><table><thead><tr><th>Date</th><th>Reçu</th><th>Année</th><th>Prestation</th><th class="number">Quantité</th><th class="number">Montant</th></tr></thead><tbody>${receiptRows || '<tr><td colspan="6">Aucun reçu.</td></tr>'}</tbody></table><script>window.addEventListener('load',()=>window.print())</script></body></html>`);
+    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Total par prestation - ${escapeExportValue(selectedStudent)}</title><style>body{font:12px Arial,sans-serif;color:#1f2937;margin:24px}.logo-section{text-align:center;margin-bottom:8px}.logo{width:180px;height:80px;object-fit:contain}.info{text-align:center;border-bottom:1px solid #ddd;padding:8px;margin-bottom:16px}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#e5e7eb;text-align:left}th,td{border:1px solid #d1d5db;padding:8px}.number{text-align:right}tr{break-inside:avoid}@page{margin:12mm}</style></head><body>${buildClinicExportHeader(`${window.location.origin}/image/h.png`)}<h1>Total par prestation — ${escapeExportValue(selectedStudent)}</h1>${buildSummaryTable()}<script>window.addEventListener('load',()=>window.print())</script></body></html>`);
     printWindow.document.close();
   };
 
@@ -1919,52 +1894,35 @@ export function NumberCase() {
         <p className="py-6 text-center text-sm text-gray-500">Chargement des reçus…</p>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-md bg-gray-50 p-4">
-              <p className="text-sm text-gray-500">Reçus</p>
-              <p className="mt-1 text-2xl font-semibold text-gray-800">{receipts.length}</p>
-            </div>
-            <div className="rounded-md bg-gray-50 p-4">
-              <p className="text-sm text-gray-500">Prestations enregistrées</p>
-              <p className="mt-1 text-2xl font-semibold text-gray-800">{paymentLines.length}</p>
-            </div>
-            <div className="rounded-md bg-gray-50 p-4">
-              <p className="text-sm text-gray-500">Total payé</p>
-              <p className="mt-1 text-2xl font-semibold text-gray-800">
-                $ {formatClinicAmount(receipts.reduce((total, receipt) => total + (Number(receipt.total_price) || 0), 0))} HT
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2" aria-label="Télécharger ou imprimer le rapport étudiant">
-            <button
-              type="button"
-              onClick={printStudentReport}
-              disabled={isLoadingReceipts || receipts.length === 0}
-              className="min-h-11 rounded-md border border-gray-400 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Imprimer
-            </button>
-            <button
-              type="button"
-              onClick={exportStudentExcel}
-              disabled={isLoadingReceipts || receipts.length === 0}
-              className="min-h-11 rounded-md border border-green-700 px-4 py-2 text-sm font-medium text-green-800 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Télécharger Excel
-            </button>
-          </div>
-
           <div className="space-y-3">
-            <h3 className="text-base font-semibold text-gray-800">Total par prestation</h3>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-base font-semibold text-gray-800">Total par prestation</h3>
+              <div className="flex flex-wrap gap-2" aria-label="Télécharger ou imprimer le total par prestation">
+                <button
+                  type="button"
+                  onClick={printStudentReport}
+                  disabled={isLoadingReceipts || receipts.length === 0}
+                  className="min-h-11 rounded-md border border-gray-400 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Imprimer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void exportStudentExcel()}
+                  disabled={isLoadingReceipts || receipts.length === 0}
+                  className="min-h-11 rounded-md border border-green-700 px-4 py-2 text-sm font-medium text-green-800 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Télécharger Excel
+                </button>
+              </div>
+            </div>
             {serviceSummaries.length ? (
               <div className="overflow-x-auto rounded-md border border-gray-200">
-                <table className="w-full min-w-[32rem] text-left text-sm">
+                <table className="w-full min-w-[24rem] text-left text-sm">
                   <thead className="bg-gray-50 text-gray-600">
                     <tr>
                       <th className="px-3 py-3 font-medium">Prestation</th>
                       <th className="px-3 py-3 text-right font-medium">Quantité totale</th>
-                      <th className="px-3 py-3 text-right font-medium">Montant total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1972,7 +1930,6 @@ export function NumberCase() {
                       <tr key={summary.serviceName} className="border-t border-gray-100 text-gray-700">
                         <td className="px-3 py-3">{summary.serviceName}</td>
                         <td className="px-3 py-3 text-right">{formatClinicAmount(summary.quantity)}</td>
-                        <td className="px-3 py-3 text-right font-medium">$ {formatClinicAmount(summary.amount)} HT</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1982,47 +1939,317 @@ export function NumberCase() {
               <p className="py-4 text-sm text-gray-500">Aucune prestation détaillée pour cet étudiant.</p>
             )}
           </div>
-
-          <div className="space-y-3">
-            <h3 className="text-base font-semibold text-gray-800">Tous les reçus</h3>
-            {receipts.length ? (
-              <div className="space-y-3">
-                {receipts.map((receipt) => {
-                  const lines = paymentLines.filter((line) => line.receipt_id === receipt.id);
-                  return (
-                    <article key={receipt.id} className="space-y-3 rounded-md border border-gray-200 p-4">
-                      <header className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 pb-3">
-                        <div>
-                          <h4 className="font-semibold text-gray-800">Reçu n° {receipt.id}</h4>
-                          <p className="text-sm text-gray-500">{new Date(receipt.created_at).toLocaleString("fr-HT")}</p>
-                        </div>
-                        <span className="text-sm text-gray-600">Année {receipt.year ?? "-"}</span>
-                      </header>
-                      {lines.length ? (
-                        <ul className="space-y-2 text-sm">
-                          {lines.map((line) => (
-                            <li key={line.id} className="flex justify-between gap-3 text-gray-700">
-                              <span>{line.service_name || "Prestation"} · Qté {formatClinicAmount(Number(line.quantity) || 0)}</span>
-                              <span className="shrink-0">$ {formatClinicAmount(Number(line.price) || 0)} HT</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-500">Aucune prestation détaillée pour ce reçu.</p>
-                      )}
-                      <div className="flex justify-between border-t border-gray-100 pt-3 text-sm">
-                        <span className="text-gray-500">Réduction : − $ {formatClinicAmount(Number(receipt.discount) || 0)} HT</span>
-                        <strong className="text-gray-800">Total : $ {formatClinicAmount(Number(receipt.total_price) || 0)} HT</strong>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="py-4 text-sm text-gray-500">Aucun reçu trouvé pour cet étudiant.</p>
-            )}
-          </div>
         </>
+      )}
+    </section>
+  );
+}
+
+type ClinicExpense = {
+  id: number;
+  name: string;
+  date_time: string;
+  amount: number | string;
+  pay_method: string;
+};
+
+const CLINIC_EXPENSE_PAYMENT_METHODS = [
+  { value: "cash", label: "Espèces" },
+  { value: "moncash", label: "MonCash" },
+  { value: "bank_transfer", label: "Virement bancaire" },
+  { value: "natcash", label: "NatCash" },
+];
+
+export function SpendClinic() {
+  const [expenses, setExpenses] = useState<ClinicExpense[]>([]);
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(() => localDateInputValue(new Date()));
+  const [payMethod, setPayMethod] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+  const availableYears = Array.from({ length: 5 }, (_, index) => currentYear - index);
+  const totalAmount = expenses.reduce((total, expense) => total + (Number(expense.amount) || 0), 0);
+  const formattedAmount = (value: number) => formatClinicAmount(value);
+
+  const fetchExpenses = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    const { data, error } = await supabase
+      .from("clinic_spend")
+      .select("id, name, date_time, amount, pay_method")
+      .gte("date_time", `${selectedYear}-01-01T00:00:00`)
+      .lt("date_time", `${Number(selectedYear) + 1}-01-01T00:00:00`)
+      .order("date_time", { ascending: false });
+
+    if (error) {
+      setExpenses([]);
+      setErrorMessage(`Impossible de charger les dépenses de la clinique : ${error.message}`);
+    } else {
+      setExpenses((data ?? []) as ClinicExpense[]);
+    }
+    setIsLoading(false);
+  }, [selectedYear]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetchExpenses();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [fetchExpenses]);
+
+  const saveExpense = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const numericAmount = Number(amount);
+    if (!name.trim() || !Number.isFinite(numericAmount) || numericAmount <= 0 || !date || !payMethod) {
+      setErrorMessage("Saisissez un nom, un montant positif, une date et un mode de paiement.");
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage("");
+    const { error } = await supabase.from("clinic_spend").insert({
+      name: name.trim(),
+      amount: numericAmount,
+      date_time: new Date(`${date}T12:00:00`).toISOString(),
+      pay_method: payMethod,
+    });
+
+    if (error) {
+      setErrorMessage(`Impossible d’enregistrer la dépense : ${error.message}`);
+      setIsSaving(false);
+      return;
+    }
+
+    setName("");
+    setAmount("");
+    setDate(localDateInputValue(new Date()));
+    setPayMethod("");
+    setIsFormOpen(false);
+    setIsSaving(false);
+    await fetchExpenses();
+  };
+
+  const escapeExpenseExportValue = (value: string | number) =>
+    String(value).replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&apos;",
+    })[character] ?? character);
+
+  const exportExpensesToExcel = async () => {
+    const logoSource = await getClinicLogoDataUrl() || `${window.location.origin}/image/h.png`;
+    const rows = expenses.map((expense) => `
+      <tr>
+        <td>${escapeExpenseExportValue(expense.name)}</td>
+        <td class="amount">${Number(expense.amount) || 0}</td>
+        <td>${escapeExpenseExportValue(new Date(expense.date_time).toLocaleString("fr-HT"))}</td>
+        <td>${escapeExpenseExportValue(CLINIC_EXPENSE_PAYMENT_METHODS.find((method) => method.value === expense.pay_method)?.label ?? expense.pay_method)}</td>
+      </tr>`).join("");
+    const workbook = `<!doctype html><html><head><meta charset="utf-8"><style>
+      body{font:12px Arial,sans-serif;color:#1f2937}.logo-section{text-align:center;margin-bottom:8px}
+      .logo{width:180px;height:80px;object-fit:contain}.info{text-align:center;border-bottom:1px solid #ddd;padding:8px;margin-bottom:16px}
+      h1{text-align:center;font-size:18px}table{width:100%;border-collapse:collapse}th{background:#e5e7eb;text-align:left}
+      th,td{border:1px solid #d1d5db;padding:8px}.amount{text-align:right}
+    </style></head><body>${buildClinicExportHeader(logoSource)}
+    <h1>Dépenses de la clinique — ${selectedYear}</h1>
+    <table><thead><tr><th>Nom</th><th class="amount">Montant (HT)</th><th>Date</th><th>Mode de paiement</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4">Aucune dépense.</td></tr>'}</tbody>
+    <tfoot><tr><th colspan="3">Total des dépenses</th><th class="amount">HT ${formattedAmount(totalAmount)}</th></tr></tfoot></table>
+    <p>${expenses.length} dépense${expenses.length === 1 ? "" : "s"} · Année ${selectedYear}</p></body></html>`;
+    const blob = new Blob(["\ufeff", workbook], { type: "application/vnd.ms-excel;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `depenses-clinique-${selectedYear}.xls`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const printExpenses = async () => {
+    const printWindow = window.open("", "_blank", "width=1000,height=800");
+    if (!printWindow) {
+      setErrorMessage("Autorisez les fenêtres contextuelles pour imprimer les dépenses.");
+      return;
+    }
+
+    const logoSource = await getClinicLogoDataUrl() || `${window.location.origin}/image/h.png`;
+    const rows = expenses.map((expense) => `
+      <tr>
+        <td>${escapeExpenseExportValue(expense.name)}</td>
+        <td class="amount">HT ${formattedAmount(Number(expense.amount) || 0)}</td>
+        <td>${escapeExpenseExportValue(new Date(expense.date_time).toLocaleString("fr-HT"))}</td>
+        <td>${escapeExpenseExportValue(CLINIC_EXPENSE_PAYMENT_METHODS.find((method) => method.value === expense.pay_method)?.label ?? expense.pay_method)}</td>
+      </tr>`).join("");
+    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Dépenses de la clinique ${selectedYear}</title><style>
+      body{font:12px Arial,sans-serif;color:#1f2937;margin:24px}.logo-section{text-align:center;margin-bottom:8px}
+      .logo{width:180px;height:80px;object-fit:contain}.info{text-align:center;border-bottom:1px solid #ddd;padding:8px;margin-bottom:16px}
+      h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#e5e7eb;text-align:left}
+      th,td{border:1px solid #d1d5db;padding:8px}.amount{text-align:right}tr{break-inside:avoid}
+      @page{margin:12mm}
+    </style></head><body>${buildClinicExportHeader(logoSource)}
+    <h1>Dépenses de la clinique — ${selectedYear}</h1>
+    <table><thead><tr><th>Nom</th><th class="amount">Montant (HT)</th><th>Date</th><th>Mode de paiement</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4">Aucune dépense.</td></tr>'}</tbody>
+    <tfoot><tr><th colspan="3">Total des dépenses</th><th class="amount">HT ${formattedAmount(totalAmount)}</th></tr></tfoot></table>
+    <p>${expenses.length} dépense${expenses.length === 1 ? "" : "s"} · Année ${selectedYear}</p>
+    <script>window.addEventListener('load',()=>window.print())</script></body></html>`);
+    printWindow.document.close();
+  };
+
+  return (
+    <section className="w-full space-y-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+      <header className="flex flex-col gap-3 border-b border-gray-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800">Dépenses de la clinique</h2>
+          <p className="text-sm text-gray-500">Suivi des dépenses et paiements de la clinique.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsFormOpen(true)}
+          className="min-h-11 rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+        >
+          Ajouter une dépense
+        </button>
+      </header>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
+        <div className="min-w-0 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-5">
+          <ChartProgress
+            data={expenses.map((expense) => ({
+              date_time: expense.date_time,
+              amount: Number(expense.amount) || 0,
+            }))}
+            title="Progression des dépenses de la clinique"
+            subtitle={`Dépenses enregistrées en ${selectedYear}`}
+            currency="HT"
+          />
+        </div>
+        <div className="flex flex-col justify-center rounded-lg bg-emerald-700 p-6 text-white">
+          <p className="text-sm font-medium text-emerald-100">Total des dépenses</p>
+          <p className="mt-2 text-3xl font-bold">HT {formattedAmount(totalAmount)}</p>
+          <p className="mt-2 text-sm text-emerald-100">Année {selectedYear}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <label className="space-y-1 text-sm font-medium text-gray-700">
+          Filtrer par année
+          <select
+            value={selectedYear}
+            onChange={(event) => setSelectedYear(event.target.value)}
+            className="block min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2 sm:w-48"
+          >
+            {availableYears.map((year) => <option key={year} value={String(year)}>{year}</option>)}
+          </select>
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void printExpenses()}
+            disabled={isLoading}
+            className="min-h-11 rounded-md border border-gray-400 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Imprimer
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportExpensesToExcel()}
+            disabled={isLoading || expenses.length === 0}
+            className="min-h-11 rounded-md border border-green-700 px-4 py-2 text-sm font-medium text-green-800 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Télécharger Excel
+          </button>
+          {errorMessage && <p role="alert" className="w-full text-sm text-red-700">{errorMessage}</p>}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <p className="py-8 text-center text-sm text-gray-500">Chargement des dépenses…</p>
+      ) : expenses.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500">
+          Aucune dépense de clinique trouvée pour {selectedYear}.
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="w-full min-w-[36rem] text-left text-sm">
+            <thead className="bg-gray-50 text-gray-600">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Nom</th>
+                <th className="px-4 py-3 text-right font-semibold">Montant</th>
+                <th className="px-4 py-3 font-semibold">Date</th>
+                <th className="px-4 py-3 font-semibold">Mode de paiement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.map((expense, index) => (
+                <tr key={expense.id} className={`${index % 2 ? "bg-white" : "bg-emerald-50/40"} border-t border-gray-100`}>
+                  <td className="px-4 py-3 font-medium text-gray-800">{expense.name}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-emerald-700">HT {formattedAmount(Number(expense.amount) || 0)}</td>
+                  <td className="px-4 py-3 text-gray-600"><Time open={expense.date_time} /></td>
+                  <td className="px-4 py-3 text-gray-700">{CLINIC_EXPENSE_PAYMENT_METHODS.find((method) => method.value === expense.pay_method)?.label ?? expense.pay_method}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="border-t-2 border-gray-200 bg-gray-50">
+              <tr>
+                <td colSpan={3} className="px-4 py-3 font-semibold text-gray-700">{expenses.length} dépense{expenses.length === 1 ? "" : "s"}</td>
+                <td className="px-4 py-3 text-right font-bold text-emerald-800">Total : HT {formattedAmount(totalAmount)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {isFormOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSaving) setIsFormOpen(false);
+          }}
+        >
+          <form onSubmit={saveExpense} role="dialog" aria-modal="true" aria-labelledby="clinic-spend-dialog-title" className="w-full max-w-lg space-y-4 rounded-xl bg-white p-5 shadow-2xl sm:p-6">
+            <header>
+              <h3 id="clinic-spend-dialog-title" className="text-lg font-semibold text-gray-900">Ajouter une dépense de clinique</h3>
+              <p className="mt-1 text-sm text-gray-500">Tous les montants sont en HT.</p>
+            </header>
+            <label className="block space-y-1 text-sm font-medium text-gray-700">
+              Nom de la dépense
+              <input required value={name} onChange={(event) => setName(event.target.value)} className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2" placeholder="Nom" />
+            </label>
+            <label className="block space-y-1 text-sm font-medium text-gray-700">
+              Montant (HT)
+              <input required type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2" placeholder="0.00" />
+            </label>
+            <label className="block space-y-1 text-sm font-medium text-gray-700">
+              Date
+              <input required type="date" value={date} onChange={(event) => setDate(event.target.value)} className="min-h-11 w-full rounded-md border border-gray-300 px-3 py-2" />
+            </label>
+            <label className="block space-y-1 text-sm font-medium text-gray-700">
+              Mode de paiement
+              <select required value={payMethod} onChange={(event) => setPayMethod(event.target.value)} className="min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 py-2">
+                <option value="">Sélectionner un mode</option>
+                {CLINIC_EXPENSE_PAYMENT_METHODS.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
+              </select>
+            </label>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setIsFormOpen(false)} disabled={isSaving} className="min-h-11 flex-1 rounded-md border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                Annuler
+              </button>
+              <button type="submit" disabled={isSaving} className="min-h-11 flex-1 rounded-md bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">
+                {isSaving ? "Enregistrement…" : "Enregistrer"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </section>
   );
