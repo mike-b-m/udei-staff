@@ -56,7 +56,7 @@ export default function Teacher() {
 
                 // Get courses
                 const { data: pro, error: theError } = await supabase
-                    .from('course_program')
+                    .from('course_program_catalog')
                     .select('*')
                     .eq('faculty', facultyFilter || search)
                     .eq('session', sessionFilter || search4)

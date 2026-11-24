@@ -138,7 +138,7 @@ export default function CreateExamPage() {
   >([])
 
   useEffect(() => {
-    supabase.from('course_program').select('courses, faculty').then(({ data }) => {
+    supabase.from('course_program_catalog').select('courses, faculty').then(({ data }) => {
       if (data) setCourses(data)
     })
   }, [])

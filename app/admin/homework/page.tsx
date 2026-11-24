@@ -67,7 +67,7 @@ export default function HomeworkPage() {
 
     const loadCourses = async () => {
         const { data } = await supabase
-            .from('course_program')
+            .from('course_program_catalog')
             .select('courses,faculty,year')
             .eq('faculty', form.faculty)
             .eq('year', parseInt(form.year_study))

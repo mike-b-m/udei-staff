@@ -4,6 +4,7 @@ import { supabase } from '@/app/component/db'
 
 interface CourseProgram {
   id: number
+  course_program_id: number
   courses: string
   credit: number
   session_subjet: number
@@ -20,11 +21,12 @@ interface TableProps {
   faculty: string | null
   year: number
   session: number
-  onUpdateData?: (updatedData: CourseProgram[]) => void
+  onUpdateData?: () => void
 }
 
 interface EditFormRow {
   id: number
+  course_program_id: number
   courses: string
   credit: string
   session_subjet: string
@@ -257,6 +259,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
       if (rowToEdit) {
         setEditingRows([{
           id: rowToEdit.id,
+          course_program_id: rowToEdit.course_program_id,
           courses: rowToEdit.courses,
           credit: rowToEdit.credit.toString(),
           session_subjet: rowToEdit.session_subjet.toString(),
@@ -272,6 +275,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
       // Edit all rows
       setEditingRows(filteredData.map(item => ({
         id: item.id,
+        course_program_id: item.course_program_id,
         courses: item.courses,
         credit: item.credit.toString(),
         session_subjet: item.session_subjet.toString(),
@@ -322,21 +326,28 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
 
     try {
       for (const row of editingRows) {
-        const { error } = await supabase
+        const { error: courseError } = await supabase
           .from('course_program')
           .update({
             courses: row.courses,
             credit: parseFloat(row.credit),
             session_subjet: parseFloat(row.session_subjet),
             hour_session: parseFloat(row.hour_session),
-            total_hour: parseFloat(row.total_hour),
+            total_hour: parseFloat(row.total_hour)
+          })
+          .eq('id', row.course_program_id)
+
+        if (courseError) throw courseError
+
+        const { error: assignmentError } = await supabase
+          .from('course_program_assignment')
+          .update({
             pass_grade: parseFloat(row.pass_grade),
             year: parseFloat(row.year),
-            session: parseFloat(row.session)
+            session: parseFloat(row.session),
           })
           .eq('id', row.id)
-
-        if (error) throw error
+        if (assignmentError) throw assignmentError
       }
 
       setSuccessMessage(`${editingRows.length} ligne(s) mise(s) à jour avec succès!`)
@@ -346,7 +357,7 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
 
       // Refresh data by calling onUpdateData callback
       if (onUpdateData) {
-        onUpdateData(int)
+        onUpdateData()
       }
 
       setTimeout(() => setSuccess(false), 5000)
@@ -371,11 +382,27 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
   const handleDeleteRow = async (id: number) => {
     setDeleting(true)
     try {
-      const { error } = await supabase.from('course_program').delete().eq('id', id)
+      const rowToDelete = int.find(item => item.id === id)
+      const { error } = await supabase.from('course_program_assignment').delete().eq('id', id)
       if (error) throw error
+      if (rowToDelete) {
+        const { data: remainingAssignments, error: remainingError } = await supabase
+          .from('course_program_assignment')
+          .select('id')
+          .eq('course_program_id', rowToDelete.course_program_id)
+          .limit(1)
+        if (remainingError) throw remainingError
+        if (!remainingAssignments?.length) {
+          const { error: courseError } = await supabase
+            .from('course_program')
+            .delete()
+            .eq('id', rowToDelete.course_program_id)
+          if (courseError) throw courseError
+        }
+      }
       setSuccessMessage('Cours supprimé avec succès!')
       setSuccess(true)
-      if (onUpdateData) onUpdateData(int.filter(item => item.id !== id))
+      if (onUpdateData) onUpdateData()
       setTimeout(() => setSuccess(false), 5000)
     } catch (error) {
       setErrors({ submit: error instanceof Error ? error.message : 'Erreur lors de la suppression' })
@@ -389,11 +416,25 @@ export default function TheTable({ int, year, faculty, session, onUpdateData }: 
     setDeleting(true)
     try {
       const ids = filteredData.map(item => item.id)
-      const { error } = await supabase.from('course_program').delete().in('id', ids)
+      const courseIds = [...new Set(filteredData.map(item => item.course_program_id))]
+      const { error } = await supabase.from('course_program_assignment').delete().in('id', ids)
       if (error) throw error
+
+      for (const courseId of courseIds) {
+        const { data: remainingAssignments, error: remainingError } = await supabase
+          .from('course_program_assignment')
+          .select('id')
+          .eq('course_program_id', courseId)
+          .limit(1)
+        if (remainingError) throw remainingError
+        if (!remainingAssignments?.length) {
+          const { error: courseError } = await supabase.from('course_program').delete().eq('id', courseId)
+          if (courseError) throw courseError
+        }
+      }
       setSuccessMessage(`${ids.length} cours supprimé(s) avec succès!`)
       setSuccess(true)
-      if (onUpdateData) onUpdateData(int.filter(item => !ids.includes(item.id)))
+      if (onUpdateData) onUpdateData()
       setTimeout(() => setSuccess(false), 5000)
     } catch (error) {
       setErrors({ submit: error instanceof Error ? error.message : 'Erreur lors de la suppression' })

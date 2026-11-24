@@ -76,7 +76,7 @@ export default function ManageProfPage() {
     }
 
     const loadCourses = async (faculty: string, year: number, session: number) => {
-        const { data } = await supabase.from('course_program').select('courses,pass_grade').eq('faculty', faculty).eq('year', year).eq('session', session)
+        const { data } = await supabase.from('course_program_catalog').select('courses,pass_grade').eq('faculty', faculty).eq('year', year).eq('session', session)
         setCourses(data || [])
     }
 

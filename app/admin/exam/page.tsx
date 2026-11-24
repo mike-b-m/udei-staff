@@ -25,10 +25,13 @@ interface ExamRecord {
 
 interface Course {
   id: number
-  course_name: string
+  course_program_id: number
+  courses: string
   faculty: string
-  credits: number
-  semester: number
+  credit: number
+  year: number
+  session: number
+  pass_grade: number
 }
 
 function Fullname({ id }: { id: number | undefined }) {
@@ -481,7 +484,7 @@ export default function Exam() {
     setExams(mergedExams)
 
     const { data: courseData } = await supabase
-      .from('course_program')
+      .from('course_program_catalog')
       .select('*')
       .order('faculty')
     if (courseData) setCourses(courseData as unknown as Course[])

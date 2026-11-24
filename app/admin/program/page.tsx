@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/app/component/db'
 import Input from '@/app/component/input/input-comp'
 import TheTable from '@/app/component/table/table'
@@ -9,6 +9,7 @@ import { useFaculties } from '@/app/component/student-infos/useFaculties'
 
 interface Program {
   id: number
+  course_program_id: number
   created_at: string
   courses: string
   credit: number
@@ -19,6 +20,61 @@ interface Program {
   pass_grade: number
   year: number
   session: number
+}
+
+interface CourseCatalogRow {
+  id: number
+  course_program_id: number
+  courses: string
+  credit: number | null
+  faculty: string | null
+  year: number | null
+  session: number | null
+  pass_grade: number | null
+}
+
+interface CourseMasterRow {
+  id: number
+  courses: string
+  credit: number | null
+  session_subjet: number | null
+  hour_session: number | null
+  total_hour: number | null
+}
+
+interface SavedCourse {
+  id: number
+  name: string
+  credit: number | null
+  sessionSubject: number | null
+  hoursPerSession: number | null
+  totalHours: number | null
+  associations: {
+    id: number
+    faculty: string
+    year: number | null
+    session: number | null
+    passGrade: number | null
+  }[]
+}
+
+interface CourseDetailsForm {
+  id: number | null
+  courses: string
+  credit: string
+  session_subjet: string
+  hour_session: string
+  total_hour: string
+}
+
+interface AssociationForm {
+  courseId: number
+  courseName: string
+  assignmentId: number | null
+  faculty: string
+  year: string
+  session: string
+  passGrade: string
 }
 
 interface FormRow {
@@ -203,7 +259,17 @@ function UplaodimportantDates() {
 function Program() {
   const { facultyNames } = useFaculties()
   const [programs, setPrograms] = useState<Program[]>([])
-  const [selectedFaculty, setSelectedFaculty] = useState('')
+  const [courseMasters, setCourseMasters] = useState<CourseMasterRow[]>([])
+  const [catalogRows, setCatalogRows] = useState<CourseCatalogRow[]>([])
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState('')
+  const [catalogSearch, setCatalogSearch] = useState('')
+  const [associationForm, setAssociationForm] = useState<AssociationForm | null>(null)
+  const [associationSaving, setAssociationSaving] = useState(false)
+  const [associationError, setAssociationError] = useState('')
+  const [courseDetailsForm, setCourseDetailsForm] = useState<CourseDetailsForm | null>(null)
+  const [courseDetailsSaving, setCourseDetailsSaving] = useState(false)
+  const [courseDetailsError, setCourseDetailsError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -219,6 +285,214 @@ function Program() {
   const searchParams = useSearchParams()
   const search = searchParams.get('faculty')
 
+  const savedCourses = useMemo(() => {
+    const grouped = new Map<number, SavedCourse>()
+    for (const course of courseMasters) {
+      grouped.set(course.id, {
+        id: course.id,
+        name: course.courses,
+        credit: course.credit,
+        sessionSubject: course.session_subjet,
+        hoursPerSession: course.hour_session,
+        totalHours: course.total_hour,
+        associations: [],
+      })
+    }
+
+    for (const row of catalogRows) {
+      let course = grouped.get(row.course_program_id)
+      if (!course) {
+        course = {
+          id: row.course_program_id,
+          name: row.courses,
+          credit: row.credit,
+          sessionSubject: null,
+          hoursPerSession: null,
+          totalHours: null,
+          associations: [],
+        }
+        grouped.set(row.course_program_id, course)
+      }
+
+      if (row.faculty && !course.associations.some(
+        association => association.id === row.id
+      )) {
+        course.associations.push({
+          id: row.id,
+          faculty: row.faculty,
+          year: row.year,
+          session: row.session,
+          passGrade: row.pass_grade,
+        })
+      }
+    }
+
+    return [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name))
+  }, [catalogRows, courseMasters])
+
+  const filteredSavedCourses = useMemo(() => {
+    const query = catalogSearch.trim().toLocaleLowerCase()
+    if (!query) return savedCourses
+    return savedCourses.filter(course =>
+      course.name.toLocaleLowerCase().includes(query) ||
+      course.associations.some(association => association.faculty.toLocaleLowerCase().includes(query))
+    )
+  }, [catalogSearch, savedCourses])
+
+  const refreshCourseCatalog = async () => {
+    setCatalogLoading(true)
+    const [coursesResult, assignmentsResult] = await Promise.all([
+      supabase
+        .from('course_program')
+        .select('id, courses, credit, session_subjet, hour_session, total_hour')
+        .order('courses'),
+      supabase
+        .from('course_program_catalog')
+        .select('id, course_program_id, courses, credit, faculty, year, session, pass_grade')
+        .order('courses'),
+    ])
+
+    if (coursesResult.error || assignmentsResult.error) {
+      setCatalogError(coursesResult.error?.message ?? assignmentsResult.error?.message ?? 'Erreur inconnue')
+    } else {
+      setCourseMasters(coursesResult.data ?? [])
+      setCatalogRows(assignmentsResult.data ?? [])
+      setCatalogError('')
+    }
+    setCatalogLoading(false)
+  }
+
+  useEffect(() => {
+    void refreshCourseCatalog()
+  }, [])
+
+  const openNewCourseForm = () => {
+    setCourseDetailsError('')
+    setCourseDetailsForm({
+      id: null,
+      courses: '',
+      credit: '',
+      session_subjet: '',
+      hour_session: '',
+      total_hour: '',
+    })
+  }
+
+  const openEditCourseForm = (course: SavedCourse) => {
+    setCourseDetailsError('')
+    setCourseDetailsForm({
+      id: course.id,
+      courses: course.name,
+      credit: course.credit?.toString() ?? '',
+      session_subjet: course.sessionSubject?.toString() ?? '',
+      hour_session: course.hoursPerSession?.toString() ?? '',
+      total_hour: course.totalHours?.toString() ?? '',
+    })
+  }
+
+  const saveCourseDetails = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!courseDetailsForm) return
+    const courseName = courseDetailsForm.courses.trim()
+    const numericValues = [
+      courseDetailsForm.credit,
+      courseDetailsForm.session_subjet,
+      courseDetailsForm.hour_session,
+      courseDetailsForm.total_hour,
+    ].map(Number)
+
+    if (!courseName || numericValues.some(value => !Number.isFinite(value) || value <= 0)) {
+      setCourseDetailsError('Indiquez le nom du cours et des valeurs numériques supérieures à zéro pour chaque champ.')
+      return
+    }
+
+    setCourseDetailsSaving(true)
+    setCourseDetailsError('')
+    const courseValues = {
+      courses: courseName,
+      credit: numericValues[0],
+      session_subjet: numericValues[1],
+      hour_session: numericValues[2],
+      total_hour: numericValues[3],
+    }
+    const result = courseDetailsForm.id
+      ? await supabase.from('course_program').update(courseValues).eq('id', courseDetailsForm.id)
+      : await supabase.from('course_program').insert(courseValues)
+
+    if (result.error) {
+      setCourseDetailsError(result.error.message)
+      setCourseDetailsSaving(false)
+      return
+    }
+
+    setCourseDetailsForm(null)
+    setCourseDetailsSaving(false)
+    await refreshCourseCatalog()
+    if (search) await fetchPrograms(search)
+  }
+
+  const openAddAssociation = (course: SavedCourse) => {
+    setAssociationError('')
+    setAssociationForm({
+      courseId: course.id,
+      courseName: course.name,
+      assignmentId: null,
+      faculty: '',
+      year: '1',
+      session: '1',
+      passGrade: '50',
+    })
+  }
+
+  const openEditAssociation = (course: SavedCourse, association: SavedCourse['associations'][number]) => {
+    setAssociationError('')
+    setAssociationForm({
+      courseId: course.id,
+      courseName: course.name,
+      assignmentId: association.id,
+      faculty: association.faculty,
+      year: association.year?.toString() ?? '',
+      session: association.session?.toString() ?? '',
+      passGrade: association.passGrade?.toString() ?? '',
+    })
+  }
+
+  const saveAssociation = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!associationForm) return
+    if (!associationForm.faculty || !associationForm.year || !associationForm.session || associationForm.passGrade === '') {
+      setAssociationError('Choisissez une faculté, une année, une session et une note de passage.')
+      return
+    }
+
+    setAssociationSaving(true)
+    setAssociationError('')
+    const values = {
+      faculty: associationForm.faculty,
+      year: Number(associationForm.year),
+      session: Number(associationForm.session),
+      pass_grade: Number(associationForm.passGrade),
+    }
+
+    const result = associationForm.assignmentId
+      ? await supabase.from('course_program_assignment').update(values).eq('id', associationForm.assignmentId)
+      : await supabase.from('course_program_assignment').insert({
+          course_program_id: associationForm.courseId,
+          ...values,
+        })
+
+    if (result.error) {
+      setAssociationError(result.error.message)
+      setAssociationSaving(false)
+      return
+    }
+
+    setAssociationForm(null)
+    setAssociationSaving(false)
+    await refreshCourseCatalog()
+    if (search) await fetchPrograms(search)
+  }
+
   // Fetch programs on mount and when search changes
   useEffect(() => {
     if (search && search.trim()) {
@@ -229,7 +503,7 @@ function Program() {
   const fetchPrograms = async (facultyName: string) => {
     try {
       const { data, error } = await supabase
-        .from('course_program')
+        .from('course_program_catalog')
         .select('*')
         .eq('faculty', facultyName)
 
@@ -292,26 +566,56 @@ function Program() {
     setSuccess(false)
 
     try {
-      const dataToInsert = formRows.map(row => ({
-        courses: row.courses,
-        credit: parseFloat(row.credit),
-        session_subjet: parseFloat(row.session_subjet),
-        hour_session: parseFloat(row.hour_session),
-        total_hour: parseFloat(row.total_hour),
-        faculty,
-        year: parseInt(year),
-        session: parseInt(session),
-        pass_grade: parseInt(row.pass_grade)
-      }))
-
-      const { error } = await supabase
+      const { data: existingCourses, error: existingCoursesError } = await supabase
         .from('course_program')
-        .insert(dataToInsert)
-        .select()
+        .select('id, courses')
+      if (existingCoursesError) throw existingCoursesError
 
-      if (error) throw error
+      for (const row of formRows) {
+        const courseName = row.courses.trim()
+        const normalizedCourseName = courseName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim()
+        const existingCourse = (existingCourses ?? []).find((course) =>
+          course.courses?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim() === normalizedCourseName
+        )
+        const courseValues = {
+          courses: courseName,
+          credit: parseFloat(row.credit),
+          session_subjet: parseFloat(row.session_subjet),
+          hour_session: parseFloat(row.hour_session),
+          total_hour: parseFloat(row.total_hour),
+        }
 
-      setSuccessMessage(`${formRows.length} programme(s) ajouté(s) avec succès!`)
+        let courseId = existingCourse?.id
+        if (courseId) {
+          const { error: updateCourseError } = await supabase
+            .from('course_program')
+            .update(courseValues)
+            .eq('id', courseId)
+          if (updateCourseError) throw updateCourseError
+        } else {
+          const { data: insertedCourse, error: insertCourseError } = await supabase
+            .from('course_program')
+            .insert(courseValues)
+            .select('id')
+            .single()
+          if (insertCourseError) throw insertCourseError
+          courseId = insertedCourse.id
+          existingCourses?.push({ id: courseId, courses: courseName })
+        }
+
+        const { error: assignmentError } = await supabase
+          .from('course_program_assignment')
+          .upsert({
+            course_program_id: courseId,
+            faculty,
+            year: parseInt(year),
+            session: parseInt(session),
+            pass_grade: parseFloat(row.pass_grade),
+          }, { onConflict: 'course_program_id,year,session,faculty' })
+        if (assignmentError) throw assignmentError
+      }
+
+      setSuccessMessage(`${formRows.length} cours ajouté(s) ou assigné(s) avec succès!`)
       setSuccess(true)
       setFormRows([{ courses: '', credit: '', session_subjet: '', hour_session: '', total_hour: '', pass_grade: '' }])
       setFaculty('')
@@ -323,6 +627,7 @@ function Program() {
       if (search) {
         fetchPrograms(search)
       }
+      void refreshCourseCatalog()
 
       setTimeout(() => setSuccess(false), 5000)
     } catch (error) {
@@ -655,6 +960,333 @@ function Program() {
         </button>
       )}
       {/* add important dates */}
+      <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-lg sm:p-6">
+        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-gray-900">Cours enregistrés et facultés associées</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              {savedCourses.length} cours enregistrés dans {catalogRows.length} affectation(s).
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <label className="w-full sm:w-72">
+              <span className="sr-only">Rechercher un cours ou une faculté</span>
+              <input
+                type="search"
+                value={catalogSearch}
+                onChange={event => setCatalogSearch(event.target.value)}
+                placeholder="Rechercher un cours ou une faculté..."
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={openNewCourseForm}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+            >
+              <span aria-hidden="true">+</span> Ajouter un cours
+            </button>
+          </div>
+        </div>
+
+        {catalogLoading ? (
+          <p className="py-8 text-center text-sm text-gray-500">Chargement des cours enregistrés...</p>
+        ) : catalogError ? (
+          <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
+            Impossible de charger les cours enregistrés : {catalogError}
+          </p>
+        ) : filteredSavedCourses.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-500">
+            {catalogSearch ? 'Aucun cours ou faculté ne correspond à la recherche.' : 'Aucun cours enregistré pour le moment.'}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
+                  <th className="px-3 py-3 font-semibold">Cours</th>
+                  <th className="px-3 py-3 font-semibold">Crédit</th>
+                  <th className="px-3 py-3 font-semibold">Séances/Mois</th>
+                  <th className="px-3 py-3 font-semibold">Heures/Séance</th>
+                  <th className="px-3 py-3 font-semibold">Total heures</th>
+                  <th className="px-3 py-3 font-semibold">Facultés associées</th>
+                  <th className="px-3 py-3 text-right font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSavedCourses.map(course => (
+                  <tr key={course.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                    <td className="px-3 py-4 font-semibold text-gray-900">{course.name}</td>
+                    <td className="px-3 py-4 text-gray-600">{course.credit ?? '—'}</td>
+                    <td className="px-3 py-4 text-gray-600">{course.sessionSubject ?? '—'}</td>
+                    <td className="px-3 py-4 text-gray-600">{course.hoursPerSession ?? '—'}</td>
+                    <td className="px-3 py-4 text-gray-600">{course.totalHours ?? '—'}</td>
+                    <td className="px-3 py-4">
+                      {course.associations.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {course.associations.map(association => (
+                            <span
+                              key={`${association.faculty}-${association.year}-${association.session}`}
+                              className="inline-flex flex-wrap items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700"
+                            >
+                              {association.faculty}
+                              {association.year != null && ` · Année ${association.year}`}
+                              {association.session != null && ` · Session ${association.session}`}
+                              <button
+                                type="button"
+                                onClick={() => openEditAssociation(course, association)}
+                                className="rounded-full px-1.5 py-0.5 text-indigo-800 underline decoration-indigo-300 underline-offset-2 hover:bg-indigo-100"
+                                aria-label={`Modifier l’association ${association.faculty} pour ${course.name}`}
+                              >
+                                Modifier
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">Aucune faculté associée</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-4 text-right">
+                      <div className="flex flex-col items-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditCourseForm(course)}
+                          className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                        >
+                          Modifier le cours
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openAddAssociation(course)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+                        >
+                          <span aria-hidden="true">+</span> Ajouter une faculté
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {associationForm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+          role="presentation"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget && !associationSaving) setAssociationForm(null)
+          }}
+        >
+          <form
+            onSubmit={saveAssociation}
+            className="w-full max-w-lg space-y-5 rounded-2xl bg-white p-6 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="association-dialog-title"
+          >
+            <div>
+              <h2 id="association-dialog-title" className="text-xl font-bold text-gray-900">
+                {associationForm.assignmentId ? 'Modifier l’association' : 'Ajouter une faculté'}
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">{associationForm.courseName}</p>
+            </div>
+
+            {associationError && (
+              <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                {associationError}
+              </p>
+            )}
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-gray-700">Faculté</span>
+              <select
+                required
+                value={associationForm.faculty}
+                onChange={event => setAssociationForm({ ...associationForm, faculty: event.target.value })}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              >
+                <option value="">Sélectionner une faculté</option>
+                {facultyNames.map(name => <option key={name} value={name}>{name}</option>)}
+              </select>
+            </label>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">Année</span>
+                <select
+                  required
+                  value={associationForm.year}
+                  onChange={event => setAssociationForm({ ...associationForm, year: event.target.value })}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  {YEARS.map(value => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">Session</span>
+                <select
+                  required
+                  value={associationForm.session}
+                  onChange={event => setAssociationForm({ ...associationForm, session: event.target.value })}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  {SESSIONS.map(value => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">Note de passage</span>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={associationForm.passGrade}
+                  onChange={event => setAssociationForm({ ...associationForm, passGrade: event.target.value })}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={associationSaving}
+                onClick={() => setAssociationForm(null)}
+                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={associationSaving}
+                className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {associationSaving ? 'Enregistrement...' : associationForm.assignmentId ? 'Enregistrer' : 'Ajouter'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {courseDetailsForm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+          role="presentation"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget && !courseDetailsSaving) setCourseDetailsForm(null)
+          }}
+        >
+          <form
+            onSubmit={saveCourseDetails}
+            className="w-full max-w-2xl space-y-5 rounded-2xl bg-white p-6 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="course-details-dialog-title"
+          >
+            <div>
+              <h2 id="course-details-dialog-title" className="text-xl font-bold text-gray-900">
+                {courseDetailsForm.id ? 'Modifier le cours' : 'Ajouter un cours'}
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Les informations du cours sont indépendantes de ses facultés associées.
+              </p>
+            </div>
+
+            {courseDetailsError && (
+              <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                {courseDetailsError}
+              </p>
+            )}
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-gray-700">Cours</span>
+              <input
+                required
+                type="text"
+                value={courseDetailsForm.courses}
+                onChange={event => setCourseDetailsForm({ ...courseDetailsForm, courses: event.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                placeholder="Nom du cours"
+              />
+            </label>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">Crédit</span>
+                <input
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={courseDetailsForm.credit}
+                  onChange={event => setCourseDetailsForm({ ...courseDetailsForm, credit: event.target.value })}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">Séances/Mois</span>
+                <input
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={courseDetailsForm.session_subjet}
+                  onChange={event => setCourseDetailsForm({ ...courseDetailsForm, session_subjet: event.target.value })}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">Heures/Séance</span>
+                <input
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={courseDetailsForm.hour_session}
+                  onChange={event => setCourseDetailsForm({ ...courseDetailsForm, hour_session: event.target.value })}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">Total heures</span>
+                <input
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={courseDetailsForm.total_hour}
+                  onChange={event => setCourseDetailsForm({ ...courseDetailsForm, total_hour: event.target.value })}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={courseDetailsSaving}
+                onClick={() => setCourseDetailsForm(null)}
+                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={courseDetailsSaving}
+                className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {courseDetailsSaving ? 'Enregistrement...' : courseDetailsForm.id ? 'Enregistrer' : 'Ajouter le cours'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <UplaodimportantDates />
 
       {/* Programs Display */}
@@ -707,7 +1339,7 @@ function Program() {
                                   if (newValue !== program.pass_grade) {
                                     try {
                                       const { error } = await supabase
-                                        .from('course_program')
+                                        .from('course_program_assignment')
                                         .update({ pass_grade: newValue })
                                         .eq('id', program.id)
                                       if (error) throw error
@@ -739,7 +1371,16 @@ function Program() {
           {YEARS.map(y =>
             SESSIONS.map(s => (
               <div key={`${y}-${s}`}>
-                <TheTable int={programs} session={s} year={y} faculty={search} />
+                <TheTable
+                  int={programs}
+                  session={s}
+                  year={y}
+                  faculty={search}
+                  onUpdateData={() => {
+                    if (search) void fetchPrograms(search)
+                    void refreshCourseCatalog()
+                  }}
+                />
               </div>
             ))
           )}

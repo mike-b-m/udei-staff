@@ -79,7 +79,9 @@
 | `student_payment` | id, student_id, amount, payment method, date fields |
 | `faculty_price` | id, faculty, year, amount |
 | `exam` | id, student_id, matière, intra, final, reprise, session, year, faculty |
-| `course_program` | id, faculty, year, session, course name, credits, hours |
+| `course_program` | id, created_at, courses, credit, session_subjet, hour_session, total_hour |
+| `course_program_assignment` | id, created_at, course_program_id, year, session, faculty, pass_grade |
+| `course_program_catalog` | Read-only view joining courses with each faculty/year/session assignment |
 | `profiles` | id (UUID → auth.users), full_name, role |
 | `spent_in_company` | id, date_time, amount, name, pay_method, describe_motive |
 
@@ -473,6 +475,14 @@ CREATE POLICY "course_program_select_auth"
 -- Only admin/administration can modify programs
 CREATE POLICY "course_program_modify_admin"
   ON course_program FOR ALL
+  USING (public.get_user_role() IN ('admin', 'administration'));
+
+CREATE POLICY "course_program_assignment_select_auth"
+  ON course_program_assignment FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "course_program_assignment_modify_admin"
+  ON course_program_assignment FOR ALL
   USING (public.get_user_role() IN ('admin', 'administration'));
 
 -- ============================================
@@ -1319,8 +1329,13 @@ exam
 
 course_program
 ├── id (PK)
-├── faculty, year, session, course name, credits, hours
-└──
+├── courses, credit, session_subjet, hour_session, total_hour
+└── One row per unique course
+course_program_assignment
+├── id (PK), course_program_id (FK → course_program)
+└── faculty, year, session, pass_grade
+course_program_catalog (view)
+└── Flattened read model for course assignments
 
 profiles
 ├── id (PK, UUID → auth.users)

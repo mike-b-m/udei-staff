@@ -101,7 +101,7 @@ export default function AdminLessonsPage() {
 
   const loadMatieres = async (faculty: string) => {
     const { data } = await supabase
-      .from('course_program')
+      .from('course_program_catalog')
       .select('courses')
       .eq('faculty', faculty)
     if (data) {

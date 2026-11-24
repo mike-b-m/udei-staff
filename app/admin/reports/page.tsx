@@ -27,7 +27,7 @@ interface PaymentReportRow {
   method?: string | null
 }
 
-type ReportPeriod = 'day' | 'week' | 'month'
+type ReportPeriod = 'day' | 'week' | 'month' | 'custom'
 
 const toLocalDate = (value: string) => {
   const [year, month, day] = value.split('-').map(Number)
@@ -68,6 +68,8 @@ export default function ReportsPage() {
   const [reportError, setReportError] = useState('')
   const [period, setPeriod] = useState<ReportPeriod>('day')
   const [selectedDate, setSelectedDate] = useState(() => localDateValue(new Date()))
+  const [rangeStartDate, setRangeStartDate] = useState(() => localDateValue(new Date()))
+  const [rangeEndDate, setRangeEndDate] = useState(() => localDateValue(new Date()))
   const [selectedFaculty, setSelectedFaculty] = useState('')
   const [activeChart, setActiveChart] = useState<'enrollment' | 'revenue' | 'balance'>('enrollment')
 
@@ -150,13 +152,26 @@ export default function ReportsPage() {
     void Promise.resolve().then(fetchReportData)
   }, [fetchReportData])
 
-  const { start: periodStart, end: periodEnd } = getPeriodBounds(selectedDate, period)
+  const rangeStart = toLocalDate(rangeStartDate || selectedDate)
+  const rangeEnd = toLocalDate(rangeEndDate || selectedDate)
+  const isValidCustomRange = rangeStartDate !== '' && rangeEndDate !== '' && rangeStart <= rangeEnd
+  const { start: periodStart, end: periodEnd } = period === 'custom'
+    ? (() => {
+        const start = isValidCustomRange ? rangeStart : toLocalDate(selectedDate)
+        const end = isValidCustomRange ? new Date(rangeEnd) : new Date(start)
+        end.setDate(end.getDate() + 1)
+        return { start, end }
+      })()
+    : getPeriodBounds(selectedDate, period)
   const periodPayments = paymentRows.filter(payment => {
     const paymentDate = new Date(payment.created_at)
-    return paymentDate >= periodStart && paymentDate < periodEnd && (!selectedFaculty || payment.faculty === selectedFaculty)
+    return (period !== 'custom' || isValidCustomRange) &&
+      paymentDate >= periodStart &&
+      paymentDate < periodEnd &&
+      (!selectedFaculty || payment.faculty === selectedFaculty)
   })
   const periodTotal = periodPayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0)
-  const periodLabel = period === 'day' ? 'Jour' : period === 'week' ? 'Semaine' : 'Mois'
+  const periodLabel = period === 'day' ? 'Jour' : period === 'week' ? 'Semaine' : period === 'month' ? 'Mois' : 'Intervalle personnalisé'
   const periodDateLabel = period === 'month'
     ? periodStart.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
     : `${periodStart.toLocaleDateString('fr-FR')} - ${new Date(periodEnd.getTime() - 1).toLocaleDateString('fr-FR')}`
@@ -166,14 +181,39 @@ export default function ReportsPage() {
     totals.set(date, (totals.get(date) || 0) + (Number(payment.amount) || 0))
     return totals
   }, new Map<string, number>())
+  const monthlyTotals = new Map<string, number>()
+  for (const [date, amount] of dailyTotals) {
+    const month = date.slice(0, 7)
+    monthlyTotals.set(month, (monthlyTotals.get(month) || 0) + amount)
+  }
+  const periodDayCount = Math.max(0, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / 86400000))
+  const useMonthlyChart = period === 'custom' && periodDayCount > 90
   const chartDates = period === 'day'
     ? [localDateValue(periodStart)]
-    : Array.from({ length: Math.round((periodEnd.getTime() - periodStart.getTime()) / 86400000) }, (_, index) => {
-      const date = new Date(periodStart)
-      date.setDate(date.getDate() + index)
-      return localDateValue(date)
-    })
-  const chartValues = chartDates.map(date => ({ date, amount: dailyTotals.get(date) || 0 }))
+    : useMonthlyChart
+      ? (() => {
+          const month = new Date(periodStart.getFullYear(), periodStart.getMonth(), 1)
+          const months: string[] = []
+          while (month < periodEnd) {
+            months.push(localDateValue(month))
+            month.setMonth(month.getMonth() + 1)
+          }
+          return months
+        })()
+      : Array.from({ length: periodDayCount }, (_, index) => {
+          const date = new Date(periodStart)
+          date.setDate(date.getDate() + index)
+          return localDateValue(date)
+        })
+  const chartValues = chartDates.map(date => ({
+    date,
+    amount: useMonthlyChart
+      ? monthlyTotals.get(date.slice(0, 7)) || 0
+      : dailyTotals.get(date) || 0,
+  }))
+  const formatChartDate = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString('fr-FR', useMonthlyChart
+    ? { month: 'short', year: '2-digit' }
+    : { day: '2-digit', month: '2-digit' })
   const reportTitle = `Rapport des paiements - ${periodDateLabel}`
   const reportFaculty = selectedFaculty || 'Toutes les facultés'
   const safeFilename = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -210,7 +250,7 @@ export default function ReportsPage() {
       if (chartValues.length <= 10 || index % 3 === 0 || index === chartValues.length - 1) {
         pdf.setFontSize(7)
         pdf.setTextColor(75, 85, 99)
-        pdf.text(new Date(`${item.date}T00:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), x + barWidth / 2, chartTop + chartHeight + 4, { align: 'center' })
+        pdf.text(formatChartDate(item.date), x + barWidth / 2, chartTop + chartHeight + 4, { align: 'center' })
       }
     })
     pdf.setDrawColor(209, 213, 219)
@@ -248,17 +288,17 @@ export default function ReportsPage() {
         pdf.setFont('helvetica', 'normal')
         pdf.setFontSize(8)
       }
-      const values = [
+      const values: string[] = [
         new Date(payment.created_at).toLocaleString('fr-FR'),
         payment.studentName,
         payment.faculty,
         payment.level == null ? '-' : String(payment.level),
         `$${(Number(payment.amount) || 0).toLocaleString()} HT`,
         `$${(Number(payment.balance) || 0).toLocaleString()} HT`,
-        payment.method,
+        payment.method || '-',
         payment.insertedBy,
       ]
-      values.forEach((value:any, index) => {
+      values.forEach((value, index) => {
         const column = columns[index]
         const lines = pdf.splitTextToSize(value, column.width - 2) as string[]
         pdf.text(lines[0] || '', column.x + 1, y)
@@ -280,7 +320,7 @@ export default function ReportsPage() {
     const bars = chartValues.map((item, index) => {
       const barHeight = item.amount > 0 ? (item.amount / maxAmount) * 130 : 0
       const x = index * 28 + 8
-      return `<g><rect x="${x}" y="${150 - barHeight}" width="16" height="${barHeight}" fill="#059669" rx="2"/><text x="${x + 8}" y="168" text-anchor="middle">${escapeHtml(new Date(`${item.date}T00:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }))}</text></g>`
+      return `<g><rect x="${x}" y="${150 - barHeight}" width="16" height="${barHeight}" fill="#059669" rx="2"/><text x="${x + 8}" y="168" text-anchor="middle">${escapeHtml(formatChartDate(item.date))}</text></g>`
     }).join('')
     const tableRows = periodPayments.map(payment => `<tr><td>${escapeHtml(new Date(payment.created_at).toLocaleString('fr-FR'))}</td><td>${escapeHtml(payment.studentName)}</td><td>${escapeHtml(payment.faculty)}</td><td>${escapeHtml(payment.level ?? '-')}</td><td class="number">$${(Number(payment.amount) || 0).toLocaleString()} HT</td><td class="number">$${(Number(payment.balance) || 0).toLocaleString()} HT</td><td>${escapeHtml(payment.method)}</td><td>${escapeHtml(payment.insertedBy)}</td></tr>`).join('')
     const printWindow = window.open('', '_blank', 'width=1100,height=800')
@@ -367,19 +407,45 @@ export default function ReportsPage() {
               <h2 id="payment-report-title" className="text-xl font-bold text-gray-900">Rapport des paiements</h2>
               <p className="mt-1 text-sm text-gray-600">Transactions enregistrées par période et par faculté</p>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="text-sm font-medium text-gray-700">
                 Période
                 <select value={period} onChange={event => setPeriod(event.target.value as ReportPeriod)} className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900">
                   <option value="day">Jour</option>
                   <option value="week">Semaine</option>
                   <option value="month">Mois</option>
+                  <option value="custom">Intervalle personnalisé</option>
                 </select>
               </label>
-              <label className="text-sm font-medium text-gray-700">
-                {period === 'month' ? 'Mois' : period === 'week' ? 'Date de la semaine' : 'Date'}
-                <input type={period === 'month' ? 'month' : 'date'} value={period === 'month' ? selectedDate.slice(0, 7) : selectedDate} onChange={event => setSelectedDate(period === 'month' ? `${event.target.value}-01` : event.target.value)} className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900" />
-              </label>
+              {period === 'custom' ? (
+                <>
+                  <label className="text-sm font-medium text-gray-700">
+                    Date de début
+                    <input
+                      type="date"
+                      value={rangeStartDate}
+                      max={rangeEndDate || undefined}
+                      onChange={event => setRangeStartDate(event.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900"
+                    />
+                  </label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Date de fin
+                    <input
+                      type="date"
+                      value={rangeEndDate}
+                      min={rangeStartDate || undefined}
+                      onChange={event => setRangeEndDate(event.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900"
+                    />
+                  </label>
+                </>
+              ) : (
+                <label className="text-sm font-medium text-gray-700">
+                  {period === 'month' ? 'Mois' : period === 'week' ? 'Date de la semaine' : 'Date'}
+                  <input type={period === 'month' ? 'month' : 'date'} value={period === 'month' ? selectedDate.slice(0, 7) : selectedDate} onChange={event => setSelectedDate(period === 'month' ? `${event.target.value}-01` : event.target.value)} className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900" />
+                </label>
+              )}
               <label className="text-sm font-medium text-gray-700">
                 Faculté
                 <select value={selectedFaculty} onChange={event => setSelectedFaculty(event.target.value)} className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900">
@@ -389,6 +455,11 @@ export default function ReportsPage() {
               </label>
             </div>
           </div>
+          {period === 'custom' && !isValidCustomRange && (
+            <p role="alert" className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Choisissez une période valide : la date de début doit être antérieure ou égale à la date de fin.
+            </p>
+          )}
         </div>
 
         <div className="grid gap-px bg-gray-200 sm:grid-cols-3">

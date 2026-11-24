@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     supabase.from('student').select('*').eq('id', studentId).single(),
     supabase.from('exam').select('*').eq('student_id', studentId),
     supabase.from('student_status').select('*').eq('student_id', studentId),
-    supabase.from('course_program').select('*'),
+    supabase.from('course_program_catalog').select('*'),
   ])
 
   if (studentRes.error || !studentRes.data) {
@@ -44,8 +44,8 @@ export async function GET(request: NextRequest) {
   // Calculate GPA from grades
   const gradeEntries: GradeEntry[] = grades.map((g: Record<string, unknown>) => {
     const finalScore = Number(g.final) || 0
-    const course = programs.find((p: Record<string, unknown>) => p.course_name === g.matière)
-    return { score: finalScore, credits: Number(course?.credits) || 3 }
+    const course = programs.find((p: Record<string, unknown>) => p.courses === g.matière)
+    return { score: finalScore, credits: Number(course?.credit) || 3 }
   })
   const gpa = calculateGPA(gradeEntries)
 
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
   const transcriptGrades = grades.map((g: Record<string, unknown>) => {
     const finalScore = Number(g.final) || 0
     const gradeInfo = getGradeInfo(finalScore)
-    const course = programs.find((p: Record<string, unknown>) => p.course_name === g.matière)
+    const course = programs.find((p: Record<string, unknown>) => p.courses === g.matière)
     return {
       matiere: g.matière,
       intra: g.intra,
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       label: gradeInfo.label,
       status: gradeInfo.status,
       points: gradeInfo.points,
-      credits: Number(course?.credits) || 3,
+      credits: Number(course?.credit) || 3,
     }
   })
 

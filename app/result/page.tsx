@@ -238,7 +238,7 @@ export default function ResultDashboard(){
             const faculty = theData[0]?.faculty
 
             const [programRes, statusRes, paymentRes, gradeRes] = await Promise.all([
-                supabase.from('course_program').select('*').eq('faculty', faculty),
+                supabase.from('course_program_catalog').select('*').eq('faculty', faculty),
                 supabase.from('student_status').select('id,student_id,year_study').eq('student_id', studentId),
                 supabase.from('student_payment').select('*').eq('student_id', studentId).maybeSingle(),
                 supabase.from('exam').select('*').eq('student_id', studentId),
@@ -257,8 +257,8 @@ export default function ResultDashboard(){
                 setGrades(gradeRes.data)
                 const entries: GradeEntry[] = gradeRes.data.map((g: any) => {
                     const score = g.reprise ?? g.final ?? 0
-                    const course = programRes.data?.find((p: any) => p.course_name === g.matière)
-                    return { score: Number(score), credits: Number(course?.credits) || 3 }
+                    const course = programRes.data?.find((p: any) => p.courses === g.matière)
+                    return { score: Number(score), credits: Number(course?.credit) || 3 }
                 })
                 setGpa(calculateGPA(entries))
             }

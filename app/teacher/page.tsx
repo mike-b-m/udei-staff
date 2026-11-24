@@ -52,7 +52,7 @@ export default function Teacher() {
             try {
                 // Get courses
                 const { data: pro, error: theError } = await supabase
-                    .from('course_program')
+                    .from('course_program_catalog')
                     .select('*').eq('faculty', search).eq('session', search4).eq('year', search3);
                   
                     //Get courses for prof
